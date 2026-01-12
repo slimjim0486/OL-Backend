@@ -19,24 +19,31 @@ export interface PromptContext {
   curriculumType?: CurriculumType | null;
   gradeLevel?: number | null;
   lessonContext?: LessonContext;
+  outputLanguage?: 'ar' | 'en' | 'auto';
 }
+
+// Language output type for content generation
+export type OutputLanguage = 'ar' | 'en' | 'auto';
 
 export class PromptBuilder {
   /**
    * Build system instructions for Ollie AI tutor
-   * Now includes curriculum-aware teaching approach
+   * Now includes curriculum-aware teaching approach and Arabic language support
    */
   buildSystemInstructions(context: PromptContext): string {
     const instructions: string[] = [];
+    const isArabic = context.outputLanguage === 'ar';
 
-    // Core identity
-    instructions.push(this.getOllieIdentity());
+    // Core identity (language-aware)
+    instructions.push(isArabic ? this.getOllieIdentityArabic() : this.getOllieIdentity());
 
-    // Safety rules (CRITICAL)
-    instructions.push(this.getSafetyRules());
+    // Safety rules (CRITICAL) (language-aware)
+    instructions.push(isArabic ? this.getSafetyRulesArabic() : this.getSafetyRules());
 
-    // Age-appropriate communication
-    instructions.push(this.getAgeGuidance(context.ageGroup));
+    // Age-appropriate communication (language-aware)
+    instructions.push(isArabic
+      ? this.getAgeGuidanceArabic(context.ageGroup)
+      : this.getAgeGuidance(context.ageGroup));
 
     // Curriculum-specific teaching approach (subtle adaptations)
     instructions.push(getCurriculumGuidance(
@@ -47,7 +54,17 @@ export class PromptBuilder {
 
     // Lesson context
     if (context.lessonContext) {
-      instructions.push(this.getLessonGuidance(context.lessonContext));
+      instructions.push(isArabic
+        ? this.getLessonGuidanceArabic(context.lessonContext)
+        : this.getLessonGuidance(context.lessonContext));
+    }
+
+    // Add language instruction for Arabic output
+    if (isArabic) {
+      instructions.push(`لغة الإخراج: العربية الفصحى (Modern Standard Arabic)
+- يجب أن تكون جميع الردود باللغة العربية الفصحى
+- استخدم أسلوباً ودوداً ومناسباً للأطفال
+- الأرقام يمكن أن تكون عربية (١، ٢، ٣) أو غربية (1, 2, 3) حسب السياق`);
     }
 
     return instructions.join('\n\n');
@@ -66,6 +83,77 @@ PERSONALITY:
 
 GOAL:
 Help children understand concepts deeply through conversation, examples, and analogies they can relate to.`;
+  }
+
+  /**
+   * Get Ollie's identity in Arabic (MSA - Modern Standard Arabic)
+   */
+  private getOllieIdentityArabic(): string {
+    return `أنت أولي، صديق التعلم الذكي والودود للأطفال على منصة أوربت ليرن.
+
+الشخصية:
+- دائماً إيجابي ومشجع وصبور
+- استخدم لغة بسيطة ومناسبة للعمر
+- احتفل بكل جهد ونجاح
+- اجعل التعلم ممتعاً بالحماس
+- استخدم الرموز التعبيرية باعتدال ولكن بدفء
+- لا تكن متعالياً أو مملاً أبداً
+
+الهدف:
+مساعدة الأطفال على فهم المفاهيم بعمق من خلال المحادثة والأمثلة والتشبيهات التي يمكنهم الارتباط بها.`;
+  }
+
+  /**
+   * Get safety rules in Arabic (MSA)
+   */
+  private getSafetyRulesArabic(): string {
+    return `قواعد السلامة الحرجة (لا تنتهكها أبداً):
+
+١. لا تسأل أبداً عن المعلومات الشخصية أو تذكرها (الأسماء الحقيقية، العناوين، أرقام الهاتف، أسماء المدارس، أسماء الوالدين، تفاصيل العمر)
+
+٢. لا تناقش أبداً مواضيع غير مناسبة للأطفال:
+   - العنف أو الأسلحة أو المحتوى المخيف
+   - الرومانسية أو العلاقات أو مواضيع البالغين
+   - المخدرات أو الكحول أو المواد المحظورة
+   - السياسة أو القضايا الاجتماعية المثيرة للجدل
+   - الموت أو المرض الخطير بالتفصيل
+   - الرعب أو المحتوى المزعج
+
+٣. لا تقدم أبداً روابط خارجية أو تقترح زيارة مواقع الويب
+
+٤. لا تتظاهر أبداً بأنك شخص حقيقي أو معلم أو والد أو شخصية ذات سلطة
+
+٥. إذا سُئلت عن هذه المواضيع، أعد التوجيه بلطف:
+   "هذا ليس شيئاً أعرفه! دعنا نركز على درسك. ماذا تريد أن تتعلم عن [الموضوع]؟"
+
+٦. إذا بدا الطفل مستاءً أو ذكر الأذى، استجب بـ:
+   "يبدو أنك قد تمر بوقت صعب. لا بأس! ربما تحدث مع شخص بالغ تثق به عن شعورك. أنا هنا للمساعدة في التعلم!"
+
+٧. لا تناقش أبداً كيف تعمل أو قدراتك بخلاف كونك مساعداً تعليمياً`;
+  }
+
+  /**
+   * Get age-appropriate guidance in Arabic
+   */
+  private getAgeGuidanceArabic(ageGroup: AgeGroup): string {
+    if (ageGroup === 'YOUNG') {
+      return `اللغة للأعمار ٤-٧:
+- استخدم كلمات بسيطة جداً
+- اجعل الجمل قصيرة (٥-١٠ كلمات كحد أقصى)
+- استخدم الكثير من الأمثلة من الحياة اليومية
+- أشر إلى أشياء يحبها الأطفال: الحيوانات، الألعاب، الأسرة
+- كن مشجعاً دائماً
+- استخدم المزيد من الرموز التعبيرية للجاذبية البصرية
+- اشرح كل شيء كما لو كنت تتحدث إلى طفل صغير`;
+    }
+
+    return `اللغة للأعمار ٨-١٢:
+- استخدم مفردات مناسبة للصف الدراسي
+- اشرح الكلمات الجديدة عند تقديمها
+- قدم شروحات أكثر تفصيلاً
+- استخدم تشبيهات من عالمهم (الألعاب، الرياضة، الأفلام)
+- شجع الفضول والأسئلة الأعمق
+- يمكن التعامل مع محادثات أطول قليلاً`;
   }
 
   private getSafetyRules(): string {
@@ -129,6 +217,25 @@ When answering questions:
 2. Use examples from the lesson content when possible
 3. If the question is unrelated, gently guide back to the lesson
 4. Suggest exploring related topics within the lesson`;
+  }
+
+  /**
+   * Get lesson guidance in Arabic
+   */
+  private getLessonGuidanceArabic(lesson: LessonContext): string {
+    return `سياق الدرس الحالي:
+
+المادة: ${lesson.subject || 'عام'}
+الموضوع: ${lesson.title}
+المفاهيم الأساسية: ${lesson.keyConcepts?.join('، ') || 'غير محدد'}
+
+الملخص: ${lesson.summary || 'لا يوجد ملخص متاح'}
+
+عند الإجابة على الأسئلة:
+١. حاول أولاً ربط الإجابات بالدرس الحالي
+٢. استخدم أمثلة من محتوى الدرس عند الإمكان
+٣. إذا كان السؤال غير ذي صلة، وجه بلطف للعودة إلى الدرس
+٤. اقترح استكشاف مواضيع ذات صلة ضمن الدرس`;
   }
 
   /**

@@ -33,6 +33,7 @@ export interface ContentProcessingJobData {
   ageGroup: AgeGroup;
   curriculumType?: CurriculumType | null;
   gradeLevel?: number | null;
+  outputLanguage?: 'ar' | 'en' | 'auto';
 }
 
 // Processing queue
@@ -101,7 +102,7 @@ export async function queueContentProcessing(
  * Process a content job
  */
 async function processContentJob(job: Job<ContentProcessingJobData>): Promise<void> {
-  const { lessonId, fileUrl, youtubeUrl, sourceType, childId, ageGroup, curriculumType, gradeLevel } = job.data;
+  const { lessonId, fileUrl, youtubeUrl, sourceType, childId, ageGroup, curriculumType, gradeLevel, outputLanguage } = job.data;
 
   try {
     // Get lesson to check subject
@@ -126,11 +127,13 @@ async function processContentJob(job: Job<ContentProcessingJobData>): Promise<vo
       const pdfBuffer = Buffer.from(await response.arrayBuffer());
 
       // Use vision-based analysis - Gemini SEES the document
+      // Pass outputLanguage for Arabic content support
       analysis = await geminiService.analyzePDFWithVision(pdfBuffer, {
         ageGroup,
         curriculumType,
         gradeLevel,
         subject: lesson?.subject,
+        outputLanguage: outputLanguage || 'auto',
       });
 
       // Also extract text for reference (chat context, search, etc.)
@@ -138,6 +141,7 @@ async function processContentJob(job: Job<ContentProcessingJobData>): Promise<vo
 
       // Format using AI-generated contentBlocks from vision analysis
       // The "Master Educator" prompt creates beautifully structured lesson blocks
+      // Pass detected language for RTL support (Arabic)
       formattedContent = documentFormatter.format(extractedText, {
         ageGroup,
         chapters: analysis.chapters,
@@ -155,6 +159,7 @@ async function processContentJob(job: Job<ContentProcessingJobData>): Promise<vo
           locationInContent: ex.locationInContent,
         })),
         contentBlocks: analysis.contentBlocks, // Master Educator structured blocks
+        language: analysis.detectedLanguage, // For Arabic RTL support
       });
 
       logger.info(`PDF processed with Master Educator vision`, {
@@ -162,6 +167,7 @@ async function processContentJob(job: Job<ContentProcessingJobData>): Promise<vo
         formattedLength: formattedContent.length,
         contentBlockCount: analysis.contentBlocks?.length || 0,
         blockTypes: analysis.contentBlocks?.map(b => b.type).slice(0, 10),
+        detectedLanguage: analysis.detectedLanguage || 'en',
       });
     }
     // ==========================================================================

@@ -42,6 +42,7 @@ export interface StructuredRendererOptions {
   ageGroup?: AgeGroup;
   includeIcons?: boolean;
   colorScheme?: 'vibrant' | 'subtle';
+  language?: 'ar' | 'en';
 }
 
 // ============================================================================
@@ -59,11 +60,12 @@ export class StructuredRenderer {
       ageGroup,
       includeIcons: options?.includeIcons ?? true,
       colorScheme: options?.colorScheme ?? (ageGroup === 'YOUNG' ? 'vibrant' : 'subtle'),
+      language: options?.language ?? 'en',
     };
   }
 
   /**
-   * Update renderer options (e.g., ageGroup)
+   * Update renderer options (e.g., ageGroup, language)
    */
   setOptions(options: StructuredRendererOptions): void {
     if (options.ageGroup) {
@@ -79,10 +81,14 @@ export class StructuredRenderer {
     if (options.colorScheme) {
       this.options.colorScheme = options.colorScheme;
     }
+    if (options.language) {
+      this.options.language = options.language;
+    }
   }
 
   /**
    * Render structured content to HTML
+   * Supports RTL for Arabic content
    */
   render(content: StructuredContent): string {
     const blocks = content.blocks;
@@ -96,8 +102,10 @@ export class StructuredRenderer {
 
     const ageClass = this.options.ageGroup === 'YOUNG' ? 'age-young' : 'age-older';
     const colorClass = this.options.colorScheme === 'vibrant' ? 'color-vibrant' : 'color-subtle';
+    const rtlClass = this.options.language === 'ar' ? 'rtl' : '';
+    const dirAttr = this.options.language === 'ar' ? ' dir="rtl"' : '';
 
-    return `<div class="structured-content ${ageClass} ${colorClass}">
+    return `<div class="structured-content ${ageClass} ${colorClass} ${rtlClass}"${dirAttr}>
 ${renderedBlocks.join('\n')}
 </div>`;
   }
@@ -727,6 +735,100 @@ export const structuredRendererStyles = `
 .structured-content.age-older {
   font-size: 1rem;
   line-height: 1.7;
+}
+
+/* ============================================
+   RTL (RIGHT-TO-LEFT) SUPPORT FOR ARABIC
+   ============================================ */
+
+.structured-content.rtl {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Noto Sans Arabic', 'Segoe UI', 'Arial', sans-serif;
+}
+
+/* RTL-specific adjustments */
+.structured-content.rtl .metadata-items {
+  flex-direction: row-reverse;
+}
+
+.structured-content.rtl .metadata-item {
+  flex-direction: row-reverse;
+}
+
+.structured-content.rtl .header-level-1 {
+  border-bottom: 3px solid #4299e1;
+  text-align: right;
+}
+
+.structured-content.rtl .step-container {
+  flex-direction: row-reverse;
+}
+
+.structured-content.rtl .step-number {
+  margin-left: 1rem;
+  margin-right: 0;
+}
+
+.structured-content.rtl .bullet-list li,
+.structured-content.rtl .numbered-list li {
+  padding-left: 0;
+  padding-right: 0.5rem;
+}
+
+.structured-content.rtl .bullet-list li::before {
+  left: auto;
+  right: 0;
+}
+
+.structured-content.rtl .tip-block,
+.structured-content.rtl .note-block,
+.structured-content.rtl .warning-block {
+  border-left: none;
+  border-right: 4px solid;
+  padding-left: 0;
+  padding-right: 1rem;
+}
+
+.structured-content.rtl .tip-block {
+  border-right-color: #48bb78;
+}
+
+.structured-content.rtl .note-block {
+  border-right-color: #4299e1;
+}
+
+.structured-content.rtl .warning-block {
+  border-right-color: #ed8936;
+}
+
+.structured-content.rtl .definition-block .term {
+  text-align: right;
+}
+
+.structured-content.rtl .table-container table {
+  direction: rtl;
+}
+
+.structured-content.rtl .table-container th,
+.structured-content.rtl .table-container td {
+  text-align: right;
+}
+
+/* Arabic-specific typography */
+.structured-content.rtl {
+  word-spacing: 0.05em;
+  letter-spacing: 0;
+}
+
+.structured-content.rtl.age-young {
+  font-size: 1.2rem;
+  line-height: 2;
+}
+
+.structured-content.rtl.age-older {
+  font-size: 1.1rem;
+  line-height: 1.9;
 }
 
 /* ============================================

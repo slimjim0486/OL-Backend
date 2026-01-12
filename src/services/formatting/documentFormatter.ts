@@ -53,6 +53,8 @@ export interface DocumentFormatterOptions {
   exercises?: Exercise[];
   // Rich content blocks from AI analysis (hybrid approach)
   contentBlocks?: ContentBlock[];
+  // Language for RTL support (Arabic)
+  language?: 'ar' | 'en';
 }
 
 interface TextAnalysis {
@@ -215,7 +217,10 @@ export class DocumentFormatter {
             blocks: options.contentBlocks,
           };
 
-          this.structuredRenderer.setOptions({ ageGroup: options.ageGroup });
+          this.structuredRenderer.setOptions({
+            ageGroup: options.ageGroup,
+            language: options.language,
+          });
           return this.structuredRenderer.render(structuredContent);
         } else {
           logger.warn('Content blocks validation failed, falling back to heuristic formatting', {

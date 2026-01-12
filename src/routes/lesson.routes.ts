@@ -439,6 +439,7 @@ router.post(
           ageGroup: child.ageGroup,
           curriculumType: child.curriculumType,
           gradeLevel: child.gradeLevel,
+          // outputLanguage defaults to 'auto' - Gemini detects PDF language
         });
       } catch (queueError) {
         logger.warn('Failed to queue content processing, processing synchronously', { queueError });

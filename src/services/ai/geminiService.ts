@@ -51,6 +51,7 @@ export interface ChildContext {
   ageGroup: AgeGroup;
   curriculumType?: CurriculumType | null;
   gradeLevel?: number | null;
+  outputLanguage?: 'ar' | 'en';
 }
 
 export interface ChatResponse {
@@ -95,6 +96,8 @@ export interface LessonAnalysis {
   confidence: number;
   // Rich structured content blocks for hybrid AI+deterministic rendering
   contentBlocks?: ContentBlock[];
+  // Detected language of the content (for Arabic support)
+  detectedLanguage?: 'ar' | 'en';
 }
 
 export interface GeneratedFlashcard {
@@ -232,11 +235,13 @@ export class GeminiService {
     }
 
     // 2. Build system prompt with curriculum context
+    // Pass outputLanguage for Arabic support
     const systemPrompt = promptBuilder.buildSystemInstructions({
       ageGroup: context.ageGroup,
       curriculumType: context.curriculumType,
       gradeLevel: context.gradeLevel,
       lessonContext: context.lessonContext,
+      outputLanguage: context.outputLanguage,
     });
 
     // 3. Build conversation history
@@ -467,14 +472,17 @@ export class GeminiService {
       curriculumType?: CurriculumType | null;
       gradeLevel?: number | null;
       subject?: Subject | null;
+      outputLanguage?: 'ar' | 'en' | 'auto';
     }
   ): Promise<LessonAnalysis> {
     const isYoung = context.ageGroup === 'YOUNG';
     const pdfBase64 = pdfBuffer.toString('base64');
+    const outputLang = context.outputLanguage || 'auto';
 
     logger.info('Analyzing PDF with native vision', {
       pdfSize: pdfBuffer.length,
       ageGroup: context.ageGroup,
+      outputLanguage: outputLang,
       model: config.gemini.models.pro,
     });
 
@@ -551,7 +559,12 @@ export class GeminiService {
             required: ['type']
           }
         },
-        confidence: { type: 'number', minimum: 0, maximum: 1 }
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        detectedLanguage: {
+          type: 'string',
+          enum: ['ar', 'en'],
+          description: 'The language of the output content (ar = Arabic, en = English)'
+        }
       },
       required: ['title', 'summary', 'contentBlocks']
     };
@@ -573,6 +586,46 @@ export class GeminiService {
 - Encourage critical thinking: "Why do you think...?"
 - Emojis add visual interest: 🔬 💡 🌍 📚 🎯`;
 
+    // Language-specific instructions
+    const languageInstructions = outputLang === 'ar'
+      ? `=============================================================================
+🌍 OUTPUT LANGUAGE: ARABIC (العربية الفصحى - Modern Standard Arabic)
+=============================================================================
+CRITICAL: ALL text content MUST be in Modern Standard Arabic (MSA / فصحى).
+
+ARABIC OUTPUT REQUIREMENTS:
+- Generate ALL text fields (title, summary, text, definition, etc.) in Arabic
+- Use Modern Standard Arabic (فصحى) suitable for children
+- Vocabulary definitions should be in Arabic with Arabic examples
+- Keep language simple and age-appropriate
+- Numbers can be Western (1, 2, 3) or Arabic (١، ٢، ٣) based on context
+- Emojis are still appropriate and helpful for children
+- Maintain right-to-left text flow in all content
+
+ARABIC CHILD-FRIENDLY EXAMPLES:
+- For "keyConceptBox" title: "💡 الفكرة الرئيسية" instead of "💡 Big Idea"
+- For "tip" title: "💡 هل تعلم؟" instead of "Fun Fact!"
+- For "note" title: "📝 تذكّر!" instead of "Remember!"
+- For "warning" title: "⚠️ انتبه!" instead of "Watch out!"
+
+`
+      : outputLang === 'auto'
+        ? `=============================================================================
+🌍 LANGUAGE DETECTION & OUTPUT
+=============================================================================
+DETECT the primary language of the PDF content.
+- If the content is primarily in ARABIC: Output ALL text in Arabic (العربية الفصحى - MSA)
+- If the content is primarily in ENGLISH: Output ALL text in English
+- For mixed content: Use the dominant language
+
+When outputting in Arabic:
+- Use Modern Standard Arabic (فصحى) suitable for children
+- Keep language simple and age-appropriate
+- Numbers can be Western (1, 2, 3) or Arabic (١، ٢، ٣)
+
+`
+        : ''; // English - no special instructions needed
+
     const prompt = `ROLE: You are an expert K-8 Instructional Designer for Orbit Learn, a children's educational platform. You specialize in transforming dense educational content into vibrant, engaging lessons that make kids excited to learn.
 
 PEDAGOGICAL APPROACH: Student-Centered Learning with Visual Scaffolding
@@ -582,6 +635,8 @@ PEDAGOGICAL APPROACH: Student-Centered Learning with Visual Scaffolding
 - Make abstract concepts concrete and visual
 
 ${ageInstructions}
+
+${languageInstructions}
 
 =============================================================================
 YOUR TASK: Transform this PDF into a beautifully structured lesson
