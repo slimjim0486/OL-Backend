@@ -7,6 +7,7 @@ import { authenticateTeacher, requireTeacher } from '../../middleware/teacherAut
 import { validateInput } from '../../middleware/validateInput.js';
 import { z } from 'zod';
 import { TeacherContentType, ContentStatus, Subject, SourceType, TokenOperation } from '@prisma/client';
+import { prisma } from '../../config/database.js';
 
 const router = Router();
 
@@ -123,6 +124,47 @@ router.get(
       res.json({
         success: true,
         data: stats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/teacher/content/total-count
+ * Get total count of all content types (lessons, quizzes, flashcards, audio updates, sub plans, IEP goals)
+ * Used to determine if sample content should be auto-hidden
+ */
+router.get(
+  '/total-count',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = req.teacher!.id;
+
+      // Count all content types in parallel
+      const [contentCount, audioUpdateCount, subPlanCount, iepGoalCount] = await Promise.all([
+        prisma.teacherContent.count({ where: { teacherId } }),
+        prisma.teacherAudioUpdate.count({ where: { teacherId } }),
+        prisma.substitutePlan.count({ where: { teacherId } }),
+        prisma.iEPGoalSession.count({ where: { teacherId } }),
+      ]);
+
+      const totalCount = contentCount + audioUpdateCount + subPlanCount + iepGoalCount;
+
+      res.json({
+        success: true,
+        data: {
+          totalCount,
+          breakdown: {
+            content: contentCount,         // lessons, quizzes, flashcards
+            audioUpdates: audioUpdateCount,
+            subPlans: subPlanCount,
+            iepGoals: iepGoalCount,
+          },
+        },
       });
     } catch (error) {
       next(error);
