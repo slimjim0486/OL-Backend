@@ -1903,3 +1903,10 @@ export function getAllSampleSummaries() {
     vocabulary: sample.lessonContent.vocabulary.map(v => v.term),
   }));
 }
+
+// ============================================
+// HELPER: Get audio sample
+// ============================================
+export function getAudioSample(): SampleAudioUpdate {
+  return SAMPLE_AUDIO_UPDATE;
+}

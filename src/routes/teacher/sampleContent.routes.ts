@@ -6,7 +6,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { SAMPLE_TEACHER_CONTENT, getSampleById, getAllSampleSummaries } from '../../data/sampleTeacherContent.js';
+import { SAMPLE_TEACHER_CONTENT, getSampleById, getAllSampleSummaries, getAudioSample } from '../../data/sampleTeacherContent.js';
 
 const router = Router();
 
@@ -161,6 +161,26 @@ router.get('/:id/flashcards', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch sample flashcards',
+    });
+  }
+});
+
+/**
+ * GET /api/teacher/samples/audio/sample
+ * Get the sample audio update content
+ */
+router.get('/audio/sample', async (req: Request, res: Response) => {
+  try {
+    const audioSample = getAudioSample();
+    res.json({
+      success: true,
+      data: audioSample,
+    });
+  } catch (error) {
+    console.error('Error fetching audio sample:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch audio sample',
     });
   }
 });
