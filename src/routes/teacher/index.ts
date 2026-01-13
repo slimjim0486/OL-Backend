@@ -9,6 +9,7 @@ import audioUpdateRoutes from './audioUpdate.routes.js';
 import subPlanRoutes from './subPlan.routes.js';
 import iepGoalRoutes from './iepGoal.routes.js';
 import referralRoutes from './referral.routes.js';
+import sampleContentRoutes from './sampleContent.routes.js';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use('/audio-updates', audioUpdateRoutes);
 router.use('/sub-plans', subPlanRoutes);
 router.use('/iep-goals', iepGoalRoutes);
 router.use('/referrals', referralRoutes);
+router.use('/samples', sampleContentRoutes);  // Public sample content
 
 // Future routes will be added here:
 // router.use('/rubrics', rubricRoutes);
