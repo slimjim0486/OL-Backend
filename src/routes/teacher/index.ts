@@ -10,6 +10,7 @@ import subPlanRoutes from './subPlan.routes.js';
 import iepGoalRoutes from './iepGoal.routes.js';
 import referralRoutes from './referral.routes.js';
 import sampleContentRoutes from './sampleContent.routes.js';
+import activityRoutes from './activity.routes.js';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use('/sub-plans', subPlanRoutes);
 router.use('/iep-goals', iepGoalRoutes);
 router.use('/referrals', referralRoutes);
 router.use('/samples', sampleContentRoutes);  // Public sample content
+router.use('/activities', activityRoutes);    // Activity feed for notifications
 
 // Future routes will be added here:
 // router.use('/rubrics', rubricRoutes);

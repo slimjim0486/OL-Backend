@@ -15,6 +15,7 @@ import { genAI } from '../config/gemini.js';
 import { config } from '../config/index.js';
 import { AgeGroup, Subject, SourceType, CurriculumType, LessonAudioStatus } from '@prisma/client';
 import { lessonSummaryService } from '../services/learning/lessonSummaryService.js';
+import { getSampleLessonsByAgeGroup, getSampleLessonById, SampleLesson } from '../data/sampleLessons.js';
 
 const router = Router();
 
@@ -71,6 +72,130 @@ const processContentSchema = z.object({
 // ============================================
 // ROUTES
 // ============================================
+
+/**
+ * GET /api/lessons/samples
+ * Get sample lessons for new users (no AI processing required)
+ * Returns pre-computed lessons filtered by child's age group
+ */
+router.get(
+  '/samples',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let ageGroup: AgeGroup = 'OLDER'; // Default to older
+
+      // If child session, use their age group
+      if (req.child) {
+        ageGroup = req.child.ageGroup;
+      } else if (req.parent) {
+        // If parent session, try to get from query param or first child
+        const queryAgeGroup = req.query.ageGroup as string;
+        if (queryAgeGroup && (queryAgeGroup === 'YOUNG' || queryAgeGroup === 'OLDER')) {
+          ageGroup = queryAgeGroup as AgeGroup;
+        } else {
+          // Get first child's age group
+          const firstChild = await prisma.child.findFirst({
+            where: { parentId: req.parent.id },
+            select: { ageGroup: true },
+            orderBy: { createdAt: 'asc' },
+          });
+          if (firstChild) {
+            ageGroup = firstChild.ageGroup;
+          }
+        }
+      }
+
+      // Get sample lessons for this age group
+      const samples = getSampleLessonsByAgeGroup(ageGroup);
+
+      // Transform to match expected lesson format for frontend
+      const lessons = samples.map((sample: SampleLesson) => ({
+        id: sample.id,
+        title: sample.title,
+        summary: sample.summary,
+        subject: sample.subject,
+        gradeLevel: sample.gradeLevel,
+        ageGroup: sample.ageGroup,
+        estimatedMinutes: sample.estimatedMinutes,
+        icon: sample.icon,
+        isSample: true, // Flag to identify sample lessons
+        // Include key data for one-tap start
+        keyConcepts: sample.keyConcepts,
+        vocabulary: sample.vocabulary,
+        suggestedQuestions: sample.suggestedQuestions,
+        flashcardCount: sample.flashcards.length,
+        quizQuestionCount: sample.quiz.length,
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          lessons,
+          ageGroup,
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get sample lessons', { error });
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/lessons/samples/:sampleId
+ * Get full sample lesson content for study mode
+ */
+router.get(
+  '/samples/:sampleId',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { sampleId } = req.params;
+      const sample = getSampleLessonById(sampleId);
+
+      if (!sample) {
+        res.status(404).json({
+          success: false,
+          error: 'Sample lesson not found',
+        });
+        return;
+      }
+
+      // Return full sample lesson in the format expected by StudyPage
+      res.json({
+        success: true,
+        data: {
+          lesson: {
+            id: sample.id,
+            title: sample.title,
+            summary: sample.summary,
+            subject: sample.subject,
+            gradeLevel: sample.gradeLevel,
+            ageGroup: sample.ageGroup,
+            isSample: true,
+            processingStatus: 'COMPLETED',
+            formattedContent: sample.extractedText,
+            extractedText: sample.extractedText,
+            keyConcepts: sample.keyConcepts,
+            vocabulary: sample.vocabulary,
+            suggestedQuestions: sample.suggestedQuestions,
+            // Sample lessons don't track progress per child
+            progress: {
+              percentComplete: 0,
+              lastAccessedAt: null,
+            },
+          },
+          flashcards: sample.flashcards,
+          quiz: sample.quiz,
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get sample lesson', { error });
+      next(error);
+    }
+  }
+);
 
 /**
  * POST /api/lessons/analyze

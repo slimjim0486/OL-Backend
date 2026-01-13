@@ -5,3 +5,4 @@ export { contentService } from './contentService.js';
 export { audioUpdateService } from './audioUpdateService.js';
 export { subPlanService } from './subPlanService.js';
 export { iepGoalService } from './iepGoalService.js';
+export { activityService } from './activityService.js';
