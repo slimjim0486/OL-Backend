@@ -83,6 +83,39 @@ interface LessonContent {
   nextSteps?: string;
 }
 
+// Quiz content structure (separate from lesson assessment)
+interface QuizQuestion {
+  id?: string;
+  question: string;
+  type: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation?: string;
+  difficulty?: string;
+  points?: number;
+}
+
+interface QuizContent {
+  title?: string;
+  questions: QuizQuestion[];
+  totalPoints?: number;
+  estimatedTime?: number;
+}
+
+// Flashcard content structure
+interface Flashcard {
+  id?: string;
+  front: string;
+  back: string;
+  hint?: string;
+  category?: string;
+}
+
+interface FlashcardContent {
+  title?: string;
+  cards: Flashcard[];
+}
+
 /**
  * Truncate text to a maximum length
  */
@@ -177,6 +210,36 @@ function formatLessonContent(
     });
   }
 
+  // Include Quiz Content if present (separate from lesson assessment)
+  const quizData = content.quizContent as unknown as QuizContent | null;
+  if (quizData?.questions && quizData.questions.length > 0) {
+    const questions = quizData.questions.slice(0, 8);
+    parts.push(`\nQuiz Questions (${quizData.questions.length} total):`);
+    questions.forEach((q, i) => {
+      parts.push(`${i + 1}. ${truncateText(q.question, 150)}`);
+      if (q.options && q.options.length > 0) {
+        q.options.forEach((opt, j) => {
+          const letter = String.fromCharCode(65 + j);
+          parts.push(`   ${letter}) ${truncateText(opt, 80)}`);
+        });
+      }
+      if (options.includeAnswers && q.correctAnswer) {
+        parts.push(`   Answer: ${truncateText(q.correctAnswer, 100)}`);
+      }
+    });
+  }
+
+  // Include Flashcard Content if present
+  const flashcardData = content.flashcardContent as unknown as FlashcardContent | null;
+  if (flashcardData?.cards && flashcardData.cards.length > 0) {
+    const cards = flashcardData.cards.slice(0, 10);
+    parts.push(`\nFlashcards (${flashcardData.cards.length} total):`);
+    cards.forEach((card, i) => {
+      parts.push(`${i + 1}. Front: ${truncateText(card.front, 100)}`);
+      parts.push(`   Back: ${truncateText(card.back, 150)}`);
+    });
+  }
+
   return parts.join('\n');
 }
 
@@ -185,6 +248,8 @@ function formatLessonContent(
  */
 function calculateSlideCount(content: TeacherContent, options: PresentonExportOptions): number {
   const lessonData = content.lessonContent as unknown as LessonContent;
+  const quizData = content.quizContent as unknown as QuizContent | null;
+  const flashcardData = content.flashcardContent as unknown as FlashcardContent | null;
 
   // Base slides: title + objectives + summary
   let slides = 3;
@@ -203,10 +268,24 @@ function calculateSlideCount(content: TeacherContent, options: PresentonExportOp
     slides += 1;
   }
 
-  // Assessment slide(s)
-  const questionCount = lessonData?.assessment?.questions?.length || 0;
-  if (questionCount > 0) {
+  // Assessment slide(s) from lesson content
+  const assessmentCount = lessonData?.assessment?.questions?.length || 0;
+  if (assessmentCount > 0) {
     slides += options.slideStyle === 'focused' ? 2 : 1;
+  }
+
+  // Quiz slide(s) from quizContent (separate from lesson assessment)
+  const quizCount = quizData?.questions?.length || 0;
+  if (quizCount > 0) {
+    // Add 1-3 slides depending on quiz size
+    slides += options.slideStyle === 'focused' ? Math.min(Math.ceil(quizCount / 3), 3) : 1;
+  }
+
+  // Flashcard slide(s) from flashcardContent
+  const flashcardCount = flashcardData?.cards?.length || 0;
+  if (flashcardCount > 0) {
+    // Add 1-2 slides for flashcards
+    slides += options.slideStyle === 'focused' ? Math.min(Math.ceil(flashcardCount / 5), 2) : 1;
   }
 
   // Summary slide
@@ -214,7 +293,7 @@ function calculateSlideCount(content: TeacherContent, options: PresentonExportOp
 
   // Cap at reasonable limits
   const minSlides = options.slideStyle === 'dense' ? 6 : 8;
-  const maxSlides = options.slideStyle === 'dense' ? 12 : 18;
+  const maxSlides = options.slideStyle === 'dense' ? 15 : 22; // Increased max for quiz/flashcards
 
   return Math.min(Math.max(slides, minSlides), maxSlides);
 }
