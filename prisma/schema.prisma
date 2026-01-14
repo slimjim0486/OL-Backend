@@ -800,6 +800,9 @@ model Teacher {
   referralRewards    ReferralReward[]
   shareableContents  ShareableContent[]
 
+  // Onboarding
+  tutorialCompletedAt  DateTime?            // When dashboard tutorial was completed (null = not completed)
+
   // Timestamps
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

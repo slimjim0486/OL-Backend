@@ -6,6 +6,7 @@ import { validateInput } from '../../middleware/validateInput.js';
 import { authRateLimit, emailRateLimit } from '../../middleware/rateLimit.js';
 import { addContactToBrevo, BREVO_LISTS } from '../../services/brevoService.js';
 import { z } from 'zod';
+import prisma from '../../config/database.js';
 
 const router = Router();
 
@@ -667,6 +668,95 @@ router.delete(
       res.json({
         success: true,
         message: 'Account and all associated data deleted successfully.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
+// ONBOARDING / TUTORIAL
+// ============================================
+
+/**
+ * GET /api/teacher/auth/tutorial-status
+ * Get tutorial completion status
+ */
+router.get(
+  '/tutorial-status',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacher = await prisma.teacher.findUnique({
+        where: { id: req.teacher!.id },
+        select: { tutorialCompletedAt: true },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          completed: !!teacher?.tutorialCompletedAt,
+          completedAt: teacher?.tutorialCompletedAt,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/auth/tutorial-complete
+ * Mark tutorial as completed
+ */
+router.post(
+  '/tutorial-complete',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacher = await prisma.teacher.update({
+        where: { id: req.teacher!.id },
+        data: { tutorialCompletedAt: new Date() },
+        select: { tutorialCompletedAt: true },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          completed: true,
+          completedAt: teacher.tutorialCompletedAt,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/auth/tutorial-reset
+ * Reset tutorial (for testing/replay)
+ */
+router.post(
+  '/tutorial-reset',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await prisma.teacher.update({
+        where: { id: req.teacher!.id },
+        data: { tutorialCompletedAt: null },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          completed: false,
+          completedAt: null,
+        },
       });
     } catch (error) {
       next(error);
