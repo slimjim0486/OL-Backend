@@ -6,7 +6,7 @@ import { validateInput } from '../../middleware/validateInput.js';
 import { authRateLimit, emailRateLimit } from '../../middleware/rateLimit.js';
 import { addContactToBrevo, BREVO_LISTS } from '../../services/brevoService.js';
 import { z } from 'zod';
-import prisma from '../../config/database.js';
+import { prisma } from '../../config/database.js';
 
 const router = Router();
 
