@@ -1,7 +1,7 @@
 # Curriculum Mapping System - Master Document
 
 **Last Updated:** 2026-01-15
-**Status:** Phase 2 Complete (British NC + AI Alignment Service)
+**Status:** Phase 3 Complete (Progress Tracking + Frontend Display + Simplified UX)
 
 ---
 
@@ -13,7 +13,11 @@ The Curriculum Mapping System enables Orbit Learn to:
 3. Track child progress against curriculum requirements
 4. Enable curriculum switching with intelligent gap analysis (future)
 
-**Current State:** 997 British National Curriculum standards seeded for Years 1-9 across Mathematics, English, and Science. **AI-powered alignment service is now live** - when lessons are analyzed, they are automatically aligned to relevant curriculum standards.
+**Current State:** 997 British National Curriculum standards seeded for Years 1-9 across Mathematics, English, and Science. **Full curriculum tracking is now live:**
+- AI-powered alignment runs on every lesson upload
+- Progress tracked when quizzes/flashcards are completed
+- Parents see a simplified "Learning Journey" view (topics explored, encouraging messages)
+- XP awarded for lesson/quiz/flashcard completion
 
 ---
 
@@ -115,6 +119,116 @@ Located in `backend/src/services/curriculum/`:
 - Math (Y5 Fractions) → `UK.KS2.Y4.MA.NFR.4` (add/subtract fractions with same denominator) - 100%
 - English (Y3 Adjectives) → `UK.KS2.Y3.EN.RC.7` (discussing words that capture interest) - 100%
 - Science (Y2 Plants) → `UK.KS1.Y2.SC.PLT.2` (plants need water, light, temperature) - 100%
+
+### 9. Progress Tracking Service (NEW - Phase 3)
+
+Located in `backend/src/services/curriculum/progressService.ts`:
+
+| Function | Purpose |
+|----------|---------|
+| `saveContentAlignments()` | Persist ContentStandardAlignment records after lesson analysis |
+| `updateStandardProgress()` | Update ChildStandardProgress on quiz/flashcard completion |
+| `updateProgressBatch()` | Batch update for quiz submission (multiple questions) |
+| `getCurriculumCoverage()` | Get mastery stats (mastered/proficient/approaching counts) |
+| `getProgressBySubject()` | Get progress grouped by subject/strand |
+| `getContentAlignments()` | Get standards aligned to a specific lesson |
+
+**Mastery Thresholds:**
+```typescript
+const MASTERY_THRESHOLDS = {
+  APPROACHING: 0.5,   // 50% correct
+  PROFICIENT: 0.7,    // 70% correct
+  MASTERED: 0.85,     // 85% correct
+};
+const MIN_ATTEMPTS_FOR_MASTERY = 3; // Need 3+ attempts before showing mastery level
+```
+
+**Integration Points:**
+- `lesson.routes.ts` - Calls `saveContentAlignments()` after successful alignment
+- `quiz.routes.ts` - `POST /api/quizzes/submit` updates progress + awards XP
+- `flashcard.routes.ts` - `POST /api/flashcards/review` updates progress + awards XP
+- `lesson.routes.ts` - `POST /api/lessons/:id/complete` awards XP
+
+### 10. Progress API Routes (NEW - Phase 3)
+
+Located in `backend/src/routes/progress.routes.ts`:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/progress/child/:childId/curriculum` | Coverage stats (mastered/proficient/approaching counts) |
+| `GET /api/progress/child/:childId/by-subject` | Progress grouped by subject and strand |
+| `GET /api/progress/lesson/:lessonId/standards` | Standards aligned to a specific lesson |
+
+### 11. Frontend Progress Display (NEW - Phase 3)
+
+**Files Created/Modified:**
+- `frontend/src/services/api/progressAPI.js` - Frontend API client for progress endpoints
+- `frontend/src/components/ChildDetails/CurriculumProgress.jsx` - **Redesigned** to simple "Learning Journey" view
+
+**UX Decision:** We initially implemented complex mastery metrics (Mastered/Proficient/Approaching/In Progress with percentages), but user testing showed parents found this confusing. We redesigned to a simpler "Learning Journey" view:
+
+| Before (Complex) | After (Simple) |
+|-----------------|----------------|
+| Donut chart with 4 mastery levels | Encouraging banner with emoji |
+| Percentages and progress bars | Topic cards grouped by subject |
+| Gap analysis warnings | Positive "Topics Explored" framing |
+| Standards notation displayed | No jargon, just subject + topic names |
+
+**Key Components:**
+```jsx
+// CurriculumProgress.jsx - Simple Learning Journey view
+- Encouragement banner ("Great start! Keep exploring!")
+- Topics explored by subject (Math: Fractions, Geometry...)
+- Quick stats (X Lessons Completed, Y Quizzes Taken)
+```
+
+### 12. Quiz Submission Endpoint (NEW - Phase 3)
+
+**Critical Fix:** The quiz submission endpoint was missing, so quiz performance wasn't being tracked.
+
+**Endpoint:** `POST /api/quizzes/submit`
+
+**Request:**
+```json
+{
+  "lessonId": "uuid",
+  "answers": [
+    { "questionIndex": 0, "selectedAnswer": 2, "isCorrect": true },
+    { "questionIndex": 1, "selectedAnswer": 1, "isCorrect": false }
+  ],
+  "totalQuestions": 10,
+  "timeSpentSeconds": 180
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "attemptId": "uuid",
+    "score": 80,
+    "correctCount": 8,
+    "isPerfect": false,
+    "xp": { "awarded": 20, "leveledUp": false }
+  }
+}
+```
+
+**What It Does:**
+1. Creates QuizAttempt record
+2. Awards XP (QUIZ_COMPLETE: 20, QUIZ_PERFECT: 50 bonus)
+3. Gets lesson's aligned standards via ContentStandardAlignment
+4. Updates ChildStandardProgress for each aligned standard
+5. Updates UserProgress.questionsAnswered
+
+### 13. Bug Fixes (Phase 3)
+
+| Bug | Root Cause | Fix |
+|-----|------------|-----|
+| Lesson shows 0% progress in UI | `transformDbLesson` looked for `dbLesson.progress?.percentComplete` but backend returns `dbLesson.percentComplete` directly | Fixed field mapping in `LessonContext.jsx:309-316` |
+| ContentStandardAlignment not saved | Alignments calculated but not persisted | Added `saveContentAlignments()` call after alignment |
+| XP not awarded | No XP logic in completion handlers | Added XP awards to quiz/flashcard/lesson completion |
 
 ---
 
@@ -536,31 +650,42 @@ Ensure questions directly assess these learning objectives.`;
 | **Content-Standard Alignment Service** | AI auto-alignment of uploaded lessons to standards | ✅ DONE |
 | **Curriculum API Endpoints** | GET /api/curricula, GET /api/standards/:id, etc. | ✅ DONE |
 
-### High Priority (Phase 3)
+### Completed (Phase 3) ✅
 
-| Item | Description | Effort |
+| Item | Description | Status |
 |------|-------------|--------|
-| **Progress Tracking Service** | Update ChildStandardProgress on quiz/flashcard completion | 2-3 days |
-| **Parent Dashboard - Curriculum Coverage** | Visual showing which standards child has mastered | 3-5 days |
-| **Frontend: Display Aligned Standards** | Show curriculum alignment in lesson view UI | 2-3 days |
+| **Progress Tracking Service** | `progressService.ts` with mastery tracking | ✅ DONE |
+| **ContentStandardAlignment Persistence** | Save alignments to DB after lesson analysis | ✅ DONE |
+| **Quiz Submission Endpoint** | `POST /api/quizzes/submit` with progress + XP | ✅ DONE |
+| **Flashcard Review Endpoint** | `POST /api/flashcards/review` with progress + XP | ✅ DONE |
+| **Lesson Completion XP** | XP awarded on `POST /api/lessons/:id/complete` | ✅ DONE |
+| **Progress API Routes** | GET endpoints for curriculum coverage and progress | ✅ DONE |
+| **Frontend Progress Display** | Simple "Learning Journey" view in ChildDetailsPage | ✅ DONE |
+| **Lesson Progress Bug Fix** | Fixed `transformDbLesson` field mapping | ✅ DONE |
 
-### Medium Priority (Phase 3)
+### High Priority (Phase 4) - Curriculum Expansion
+
+| Item | Description | Effort | Priority |
+|------|-------------|--------|----------|
+| **CBSE/NCERT Curriculum** | Indian curriculum (26% Dubai market share) | 3-5 days | 🔴 HIGH |
+| **US Common Core** | American standards (Math + ELA) | 3-5 days | 🟡 MEDIUM |
+| **IB PYP** | International Baccalaureate Primary Years | 2-3 days | 🟡 MEDIUM |
+
+### Medium Priority (Phase 4)
 
 | Item | Description | Effort |
 |------|-------------|--------|
 | **Standard-Aware Quiz Generation** | Generate quizzes targeting specific unmastered standards | 3-5 days |
-| **Gap Analysis Report** | Show parents which standards need more work | 2-3 days |
+| **Curriculum Email Reports** | Weekly/monthly email with detailed curriculum progress | 2-3 days |
 | **Teacher Standard Tagging UI** | Allow teachers to manually tag content to standards | 2-3 days |
-| **American Common Core Integration** | Import US standards via Common Standards Project API | 3-5 days |
 
-### Low Priority (Phase 4)
+### Low Priority (Phase 5)
 
 | Item | Description | Effort |
 |------|-------------|--------|
-| **Cross-Curriculum Mapping** | AI-powered equivalence between British NC ↔ US CC ↔ IB PYP | 5-7 days |
+| **Cross-Curriculum Mapping** | AI-powered equivalence between British NC ↔ US CC ↔ CBSE | 5-7 days |
 | **Curriculum Switch Wizard** | Gap analysis when child changes curricula | 3-5 days |
-| **CBSE/NCERT Integration** | Indian curriculum (blue ocean opportunity) | 5-7 days |
-| **IB PYP Integration** | International Baccalaureate standards | 3-5 days |
+| **More Curricula** | Australian, Canadian, Singapore, etc. | 2-3 days each |
 
 ---
 
@@ -606,11 +731,17 @@ GET  /api/children/:id/curriculum-coverage       - Coverage percentage by strand
 ### Services (Created ✅)
 - `backend/src/services/curriculum/curriculumService.ts` ✅
 - `backend/src/services/curriculum/alignmentService.ts` ✅
+- `backend/src/services/curriculum/progressService.ts` ✅
 - `backend/src/services/curriculum/index.ts` ✅
-- `backend/src/services/curriculum/progressService.ts` (TODO)
 
 ### Routes (Created ✅)
 - `backend/src/routes/curriculum.routes.ts` ✅
+- `backend/src/routes/progress.routes.ts` ✅
+
+### Frontend (Phase 3)
+- `frontend/src/services/api/progressAPI.js` ✅
+- `frontend/src/components/ChildDetails/CurriculumProgress.jsx` ✅ (redesigned)
+- `frontend/src/context/LessonContext.jsx` (fixed `transformDbLesson`)
 
 ### Test Files
 - `backend/scripts/testAlignmentService.ts` - End-to-end alignment test
@@ -651,7 +782,426 @@ npx tsx scripts/seedBritishScienceCurriculum.ts
 | Years covered | 1-9 | ✅ 1-9 |
 | Auto-alignment accuracy | >85% | ✅ ~95% (tested) |
 | Alignment service live | Yes | ✅ Integrated into /api/lessons/analyze |
-| Parent curriculum coverage visibility | Yes | ⏳ Not yet implemented |
+| Alignment persistence | Yes | ✅ ContentStandardAlignment saved |
+| Progress tracking | Yes | ✅ ChildStandardProgress updated on quiz/flashcard |
+| XP integration | Yes | ✅ XP awarded for lesson/quiz/flashcard completion |
+| Parent curriculum visibility | Yes | ✅ Simple "Learning Journey" view |
+| Curricula supported | 1 (British NC) | 🟡 Next: CBSE, US CC, IB PYP |
+
+---
+
+## Tips for Creating New Curricula (Next Session)
+
+This section provides comprehensive guidance for adding CBSE, US Common Core, and IB PYP curricula.
+
+### General Principles
+
+1. **Use Static TypeScript Files** - NOT APIs or scraping
+2. **Follow the British NC Pattern** - Same interfaces, notation system, seed script structure
+3. **Upsert Pattern** - Scripts should be idempotent (safe to run multiple times)
+4. **Test Alignment** - After seeding, test with sample lessons
+
+### Step-by-Step Process
+
+```
+1. Find Official Source
+         │
+         ▼
+2. Create TypeScript Interface (match British pattern)
+         │
+         ▼
+3. Create Data File (src/config/{curriculum}.ts)
+         │
+         ▼
+4. Create Seed Script (scripts/seed{Curriculum}.ts)
+         │
+         ▼
+5. Run Seed + Verify in Prisma Studio
+         │
+         ▼
+6. Test Alignment with Sample Lessons
+```
+
+---
+
+### CBSE (Central Board of Secondary Education) - India
+
+**Official Sources:**
+- NCERT Textbooks: https://ncert.nic.in/textbook.php
+- CBSE Syllabus: https://cbseacademic.nic.in/curriculum.html
+
+**Key Differences from British NC:**
+| Aspect | British NC | CBSE |
+|--------|------------|------|
+| Grade naming | Year 1-9 | Class 1-8 |
+| Key stages | KS1, KS2, KS3 | None (continuous) |
+| Textbook alignment | Loose | Strong (NCERT books) |
+| Subject coverage | Statutory + non-statutory | All statutory |
+
+**Notation System:**
+```
+IN.CBSE.C{class}.{subject}.{strand}.{number}
+
+Examples:
+IN.CBSE.C4.MA.GEO.3    = India, CBSE, Class 4, Math, Geometry, Standard 3
+IN.CBSE.C5.SC.LIV.2    = India, CBSE, Class 5, Science, Living Things, Standard 2
+IN.CBSE.C3.EN.RC.1     = India, CBSE, Class 3, English, Reading Comprehension, Standard 1
+```
+
+**Subject/Strand Codes:**
+| Code | Subject |
+|------|---------|
+| MA | Mathematics |
+| SC | Science |
+| EN | English |
+
+**Math Strand Codes:**
+| Code | Strand |
+|------|--------|
+| NUM | Numbers and Operations |
+| GEO | Geometry |
+| MEA | Measurement |
+| DAT | Data Handling |
+| PAT | Patterns and Algebra |
+| FRA | Fractions and Decimals |
+| RAT | Ratio and Proportion |
+
+**Files to Create:**
+```
+backend/src/config/cbseMathCurriculum.ts
+backend/src/config/cbseScienceCurriculum.ts
+backend/src/config/cbseEnglishCurriculum.ts
+backend/scripts/seedCBSECurriculum.ts
+```
+
+**TypeScript Interface:**
+```typescript
+// src/config/cbseMathCurriculum.ts
+export interface CBSEStandard {
+  notation: string;      // "IN.CBSE.C4.MA.GEO.3"
+  strand: string;        // "Geometry"
+  description: string;   // Full learning objective
+  chapter?: string;      // NCERT chapter reference (e.g., "Ch. 5: Shapes")
+}
+
+export interface CBSEClass {
+  class: number;         // 1-8
+  ageRangeMin: number;
+  ageRangeMax: number;
+  standards: CBSEStandard[];
+}
+
+export interface CBSECurriculum {
+  code: string;          // "INDIAN_CBSE"
+  name: string;          // "Central Board of Secondary Education"
+  country: string;       // "IN"
+  version: string;       // "2024-25"
+  sourceUrl: string;
+  subject: string;       // "MATH" | "SCIENCE" | "ENGLISH"
+  classes: CBSEClass[];
+}
+
+// Helper function
+export function countCBSEStandards(curriculum: CBSECurriculum): number {
+  return curriculum.classes.reduce(
+    (sum, c) => sum + c.standards.length,
+    0
+  );
+}
+```
+
+**Estimated Standards:** ~800 (Math: 300, Science: 250, English: 250)
+
+---
+
+### US Common Core
+
+**Official Sources:**
+- Math: https://www.corestandards.org/Math/ (public domain)
+- ELA: https://www.corestandards.org/ELA-Literacy/ (public domain)
+
+**Key Differences:**
+| Aspect | British NC | US Common Core |
+|--------|------------|----------------|
+| Grade naming | Year 1-9 | Grade K-8 |
+| Structure | Key Stages | Domains/Clusters |
+| Subject naming | Maths | Math (no 's') |
+| ELA structure | Reading + Writing | Complex strand hierarchy |
+
+**Notation System:**
+```
+US.CC.{grade}.{subject}.{domain}.{number}
+
+Examples:
+US.CC.3.MA.NBT.2     = US, Common Core, Grade 3, Math, Number-Base Ten, Standard 2
+US.CC.K.MA.CC.4      = US, Common Core, Kindergarten, Math, Counting-Cardinality, Standard 4
+US.CC.5.ELA.RL.3     = US, Common Core, Grade 5, ELA, Reading Literature, Standard 3
+```
+
+**Math Domain Codes:**
+| Code | Domain | Grades |
+|------|--------|--------|
+| CC | Counting & Cardinality | K only |
+| OA | Operations & Algebraic Thinking | K-5 |
+| NBT | Number & Operations in Base Ten | K-5 |
+| NF | Number & Operations—Fractions | 3-5 |
+| MD | Measurement & Data | K-5 |
+| G | Geometry | K-8 |
+| RP | Ratios & Proportional Relationships | 6-7 |
+| NS | The Number System | 6-8 |
+| EE | Expressions & Equations | 6-8 |
+| SP | Statistics & Probability | 6-8 |
+| F | Functions | 8 |
+
+**ELA Domain Codes:**
+| Code | Domain |
+|------|--------|
+| RL | Reading Literature |
+| RI | Reading Informational Text |
+| RF | Reading Foundational Skills |
+| W | Writing |
+| SL | Speaking & Listening |
+| L | Language |
+
+**Files to Create:**
+```
+backend/src/config/commonCoreMath.ts
+backend/src/config/commonCoreELA.ts
+backend/scripts/seedCommonCore.ts
+```
+
+**TypeScript Interface:**
+```typescript
+// src/config/commonCoreMath.ts
+export interface CommonCoreStandard {
+  notation: string;      // "US.CC.3.MA.NBT.2"
+  domain: string;        // "Number & Operations in Base Ten"
+  cluster: string;       // "Use place value understanding..."
+  description: string;   // Full standard text
+}
+
+export interface CommonCoreGrade {
+  grade: number;         // 0-8 (K=0)
+  gradeLabel: string;    // "K", "1", "2", etc.
+  ageRangeMin: number;
+  ageRangeMax: number;
+  standards: CommonCoreStandard[];
+}
+
+export interface CommonCoreCurriculum {
+  code: string;          // "US_COMMON_CORE"
+  name: string;          // "Common Core State Standards"
+  country: string;       // "US"
+  version: string;       // "2010" (hasn't been updated)
+  sourceUrl: string;
+  subject: string;       // "MATH" | "ENGLISH"
+  grades: CommonCoreGrade[];
+}
+```
+
+**Estimated Standards:** ~600 (Math: 300, ELA: 300)
+
+---
+
+### IB PYP (International Baccalaureate Primary Years Programme)
+
+**Official Sources:**
+- IB PYP Scope and Sequence documents (may require IB authorization)
+- Published learning outcomes by transdisciplinary theme
+
+**Key Differences:**
+| Aspect | British NC | IB PYP |
+|--------|------------|--------|
+| Grade structure | Year 1-9 | Age bands (3-5, 5-7, 7-9, 9-12) |
+| Subject focus | Discrete subjects | Transdisciplinary themes |
+| Standard type | Prescriptive | Conceptual/inquiry-based |
+| Assessment | Summative | Formative + portfolio |
+
+**Notation System:**
+```
+IB.PYP.{ageBand}.{subject}.{strand}.{number}
+
+Examples:
+IB.PYP.7-9.MA.NUM.3   = IB, PYP, Ages 7-9, Math, Number, Standard 3
+IB.PYP.5-7.SC.LIV.2   = IB, PYP, Ages 5-7, Science, Living Things, Standard 2
+```
+
+**Age Bands:**
+| Band | Ages | Equivalent |
+|------|------|------------|
+| 3-5 | 3-5 years | Pre-K/Reception |
+| 5-7 | 5-7 years | Year 1-2 |
+| 7-9 | 7-9 years | Year 3-4 |
+| 9-12 | 9-12 years | Year 5-7 |
+
+**Files to Create:**
+```
+backend/src/config/ibPYPCurriculum.ts
+backend/scripts/seedIBPYP.ts
+```
+
+**Note:** IB PYP standards are more conceptual than prescriptive. Focus on:
+- Mathematical concepts (not procedures)
+- Scientific inquiry (not facts)
+- Language skills (not specific texts)
+
+**Estimated Standards:** ~400
+
+---
+
+### Seed Script Template
+
+Use this template for all new curriculum seed scripts:
+
+```typescript
+// scripts/seed{Curriculum}.ts
+import { PrismaClient, Subject, CurriculumType } from '@prisma/client';
+import { curriculum } from '../src/config/{curriculum}.js';
+
+const prisma = new PrismaClient();
+
+async function seed() {
+  console.log('🌱 Seeding {Curriculum} standards...');
+
+  // 1. Upsert jurisdiction
+  const jurisdiction = await prisma.curriculumJurisdiction.upsert({
+    where: { code: curriculum.code },
+    update: {
+      version: curriculum.version,
+      sourceUrl: curriculum.sourceUrl,
+    },
+    create: {
+      code: curriculum.code,
+      name: curriculum.name,
+      country: curriculum.country,
+      version: curriculum.version,
+      sourceUrl: curriculum.sourceUrl,
+    },
+  });
+  console.log(`✅ Jurisdiction: ${jurisdiction.code}`);
+
+  let totalStandards = 0;
+
+  // 2. For each grade/class, create StandardSet + LearningStandards
+  for (const gradeData of curriculum.grades) { // or .classes
+    const setCode = `${curriculum.code}.${gradeData.gradeLabel || gradeData.class}.${curriculum.subject}`;
+
+    const standardSet = await prisma.standardSet.upsert({
+      where: {
+        jurisdictionId_code: {
+          jurisdictionId: jurisdiction.id,
+          code: setCode,
+        },
+      },
+      update: {},
+      create: {
+        jurisdictionId: jurisdiction.id,
+        code: setCode,
+        name: `${curriculum.name} - Grade ${gradeData.gradeLabel || gradeData.class} ${curriculum.subject}`,
+        subject: curriculum.subject as Subject,
+        gradeLevel: gradeData.grade ?? gradeData.class,
+        ageRangeMin: gradeData.ageRangeMin,
+        ageRangeMax: gradeData.ageRangeMax,
+      },
+    });
+
+    // 3. Upsert each standard
+    for (let i = 0; i < gradeData.standards.length; i++) {
+      const std = gradeData.standards[i];
+      await prisma.learningStandard.upsert({
+        where: {
+          standardSetId_notation: {
+            standardSetId: standardSet.id,
+            notation: std.notation,
+          },
+        },
+        update: {
+          description: std.description,
+          strand: std.strand || std.domain,
+        },
+        create: {
+          standardSetId: standardSet.id,
+          notation: std.notation,
+          description: std.description,
+          strand: std.strand || std.domain,
+          position: i + 1,
+        },
+      });
+      totalStandards++;
+    }
+
+    console.log(`  Grade ${gradeData.gradeLabel || gradeData.class}: ${gradeData.standards.length} standards`);
+  }
+
+  console.log(`\n✅ Seeded ${totalStandards} ${curriculum.subject} standards for ${curriculum.code}`);
+}
+
+seed()
+  .catch((e) => {
+    console.error('❌ Seed failed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+```
+
+---
+
+### Testing After Seeding
+
+1. **Verify in Prisma Studio:**
+```bash
+cd backend
+npx prisma studio
+# Check LearningStandard table for new records
+```
+
+2. **SQL Verification:**
+```sql
+SELECT cj.code, ss.subject, COUNT(*) as standards
+FROM "LearningStandard" ls
+JOIN "StandardSet" ss ON ls."standardSetId" = ss.id
+JOIN "CurriculumJurisdiction" cj ON ss."jurisdictionId" = cj.id
+GROUP BY cj.code, ss.subject
+ORDER BY cj.code, ss.subject;
+```
+
+3. **Test Alignment:**
+Create test lesson files in `backend/test-lessons/`:
+- `cbse-class4-fractions.txt`
+- `common-core-grade3-multiplication.txt`
+- `ibpyp-age7-9-shapes.txt`
+
+Run the alignment test script and verify matches.
+
+---
+
+### Updating curriculumService.ts
+
+After adding a new curriculum, update `curriculumService.ts` to support it:
+
+1. **Add to CurriculumType enum** (in Prisma schema if not already):
+```prisma
+enum CurriculumType {
+  UK_NATIONAL_CURRICULUM
+  INDIAN_CBSE
+  US_COMMON_CORE
+  IB_PYP
+}
+```
+
+2. **Add jurisdiction code mapping** in `curriculumService.ts`:
+```typescript
+const JURISDICTION_CODES: Record<CurriculumType, string> = {
+  UK_NATIONAL_CURRICULUM: 'UK_NATIONAL_CURRICULUM',
+  INDIAN_CBSE: 'INDIAN_CBSE',
+  US_COMMON_CORE: 'US_COMMON_CORE',
+  IB_PYP: 'IB_PYP',
+};
+```
+
+3. **Run `npx prisma db push`** to sync schema changes.
 
 ---
 
