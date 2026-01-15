@@ -1,7 +1,7 @@
 # Curriculum Mapping System - Master Document
 
 **Last Updated:** 2026-01-15
-**Status:** Phase 3 Complete (Progress Tracking + Frontend Display + Simplified UX)
+**Status:** Phase 4 In Progress (CBSE Complete, US Common Core + IB PYP Pending)
 
 ---
 
@@ -13,7 +13,11 @@ The Curriculum Mapping System enables Orbit Learn to:
 3. Track child progress against curriculum requirements
 4. Enable curriculum switching with intelligent gap analysis (future)
 
-**Current State:** 997 British National Curriculum standards seeded for Years 1-9 across Mathematics, English, and Science. **Full curriculum tracking is now live:**
+**Current State:** 1,636 curriculum standards seeded:
+- **British National Curriculum:** 997 standards (Years 1-9, Math/English/Science)
+- **CBSE (India):** 639 standards (Classes 1-8, Math/English/Science) ✅ NEW
+
+**Full curriculum tracking is now live:**
 - AI-powered alignment runs on every lesson upload
 - Progress tracked when quizzes/flashcards are completed
 - Parents see a simplified "Learning Journey" view (topics explored, encouraging messages)
@@ -41,22 +45,40 @@ New Prisma models added to `prisma/schema.prisma`:
 
 Located in `backend/src/config/`:
 
+**British National Curriculum:**
 | File | Subject | Standards | Years |
 |------|---------|-----------|-------|
 | `britishCurriculum.ts` | Mathematics | 327 | 1-9 |
 | `britishEnglishCurriculum.ts` | English | 432 | 1-9 |
 | `britishScienceCurriculum.ts` | Science | 238 | 1-9 |
-| **Total** | | **997** | |
+| **Subtotal** | | **997** | |
+
+**CBSE (India) - NEW ✅:**
+| File | Subject | Standards | Classes |
+|------|---------|-----------|---------|
+| `cbseMathCurriculum.ts` | Mathematics | 244 | 1-8 |
+| `cbseScienceCurriculum.ts` | Science | 198 | 1-8 |
+| `cbseEnglishCurriculum.ts` | English | 197 | 1-8 |
+| `cbseNEP2020ChapterMapping.ts` | Chapter Mapping Plan | N/A | 6-8 |
+| **Subtotal** | | **639** | |
+
+**Grand Total: 1,636 standards**
 
 ### 3. Seed Scripts
 
 Located in `backend/scripts/`:
 
 ```bash
-# Seed all British NC standards
+# British NC standards
 npx tsx scripts/seedBritishCurriculum.ts        # Mathematics
 npx tsx scripts/seedBritishEnglishCurriculum.ts # English
 npx tsx scripts/seedBritishScienceCurriculum.ts # Science
+
+# CBSE (India) standards - NEW ✅
+npx tsx scripts/seedCBSECurriculum.ts           # All 3 subjects (Math, Science, English)
+npx tsx scripts/seedCBSECurriculum.ts --math-only     # Math only
+npx tsx scripts/seedCBSECurriculum.ts --science-only  # Science only
+npx tsx scripts/seedCBSECurriculum.ts --english-only  # English only
 ```
 
 ### 4. Notation System
@@ -663,13 +685,29 @@ Ensure questions directly assess these learning objectives.`;
 | **Frontend Progress Display** | Simple "Learning Journey" view in ChildDetailsPage | ✅ DONE |
 | **Lesson Progress Bug Fix** | Fixed `transformDbLesson` field mapping | ✅ DONE |
 
+### Completed (Phase 4) ✅ - CBSE India
+
+| Item | Description | Status |
+|------|-------------|--------|
+| **CBSE Math Curriculum** | 244 standards, Classes 1-8 | ✅ DONE |
+| **CBSE Science Curriculum** | 198 standards, Classes 1-8 | ✅ DONE |
+| **CBSE English Curriculum** | 197 standards, Classes 1-8 | ✅ DONE |
+| **Unified Seed Script** | Single script with subject flags | ✅ DONE |
+| **NEP 2020 Chapter Mapping Plan** | Structure for future chapter-level alignment | ✅ DONE |
+
+**Important Notes on CBSE Implementation:**
+- Standards are skill-based learning objectives (NOT tied to specific textbook chapters)
+- NCERT released new NEP 2020 textbooks in 2024-25 ("Joyful Mathematics", "Curiosity", etc.)
+- Chapter-level mapping is planned but not yet implemented (see `cbseNEP2020ChapterMapping.ts`)
+- To truly compete with traditional tutors, Phase 2 will add chapter → standard mappings
+
 ### High Priority (Phase 4) - Curriculum Expansion
 
 | Item | Description | Effort | Priority |
 |------|-------------|--------|----------|
-| **CBSE/NCERT Curriculum** | Indian curriculum (26% Dubai market share) | 3-5 days | 🔴 HIGH |
 | **US Common Core** | American standards (Math + ELA) | 3-5 days | 🟡 MEDIUM |
 | **IB PYP** | International Baccalaureate Primary Years | 2-3 days | 🟡 MEDIUM |
+| **CBSE Chapter Mapping** | Map standards to NEP 2020 textbook chapters | 1-2 weeks | 🟡 MEDIUM |
 
 ### Medium Priority (Phase 4)
 
@@ -777,16 +815,17 @@ npx tsx scripts/seedBritishScienceCurriculum.ts
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| Standards seeded | 997 | ✅ 997 |
+| Standards seeded | 1,636 | ✅ 1,636 (997 British + 639 CBSE) |
 | Subjects covered | 3 (Math, English, Science) | ✅ 3 |
-| Years covered | 1-9 | ✅ 1-9 |
+| Years/Classes covered | K-9 | ✅ British Y1-9, CBSE C1-8 |
 | Auto-alignment accuracy | >85% | ✅ ~95% (tested) |
 | Alignment service live | Yes | ✅ Integrated into /api/lessons/analyze |
 | Alignment persistence | Yes | ✅ ContentStandardAlignment saved |
 | Progress tracking | Yes | ✅ ChildStandardProgress updated on quiz/flashcard |
 | XP integration | Yes | ✅ XP awarded for lesson/quiz/flashcard completion |
 | Parent curriculum visibility | Yes | ✅ Simple "Learning Journey" view |
-| Curricula supported | 1 (British NC) | 🟡 Next: CBSE, US CC, IB PYP |
+| Curricula supported | 2 | ✅ British NC + CBSE India |
+| Next curricula | US CC, IB PYP | 🟡 Pending |
 
 ---
 
@@ -824,7 +863,9 @@ This section provides comprehensive guidance for adding CBSE, US Common Core, an
 
 ---
 
-### CBSE (Central Board of Secondary Education) - India
+### CBSE (Central Board of Secondary Education) - India ✅ COMPLETED
+
+**Status:** ✅ IMPLEMENTED (639 standards seeded)
 
 **Official Sources:**
 - NCERT Textbooks: https://ncert.nic.in/textbook.php
@@ -865,52 +906,69 @@ IN.CBSE.C3.EN.RC.1     = India, CBSE, Class 3, English, Reading Comprehension, S
 | PAT | Patterns and Algebra |
 | FRA | Fractions and Decimals |
 | RAT | Ratio and Proportion |
+| INT | Integers |
+| ALG | Algebra |
+| MEN | Mensuration |
 
-**Files to Create:**
+**Science Strand Codes (Classes 1-5 EVS):**
+| Code | Strand |
+|------|--------|
+| LIV | Living World |
+| ENV | Environment |
+| HEA | Health and Hygiene |
+| FAM | Family and Community |
+| FOD | Food |
+| WAT | Water |
+| SHL | Shelter |
+| TRV | Travel and Transport |
+
+**Science Strand Codes (Classes 6-8):**
+| Code | Strand |
+|------|--------|
+| PHY | Physics |
+| CHM | Chemistry |
+| BIO | Biology |
+
+**English Strand Codes:**
+| Code | Strand |
+|------|--------|
+| RC | Reading Comprehension |
+| WR | Writing |
+| GR | Grammar |
+| VC | Vocabulary |
+| LS | Listening and Speaking |
+| LT | Literature |
+
+**Files Created:**
 ```
-backend/src/config/cbseMathCurriculum.ts
-backend/src/config/cbseScienceCurriculum.ts
-backend/src/config/cbseEnglishCurriculum.ts
-backend/scripts/seedCBSECurriculum.ts
-```
-
-**TypeScript Interface:**
-```typescript
-// src/config/cbseMathCurriculum.ts
-export interface CBSEStandard {
-  notation: string;      // "IN.CBSE.C4.MA.GEO.3"
-  strand: string;        // "Geometry"
-  description: string;   // Full learning objective
-  chapter?: string;      // NCERT chapter reference (e.g., "Ch. 5: Shapes")
-}
-
-export interface CBSEClass {
-  class: number;         // 1-8
-  ageRangeMin: number;
-  ageRangeMax: number;
-  standards: CBSEStandard[];
-}
-
-export interface CBSECurriculum {
-  code: string;          // "INDIAN_CBSE"
-  name: string;          // "Central Board of Secondary Education"
-  country: string;       // "IN"
-  version: string;       // "2024-25"
-  sourceUrl: string;
-  subject: string;       // "MATH" | "SCIENCE" | "ENGLISH"
-  classes: CBSEClass[];
-}
-
-// Helper function
-export function countCBSEStandards(curriculum: CBSECurriculum): number {
-  return curriculum.classes.reduce(
-    (sum, c) => sum + c.standards.length,
-    0
-  );
-}
+backend/src/config/cbseMathCurriculum.ts      # 244 standards
+backend/src/config/cbseScienceCurriculum.ts   # 198 standards
+backend/src/config/cbseEnglishCurriculum.ts   # 197 standards
+backend/src/config/cbseNEP2020ChapterMapping.ts  # Chapter mapping plan
+backend/scripts/seedCBSECurriculum.ts         # Unified seed script
 ```
 
-**Estimated Standards:** ~800 (Math: 300, Science: 250, English: 250)
+**Standards Count:**
+| Subject | Standards |
+|---------|-----------|
+| Mathematics | 244 |
+| Science | 198 |
+| English | 197 |
+| **Total** | **639** |
+
+**Important: NEP 2020 Curriculum Update**
+
+NCERT released completely new textbooks in 2024-25 aligned with NEP 2020:
+- **Math:** "Joyful Mathematics" (Classes 1-5), "Ganit Prakash" (Classes 6-8)
+- **Science:** "Curiosity" (Jigyasa)
+- **English:** "Mridang" (new series)
+
+Our standards are skill-based learning objectives that remain educationally valid regardless of textbook changes. However, chapter-level mapping is needed for "tutor parity" (when students say "help with Chapter 5").
+
+**Chapter Mapping Plan:** See `cbseNEP2020ChapterMapping.ts` for:
+- Type definitions for chapter → standard mapping
+- Known NEP 2020 chapters for Classes 6-8
+- Implementation roadmap (4 phases)
 
 ---
 
@@ -1213,4 +1271,13 @@ const JURISDICTION_CODES: Record<CurriculumType, string> = {
 
 3. **Verification**: All standards were verified against official GOV.UK documentation (2025-01-15).
 
-4. **Gulf Market Focus**: British NC was prioritized as it covers 36% of Dubai's school market. CBSE (26% market share) is the next blue ocean opportunity.
+4. **Gulf Market Focus**: British NC was prioritized as it covers 36% of Dubai's school market. CBSE (26% market share) is now complete.
+
+5. **CBSE Implementation (2026-01-15)**:
+   - 639 skill-based standards seeded for Classes 1-8 (Math, Science, English)
+   - Standards focus on learning objectives, NOT textbook chapters
+   - NEP 2020 chapter mapping planned but not yet implemented
+   - Cross-referencing revealed NCERT released new textbooks in 2024-25
+   - See `cbseNEP2020ChapterMapping.ts` for chapter mapping roadmap
+
+6. **Next Priorities**: US Common Core and IB PYP to cover international school market.
