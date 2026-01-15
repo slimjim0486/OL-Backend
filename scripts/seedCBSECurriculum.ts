@@ -2,11 +2,12 @@
  * Seed Script: CBSE (Central Board of Secondary Education) Curriculum Standards
  *
  * Populates the database with CBSE standards for Classes 1-8
- * - Mathematics: ~220 standards
- * - Science: ~175 standards
- * - English: ~200 standards
+ * - Mathematics: ~244 standards
+ * - Science: ~198 standards
+ * - English: ~197 standards
  *
- * Based on NCERT curriculum and textbooks.
+ * These are skill-based learning objectives aligned with CBSE/NCERT curriculum.
+ * NOTE: Chapter-level mapping to NEP 2020 textbooks (2024-25) is pending.
  *
  * Run with: npx tsx scripts/seedCBSECurriculum.ts
  *
@@ -390,7 +391,7 @@ async function seedSubject(
             strand: std.strand,
             conceptualArea: getConceptualArea(std.strand, subject),
             isStatutory: true,
-            guidance: std.chapter ? `NCERT Chapter: ${std.chapter}` : undefined,
+            guidance: undefined, // Chapter mapping pending NEP 2020 alignment
             position,
             depth: 0,
             ancestorDescriptions: getAncestorDescriptions(std.strand, subject)
@@ -402,7 +403,7 @@ async function seedSubject(
             strand: std.strand,
             conceptualArea: getConceptualArea(std.strand, subject),
             isStatutory: true,
-            guidance: std.chapter ? `NCERT Chapter: ${std.chapter}` : undefined,
+            guidance: undefined, // Chapter mapping pending NEP 2020 alignment
             position,
             depth: 0,
             ancestorDescriptions: getAncestorDescriptions(std.strand, subject)
