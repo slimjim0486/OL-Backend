@@ -1,0 +1,510 @@
+/**
+ * US Common Core State Standards - English Language Arts (ELA)
+ * Grades K-8
+ *
+ * Official Source: https://www.corestandards.org/ELA-Literacy/ (Public Domain)
+ *
+ * Notation System: US.CC.{grade}.ELA.{domain}.{number}
+ * - Domain codes:
+ *   - RL = Reading Literature
+ *   - RI = Reading Informational Text
+ *   - RF = Reading Foundational Skills (K-5 only)
+ *   - W = Writing
+ *   - SL = Speaking and Listening
+ *   - L = Language
+ */
+
+export interface CommonCoreELAStandard {
+  notation: string;
+  domain: string;
+  cluster: string;
+  description: string;
+}
+
+export interface CommonCoreELAGrade {
+  grade: number;
+  gradeLabel: string;
+  ageRangeMin: number;
+  ageRangeMax: number;
+  standards: CommonCoreELAStandard[];
+}
+
+export interface CommonCoreELACurriculum {
+  code: string;
+  name: string;
+  country: string;
+  version: string;
+  sourceUrl: string;
+  subject: string;
+  grades: CommonCoreELAGrade[];
+}
+
+// =============================================================================
+// KINDERGARTEN (Ages 5-6)
+// =============================================================================
+
+const kindergartenStandards: CommonCoreELAStandard[] = [
+  // READING LITERATURE (RL)
+  { notation: 'US.CC.K.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'with prompting and support, ask and answer questions about key details in a text' },
+  { notation: 'US.CC.K.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'with prompting and support, retell familiar stories, including key details' },
+  { notation: 'US.CC.K.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'with prompting and support, identify characters, settings, and major events in a story' },
+  { notation: 'US.CC.K.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'ask and answer questions about unknown words in a text' },
+  { notation: 'US.CC.K.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'recognize common types of texts (e.g., storybooks, poems)' },
+  { notation: 'US.CC.K.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'with prompting and support, name the author and illustrator of a story and define the role of each in telling the story' },
+  { notation: 'US.CC.K.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'with prompting and support, describe the relationship between illustrations and the story in which they appear' },
+  { notation: 'US.CC.K.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'with prompting and support, compare and contrast the adventures and experiences of characters in familiar stories' },
+  { notation: 'US.CC.K.ELA.RL.10', domain: 'Reading Literature', cluster: 'Range of Reading', description: 'actively engage in group reading activities with purpose and understanding' },
+
+  // READING INFORMATIONAL TEXT (RI)
+  { notation: 'US.CC.K.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'with prompting and support, ask and answer questions about key details in a text' },
+  { notation: 'US.CC.K.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'with prompting and support, identify the main topic and retell key details of a text' },
+  { notation: 'US.CC.K.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'with prompting and support, describe the connection between two individuals, events, ideas, or pieces of information in a text' },
+  { notation: 'US.CC.K.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'with prompting and support, ask and answer questions about unknown words in a text' },
+  { notation: 'US.CC.K.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'identify the front cover, back cover, and title page of a book' },
+  { notation: 'US.CC.K.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'name the author and illustrator of a text and define the role of each in presenting the ideas or information in a text' },
+  { notation: 'US.CC.K.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'with prompting and support, describe the relationship between illustrations and the text in which they appear' },
+  { notation: 'US.CC.K.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'with prompting and support, identify the reasons an author gives to support points in a text' },
+  { notation: 'US.CC.K.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'with prompting and support, identify basic similarities in and differences between two texts on the same topic' },
+  { notation: 'US.CC.K.ELA.RI.10', domain: 'Reading Informational Text', cluster: 'Range of Reading', description: 'actively engage in group reading activities with purpose and understanding' },
+
+  // READING FOUNDATIONAL SKILLS (RF)
+  { notation: 'US.CC.K.ELA.RF.1', domain: 'Reading Foundational Skills', cluster: 'Print Concepts', description: 'demonstrate understanding of the organization and basic features of print' },
+  { notation: 'US.CC.K.ELA.RF.2', domain: 'Reading Foundational Skills', cluster: 'Phonological Awareness', description: 'demonstrate understanding of spoken words, syllables, and sounds (phonemes)' },
+  { notation: 'US.CC.K.ELA.RF.3', domain: 'Reading Foundational Skills', cluster: 'Phonics and Word Recognition', description: 'know and apply grade-level phonics and word analysis skills in decoding words' },
+  { notation: 'US.CC.K.ELA.RF.4', domain: 'Reading Foundational Skills', cluster: 'Fluency', description: 'read emergent-reader texts with purpose and understanding' },
+
+  // WRITING (W)
+  { notation: 'US.CC.K.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'use a combination of drawing, dictating, and writing to compose opinion pieces in which they tell a reader the topic or the name of the book they are writing about and state an opinion or preference about the topic or book' },
+  { notation: 'US.CC.K.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'use a combination of drawing, dictating, and writing to compose informative/explanatory texts in which they name what they are writing about and supply some information about the topic' },
+  { notation: 'US.CC.K.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'use a combination of drawing, dictating, and writing to narrate a single event or several loosely linked events, tell about the events in the order in which they occurred, and provide a reaction to what happened' },
+  { notation: 'US.CC.K.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults, respond to questions and suggestions from peers and add details to strengthen writing as needed' },
+  { notation: 'US.CC.K.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults, explore a variety of digital tools to produce and publish writing, including in collaboration with peers' },
+  { notation: 'US.CC.K.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'participate in shared research and writing projects' },
+  { notation: 'US.CC.K.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'with guidance and support from adults, recall information from experiences or gather information from provided sources to answer a question' },
+
+  // SPEAKING AND LISTENING (SL)
+  { notation: 'US.CC.K.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'participate in collaborative conversations with diverse partners about kindergarten topics and texts with peers and adults in small and larger groups' },
+  { notation: 'US.CC.K.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'confirm understanding of a text read aloud or information presented orally or through other media by asking and answering questions about key details and requesting clarification if something is not understood' },
+  { notation: 'US.CC.K.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'ask and answer questions in order to seek help, get information, or clarify something that is not understood' },
+  { notation: 'US.CC.K.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'describe familiar people, places, things, and events and, with prompting and support, provide additional detail' },
+  { notation: 'US.CC.K.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'add drawings or other visual displays to descriptions as desired to provide additional detail' },
+  { notation: 'US.CC.K.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'speak audibly and express thoughts, feelings, and ideas clearly' },
+
+  // LANGUAGE (L)
+  { notation: 'US.CC.K.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.K.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.K.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on kindergarten reading and content' },
+  { notation: 'US.CC.K.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'with guidance and support from adults, explore word relationships and nuances in word meanings' },
+  { notation: 'US.CC.K.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'use words and phrases acquired through conversations, reading and being read to, and responding to texts' },
+];
+
+// =============================================================================
+// GRADE 1 (Ages 6-7)
+// =============================================================================
+
+const grade1Standards: CommonCoreELAStandard[] = [
+  // READING LITERATURE (RL)
+  { notation: 'US.CC.1.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'ask and answer questions about key details in a text' },
+  { notation: 'US.CC.1.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'retell stories, including key details, and demonstrate understanding of their central message or lesson' },
+  { notation: 'US.CC.1.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'describe characters, settings, and major events in a story, using key details' },
+  { notation: 'US.CC.1.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'identify words and phrases in stories or poems that suggest feelings or appeal to the senses' },
+  { notation: 'US.CC.1.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'explain major differences between books that tell stories and books that give information, drawing on a wide reading of a range of text types' },
+  { notation: 'US.CC.1.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'identify who is telling the story at various points in a text' },
+  { notation: 'US.CC.1.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'use illustrations and details in a story to describe its characters, setting, or events' },
+  { notation: 'US.CC.1.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast the adventures and experiences of characters in stories' },
+  { notation: 'US.CC.1.ELA.RL.10', domain: 'Reading Literature', cluster: 'Range of Reading', description: 'with prompting and support, read prose and poetry of appropriate complexity for grade 1' },
+
+  // READING INFORMATIONAL TEXT (RI)
+  { notation: 'US.CC.1.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'ask and answer questions about key details in a text' },
+  { notation: 'US.CC.1.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'identify the main topic and retell key details of a text' },
+  { notation: 'US.CC.1.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'describe the connection between two individuals, events, ideas, or pieces of information in a text' },
+  { notation: 'US.CC.1.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'ask and answer questions to help determine or clarify the meaning of words and phrases in a text' },
+  { notation: 'US.CC.1.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'know and use various text features (e.g., headings, tables of contents, glossaries, electronic menus, icons) to locate key facts or information in a text' },
+  { notation: 'US.CC.1.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'distinguish between information provided by pictures or other illustrations and information provided by the words in a text' },
+  { notation: 'US.CC.1.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'use the illustrations and details in a text to describe its key ideas' },
+  { notation: 'US.CC.1.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'identify the reasons an author gives to support points in a text' },
+  { notation: 'US.CC.1.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'identify basic similarities in and differences between two texts on the same topic' },
+  { notation: 'US.CC.1.ELA.RI.10', domain: 'Reading Informational Text', cluster: 'Range of Reading', description: 'with prompting and support, read informational texts appropriately complex for grade 1' },
+
+  // READING FOUNDATIONAL SKILLS (RF)
+  { notation: 'US.CC.1.ELA.RF.1', domain: 'Reading Foundational Skills', cluster: 'Print Concepts', description: 'demonstrate understanding of the organization and basic features of print' },
+  { notation: 'US.CC.1.ELA.RF.2', domain: 'Reading Foundational Skills', cluster: 'Phonological Awareness', description: 'demonstrate understanding of spoken words, syllables, and sounds (phonemes)' },
+  { notation: 'US.CC.1.ELA.RF.3', domain: 'Reading Foundational Skills', cluster: 'Phonics and Word Recognition', description: 'know and apply grade-level phonics and word analysis skills in decoding words' },
+  { notation: 'US.CC.1.ELA.RF.4', domain: 'Reading Foundational Skills', cluster: 'Fluency', description: 'read with sufficient accuracy and fluency to support comprehension' },
+
+  // WRITING (W)
+  { notation: 'US.CC.1.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write opinion pieces in which they introduce the topic or name the book they are writing about, state an opinion, supply a reason for the opinion, and provide some sense of closure' },
+  { notation: 'US.CC.1.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts in which they name a topic, supply some facts about the topic, and provide some sense of closure' },
+  { notation: 'US.CC.1.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives in which they recount two or more appropriately sequenced events, include some details regarding what happened, use temporal words to signal event order, and provide some sense of closure' },
+  { notation: 'US.CC.1.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults, focus on a topic, respond to questions and suggestions from peers, and add details to strengthen writing as needed' },
+  { notation: 'US.CC.1.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults, use a variety of digital tools to produce and publish writing, including in collaboration with peers' },
+  { notation: 'US.CC.1.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'participate in shared research and writing projects' },
+  { notation: 'US.CC.1.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'with guidance and support from adults, recall information from experiences or gather information from provided sources to answer a question' },
+
+  // SPEAKING AND LISTENING (SL)
+  { notation: 'US.CC.1.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'participate in collaborative conversations with diverse partners about grade 1 topics and texts with peers and adults in small and larger groups' },
+  { notation: 'US.CC.1.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'ask and answer questions about key details in a text read aloud or information presented orally or through other media' },
+  { notation: 'US.CC.1.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'ask and answer questions about what a speaker says in order to gather additional information or clarify something that is not understood' },
+  { notation: 'US.CC.1.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'describe people, places, things, and events with relevant details, expressing ideas and feelings clearly' },
+  { notation: 'US.CC.1.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'add drawings or other visual displays to descriptions when appropriate to clarify ideas, thoughts, and feelings' },
+  { notation: 'US.CC.1.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'produce complete sentences when appropriate to task and situation' },
+
+  // LANGUAGE (L)
+  { notation: 'US.CC.1.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.1.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.1.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 1 reading and content, choosing flexibly from an array of strategies' },
+  { notation: 'US.CC.1.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'with guidance and support from adults, demonstrate understanding of word relationships and nuances in word meanings' },
+  { notation: 'US.CC.1.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'use words and phrases acquired through conversations, reading and being read to, and responding to texts, including using frequently occurring conjunctions to signal simple relationships' },
+];
+
+// =============================================================================
+// GRADE 2 (Ages 7-8)
+// =============================================================================
+
+const grade2Standards: CommonCoreELAStandard[] = [
+  { notation: 'US.CC.2.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'ask and answer such questions as who, what, where, when, why, and how to demonstrate understanding of key details in a text' },
+  { notation: 'US.CC.2.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'recount stories, including fables and folktales from diverse cultures, and determine their central message, lesson, or moral' },
+  { notation: 'US.CC.2.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'describe how characters in a story respond to major events and challenges' },
+  { notation: 'US.CC.2.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'describe how words and phrases (e.g., regular beats, alliteration, rhymes, repeated lines) supply rhythm and meaning in a story, poem, or song' },
+  { notation: 'US.CC.2.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'describe the overall structure of a story, including describing how the beginning introduces the story and the ending concludes the action' },
+  { notation: 'US.CC.2.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'acknowledge differences in the points of view of characters, including by speaking in a different voice for each character when reading dialogue aloud' },
+  { notation: 'US.CC.2.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'use information gained from the illustrations and words in a print or digital text to demonstrate understanding of its characters, setting, or plot' },
+  { notation: 'US.CC.2.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast two or more versions of the same story by different authors or from different cultures' },
+  { notation: 'US.CC.2.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'ask and answer such questions as who, what, where, when, why, and how to demonstrate understanding of key details in a text' },
+  { notation: 'US.CC.2.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'identify the main topic of a multiparagraph text as well as the focus of specific paragraphs within the text' },
+  { notation: 'US.CC.2.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'describe the connection between a series of historical events, scientific ideas or concepts, or steps in technical procedures in a text' },
+  { notation: 'US.CC.2.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases in a text relevant to a grade 2 topic or subject area' },
+  { notation: 'US.CC.2.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'know and use various text features (e.g., captions, bold print, subheadings, glossaries, indexes, electronic menus, icons) to locate key facts or information in a text efficiently' },
+  { notation: 'US.CC.2.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'identify the main purpose of a text, including what the author wants to answer, explain, or describe' },
+  { notation: 'US.CC.2.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'explain how specific images (e.g., a diagram showing how a machine works) contribute to and clarify a text' },
+  { notation: 'US.CC.2.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'describe how reasons support specific points the author makes in a text' },
+  { notation: 'US.CC.2.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast the most important points presented by two texts on the same topic' },
+  { notation: 'US.CC.2.ELA.RF.3', domain: 'Reading Foundational Skills', cluster: 'Phonics and Word Recognition', description: 'know and apply grade-level phonics and word analysis skills in decoding words' },
+  { notation: 'US.CC.2.ELA.RF.4', domain: 'Reading Foundational Skills', cluster: 'Fluency', description: 'read with sufficient accuracy and fluency to support comprehension' },
+  { notation: 'US.CC.2.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write opinion pieces in which they introduce the topic or book they are writing about, state an opinion, supply reasons that support the opinion, use linking words to connect opinion and reasons, and provide a concluding statement or section' },
+  { notation: 'US.CC.2.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts in which they introduce a topic, use facts and definitions to develop points, and provide a concluding statement or section' },
+  { notation: 'US.CC.2.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives in which they recount a well-elaborated event or short sequence of events, include details to describe actions, thoughts, and feelings, use temporal words to signal event order, and provide a sense of closure' },
+  { notation: 'US.CC.2.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults and peers, focus on a topic and strengthen writing as needed by revising and editing' },
+  { notation: 'US.CC.2.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults, use a variety of digital tools to produce and publish writing, including in collaboration with peers' },
+  { notation: 'US.CC.2.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'participate in shared research and writing projects' },
+  { notation: 'US.CC.2.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'recall information from experiences or gather information from provided sources to answer a question' },
+  { notation: 'US.CC.2.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'participate in collaborative conversations with diverse partners about grade 2 topics and texts with peers and adults in small and larger groups' },
+  { notation: 'US.CC.2.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'recount or describe key ideas or details from a text read aloud or information presented orally or through other media' },
+  { notation: 'US.CC.2.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'ask and answer questions about what a speaker says in order to clarify comprehension, gather additional information, or deepen understanding of a topic or issue' },
+  { notation: 'US.CC.2.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'tell a story or recount an experience with appropriate facts and relevant, descriptive details, speaking audibly in coherent sentences' },
+  { notation: 'US.CC.2.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'create audio recordings of stories or poems; add drawings or other visual displays to stories or recounts of experiences when appropriate to clarify ideas, thoughts, and feelings' },
+  { notation: 'US.CC.2.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'produce complete sentences when appropriate to task and situation in order to provide requested detail or clarification' },
+  { notation: 'US.CC.2.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.2.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.2.ELA.L.3', domain: 'Language', cluster: 'Knowledge of Language', description: 'use knowledge of language and its conventions when writing, speaking, reading, or listening' },
+  { notation: 'US.CC.2.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 2 reading and content, choosing flexibly from an array of strategies' },
+  { notation: 'US.CC.2.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'demonstrate understanding of word relationships and nuances in word meanings' },
+  { notation: 'US.CC.2.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'use words and phrases acquired through conversations, reading and being read to, and responding to texts, including using adjectives and adverbs to describe' },
+];
+
+// =============================================================================
+// GRADES 3-8 - Condensed format for remaining grades
+// =============================================================================
+
+const grade3Standards: CommonCoreELAStandard[] = [
+  { notation: 'US.CC.3.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'ask and answer questions to demonstrate understanding of a text, referring explicitly to the text as the basis for the answers' },
+  { notation: 'US.CC.3.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'recount stories, including fables, folktales, and myths from diverse cultures; determine the central message, lesson, or moral and explain how it is conveyed through key details in the text' },
+  { notation: 'US.CC.3.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'describe characters in a story (e.g., their traits, motivations, or feelings) and explain how their actions contribute to the sequence of events' },
+  { notation: 'US.CC.3.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, distinguishing literal from nonliteral language' },
+  { notation: 'US.CC.3.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'refer to parts of stories, dramas, and poems when writing or speaking about a text, using terms such as chapter, scene, and stanza; describe how each successive part builds on earlier sections' },
+  { notation: 'US.CC.3.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'distinguish their own point of view from that of the narrator or those of the characters' },
+  { notation: 'US.CC.3.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'explain how specific aspects of a text\'s illustrations contribute to what is conveyed by the words in a story' },
+  { notation: 'US.CC.3.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast the themes, settings, and plots of stories written by the same author about the same or similar characters' },
+  { notation: 'US.CC.3.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'ask and answer questions to demonstrate understanding of a text, referring explicitly to the text as the basis for the answers' },
+  { notation: 'US.CC.3.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'determine the main idea of a text; recount the key details and explain how they support the main idea' },
+  { notation: 'US.CC.3.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'describe the relationship between a series of historical events, scientific ideas or concepts, or steps in technical procedures in a text, using language that pertains to time, sequence, and cause/effect' },
+  { notation: 'US.CC.3.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine the meaning of general academic and domain-specific words and phrases in a text relevant to a grade 3 topic or subject area' },
+  { notation: 'US.CC.3.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'use text features and search tools (e.g., key words, sidebars, hyperlinks) to locate information relevant to a given topic efficiently' },
+  { notation: 'US.CC.3.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'distinguish their own point of view from that of the author of a text' },
+  { notation: 'US.CC.3.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'use information gained from illustrations (e.g., maps, photographs) and the words in a text to demonstrate understanding of the text' },
+  { notation: 'US.CC.3.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'describe the logical connection between particular sentences and paragraphs in a text (e.g., comparison, cause/effect, first/second/third in a sequence)' },
+  { notation: 'US.CC.3.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast the most important points and key details presented in two texts on the same topic' },
+  { notation: 'US.CC.3.ELA.RF.3', domain: 'Reading Foundational Skills', cluster: 'Phonics and Word Recognition', description: 'know and apply grade-level phonics and word analysis skills in decoding words' },
+  { notation: 'US.CC.3.ELA.RF.4', domain: 'Reading Foundational Skills', cluster: 'Fluency', description: 'read with sufficient accuracy and fluency to support comprehension' },
+  { notation: 'US.CC.3.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write opinion pieces on topics or texts, supporting a point of view with reasons' },
+  { notation: 'US.CC.3.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts to examine a topic and convey ideas and information clearly' },
+  { notation: 'US.CC.3.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives to develop real or imagined experiences or events using effective technique, descriptive details, and clear event sequences' },
+  { notation: 'US.CC.3.ELA.W.4', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults, produce writing in which the development and organization are appropriate to task and purpose' },
+  { notation: 'US.CC.3.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from peers and adults, develop and strengthen writing as needed by planning, revising, and editing' },
+  { notation: 'US.CC.3.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from adults, use technology to produce and publish writing as well as to interact and collaborate with others' },
+  { notation: 'US.CC.3.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'conduct short research projects that build knowledge about a topic' },
+  { notation: 'US.CC.3.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'recall information from experiences or gather information from print and digital sources; take brief notes on sources and sort evidence into provided categories' },
+  { notation: 'US.CC.3.ELA.W.10', domain: 'Writing', cluster: 'Range of Writing', description: 'write routinely over extended time frames (time for research, reflection, and revision) and shorter time frames (a single sitting or a day or two) for a range of discipline-specific tasks, purposes, and audiences' },
+  { notation: 'US.CC.3.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'engage effectively in a range of collaborative discussions with diverse partners on grade 3 topics and texts, building on others\' ideas and expressing their own clearly' },
+  { notation: 'US.CC.3.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'determine the main ideas and supporting details of a text read aloud or information presented in diverse media and formats, including visually, quantitatively, and orally' },
+  { notation: 'US.CC.3.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'ask and answer questions about information from a speaker, offering appropriate elaboration and detail' },
+  { notation: 'US.CC.3.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'report on a topic or text, tell a story, or recount an experience with appropriate facts and relevant, descriptive details, speaking clearly at an understandable pace' },
+  { notation: 'US.CC.3.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'create engaging audio recordings of stories or poems that demonstrate fluid reading at an understandable pace; add visual displays when appropriate to emphasize or enhance certain facts or details' },
+  { notation: 'US.CC.3.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'speak in complete sentences when appropriate to task and situation in order to provide requested detail or clarification' },
+  { notation: 'US.CC.3.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.3.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.3.ELA.L.3', domain: 'Language', cluster: 'Knowledge of Language', description: 'use knowledge of language and its conventions when writing, speaking, reading, or listening' },
+  { notation: 'US.CC.3.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 3 reading and content, choosing flexibly from a range of strategies' },
+  { notation: 'US.CC.3.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'demonstrate understanding of word relationships and nuances in word meanings' },
+  { notation: 'US.CC.3.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'acquire and use accurately grade-appropriate conversational, general academic, and domain-specific words and phrases, including those that signal spatial and temporal relationships' },
+];
+
+const grade4Standards: CommonCoreELAStandard[] = [
+  { notation: 'US.CC.4.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'refer to details and examples in a text when explaining what the text says explicitly and when drawing inferences from the text' },
+  { notation: 'US.CC.4.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'determine a theme of a story, drama, or poem from details in the text; summarize the text' },
+  { notation: 'US.CC.4.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'describe in depth a character, setting, or event in a story or drama, drawing on specific details in the text' },
+  { notation: 'US.CC.4.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including those that allude to significant characters found in mythology' },
+  { notation: 'US.CC.4.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'explain major differences between poems, drama, and prose, and refer to the structural elements of poems and drama when writing or speaking about a text' },
+  { notation: 'US.CC.4.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'compare and contrast the point of view from which different stories are narrated, including the difference between first- and third-person narrations' },
+  { notation: 'US.CC.4.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'make connections between the text of a story or drama and a visual or oral presentation of the text, identifying where each version reflects specific descriptions and directions in the text' },
+  { notation: 'US.CC.4.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast the treatment of similar themes and topics and patterns of events in stories, myths, and traditional literature from different cultures' },
+  { notation: 'US.CC.4.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'refer to details and examples in a text when explaining what the text says explicitly and when drawing inferences from the text' },
+  { notation: 'US.CC.4.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'determine the main idea of a text and explain how it is supported by key details; summarize the text' },
+  { notation: 'US.CC.4.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'explain events, procedures, ideas, or concepts in a historical, scientific, or technical text, including what happened and why, based on specific information in the text' },
+  { notation: 'US.CC.4.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine the meaning of general academic and domain-specific words or phrases in a text relevant to a grade 4 topic or subject area' },
+  { notation: 'US.CC.4.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'describe the overall structure (e.g., chronology, comparison, cause/effect, problem/solution) of events, ideas, concepts, or information in a text or part of a text' },
+  { notation: 'US.CC.4.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'compare and contrast a firsthand and secondhand account of the same event or topic; describe the differences in focus and the information provided' },
+  { notation: 'US.CC.4.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'interpret information presented visually, orally, or quantitatively and explain how the information contributes to an understanding of the text in which it appears' },
+  { notation: 'US.CC.4.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'explain how an author uses reasons and evidence to support particular points in a text' },
+  { notation: 'US.CC.4.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'integrate information from two texts on the same topic in order to write or speak about the subject knowledgeably' },
+  { notation: 'US.CC.4.ELA.RF.3', domain: 'Reading Foundational Skills', cluster: 'Phonics and Word Recognition', description: 'know and apply grade-level phonics and word analysis skills in decoding words' },
+  { notation: 'US.CC.4.ELA.RF.4', domain: 'Reading Foundational Skills', cluster: 'Fluency', description: 'read with sufficient accuracy and fluency to support comprehension' },
+  { notation: 'US.CC.4.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write opinion pieces on topics or texts, supporting a point of view with reasons and information' },
+  { notation: 'US.CC.4.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts to examine a topic and convey ideas and information clearly' },
+  { notation: 'US.CC.4.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives to develop real or imagined experiences or events using effective technique, descriptive details, and clear event sequences' },
+  { notation: 'US.CC.4.ELA.W.4', domain: 'Writing', cluster: 'Production and Distribution', description: 'produce clear and coherent writing in which the development and organization are appropriate to task, purpose, and audience' },
+  { notation: 'US.CC.4.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from peers and adults, develop and strengthen writing as needed by planning, revising, and editing' },
+  { notation: 'US.CC.4.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'with some guidance and support from adults, use technology, including the Internet, to produce and publish writing as well as to interact and collaborate with others' },
+  { notation: 'US.CC.4.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'conduct short research projects that build knowledge through investigation of different aspects of a topic' },
+  { notation: 'US.CC.4.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'recall relevant information from experiences or gather relevant information from print and digital sources; take notes and categorize information, and provide a list of sources' },
+  { notation: 'US.CC.4.ELA.W.9', domain: 'Writing', cluster: 'Research', description: 'draw evidence from literary or informational texts to support analysis, reflection, and research' },
+  { notation: 'US.CC.4.ELA.W.10', domain: 'Writing', cluster: 'Range of Writing', description: 'write routinely over extended time frames (time for research, reflection, and revision) and shorter time frames (a single sitting or a day or two) for a range of discipline-specific tasks, purposes, and audiences' },
+  { notation: 'US.CC.4.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'engage effectively in a range of collaborative discussions with diverse partners on grade 4 topics and texts, building on others\' ideas and expressing their own clearly' },
+  { notation: 'US.CC.4.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'paraphrase portions of a text read aloud or information presented in diverse media and formats, including visually, quantitatively, and orally' },
+  { notation: 'US.CC.4.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'identify the reasons and evidence a speaker provides to support particular points' },
+  { notation: 'US.CC.4.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'report on a topic or text, tell a story, or recount an experience in an organized manner, using appropriate facts and relevant, descriptive details to support main ideas or themes; speak clearly at an understandable pace' },
+  { notation: 'US.CC.4.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'add audio recordings and visual displays to presentations when appropriate to enhance the development of main ideas or themes' },
+  { notation: 'US.CC.4.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'differentiate between contexts that call for formal English and situations where informal discourse is appropriate; use formal English when appropriate to task and situation' },
+  { notation: 'US.CC.4.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.4.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.4.ELA.L.3', domain: 'Language', cluster: 'Knowledge of Language', description: 'use knowledge of language and its conventions when writing, speaking, reading, or listening' },
+  { notation: 'US.CC.4.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 4 reading and content, choosing flexibly from a range of strategies' },
+  { notation: 'US.CC.4.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'demonstrate understanding of figurative language, word relationships, and nuances in word meanings' },
+  { notation: 'US.CC.4.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'acquire and use accurately grade-appropriate general academic and domain-specific words and phrases, including those that signal precise actions, emotions, or states of being and that are basic to a particular topic' },
+];
+
+const grade5Standards: CommonCoreELAStandard[] = [
+  { notation: 'US.CC.5.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'quote accurately from a text when explaining what the text says explicitly and when drawing inferences from the text' },
+  { notation: 'US.CC.5.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'determine a theme of a story, drama, or poem from details in the text, including how characters in a story or drama respond to challenges or how the speaker in a poem reflects upon a topic; summarize the text' },
+  { notation: 'US.CC.5.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'compare and contrast two or more characters, settings, or events in a story or drama, drawing on specific details in the text' },
+  { notation: 'US.CC.5.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including figurative language such as metaphors and similes' },
+  { notation: 'US.CC.5.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'explain how a series of chapters, scenes, or stanzas fits together to provide the overall structure of a particular story, drama, or poem' },
+  { notation: 'US.CC.5.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'describe how a narrator\'s or speaker\'s point of view influences how events are described' },
+  { notation: 'US.CC.5.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'analyze how visual and multimedia elements contribute to the meaning, tone, or beauty of a text' },
+  { notation: 'US.CC.5.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast stories in the same genre on their approaches to similar themes and topics' },
+  { notation: 'US.CC.5.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'quote accurately from a text when explaining what the text says explicitly and when drawing inferences from the text' },
+  { notation: 'US.CC.5.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'determine two or more main ideas of a text and explain how they are supported by key details; summarize the text' },
+  { notation: 'US.CC.5.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'explain the relationships or interactions between two or more individuals, events, ideas, or concepts in a historical, scientific, or technical text based on specific information in the text' },
+  { notation: 'US.CC.5.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine the meaning of general academic and domain-specific words and phrases in a text relevant to a grade 5 topic or subject area' },
+  { notation: 'US.CC.5.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'compare and contrast the overall structure of events, ideas, concepts, or information in two or more texts' },
+  { notation: 'US.CC.5.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'analyze multiple accounts of the same event or topic, noting important similarities and differences in the point of view they represent' },
+  { notation: 'US.CC.5.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'draw on information from multiple print or digital sources, demonstrating the ability to locate an answer to a question quickly or to solve a problem efficiently' },
+  { notation: 'US.CC.5.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'explain how an author uses reasons and evidence to support particular points in a text, identifying which reasons and evidence support which point(s)' },
+  { notation: 'US.CC.5.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'integrate information from several texts on the same topic in order to write or speak about the subject knowledgeably' },
+  { notation: 'US.CC.5.ELA.RF.3', domain: 'Reading Foundational Skills', cluster: 'Phonics and Word Recognition', description: 'know and apply grade-level phonics and word analysis skills in decoding words' },
+  { notation: 'US.CC.5.ELA.RF.4', domain: 'Reading Foundational Skills', cluster: 'Fluency', description: 'read with sufficient accuracy and fluency to support comprehension' },
+  { notation: 'US.CC.5.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write opinion pieces on topics or texts, supporting a point of view with reasons and information' },
+  { notation: 'US.CC.5.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts to examine a topic and convey ideas and information clearly' },
+  { notation: 'US.CC.5.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives to develop real or imagined experiences or events using effective technique, descriptive details, and clear event sequences' },
+  { notation: 'US.CC.5.ELA.W.4', domain: 'Writing', cluster: 'Production and Distribution', description: 'produce clear and coherent writing in which the development and organization are appropriate to task, purpose, and audience' },
+  { notation: 'US.CC.5.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with guidance and support from peers and adults, develop and strengthen writing as needed by planning, revising, editing, rewriting, or trying a new approach' },
+  { notation: 'US.CC.5.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'with some guidance and support from adults, use technology, including the Internet, to produce and publish writing as well as to interact and collaborate with others' },
+  { notation: 'US.CC.5.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'conduct short research projects that use several sources to build knowledge through investigation of different aspects of a topic' },
+  { notation: 'US.CC.5.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'recall relevant information from experiences or gather relevant information from print and digital sources; summarize or paraphrase information in notes and finished work, and provide a list of sources' },
+  { notation: 'US.CC.5.ELA.W.9', domain: 'Writing', cluster: 'Research', description: 'draw evidence from literary or informational texts to support analysis, reflection, and research' },
+  { notation: 'US.CC.5.ELA.W.10', domain: 'Writing', cluster: 'Range of Writing', description: 'write routinely over extended time frames (time for research, reflection, and revision) and shorter time frames (a single sitting or a day or two) for a range of discipline-specific tasks, purposes, and audiences' },
+  { notation: 'US.CC.5.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'engage effectively in a range of collaborative discussions with diverse partners on grade 5 topics and texts, building on others\' ideas and expressing their own clearly' },
+  { notation: 'US.CC.5.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'summarize a written text read aloud or information presented in diverse media and formats, including visually, quantitatively, and orally' },
+  { notation: 'US.CC.5.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'summarize the points a speaker makes and explain how each claim is supported by reasons and evidence' },
+  { notation: 'US.CC.5.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'report on a topic or text or present an opinion, sequencing ideas logically and using appropriate facts and relevant, descriptive details to support main ideas or themes; speak clearly at an understandable pace' },
+  { notation: 'US.CC.5.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'include multimedia components and visual displays in presentations when appropriate to enhance the development of main ideas or themes' },
+  { notation: 'US.CC.5.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'adapt speech to a variety of contexts and tasks, using formal English when appropriate to task and situation' },
+  { notation: 'US.CC.5.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.5.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.5.ELA.L.3', domain: 'Language', cluster: 'Knowledge of Language', description: 'use knowledge of language and its conventions when writing, speaking, reading, or listening' },
+  { notation: 'US.CC.5.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 5 reading and content, choosing flexibly from a range of strategies' },
+  { notation: 'US.CC.5.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'demonstrate understanding of figurative language, word relationships, and nuances in word meanings' },
+  { notation: 'US.CC.5.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'acquire and use accurately grade-appropriate general academic and domain-specific words and phrases, including those that signal contrast, addition, and other logical relationships' },
+];
+
+const grade6Standards: CommonCoreELAStandard[] = [
+  { notation: 'US.CC.6.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'cite textual evidence to support analysis of what the text says explicitly as well as inferences drawn from the text' },
+  { notation: 'US.CC.6.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'determine a theme or central idea of a text and how it is conveyed through particular details; provide a summary of the text distinct from personal opinions or judgments' },
+  { notation: 'US.CC.6.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'describe how a particular story\'s or drama\'s plot unfolds in a series of episodes as well as how the characters respond or change as the plot moves toward a resolution' },
+  { notation: 'US.CC.6.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including figurative and connotative meanings; analyze the impact of a specific word choice on meaning and tone' },
+  { notation: 'US.CC.6.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'analyze how a particular sentence, chapter, scene, or stanza fits into the overall structure of a text and contributes to the development of the theme, setting, or plot' },
+  { notation: 'US.CC.6.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'explain how an author develops the point of view of the narrator or speaker in a text' },
+  { notation: 'US.CC.6.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast the experience of reading a story, drama, or poem to listening to or viewing an audio, video, or live version of the text, including contrasting what they "see" and "hear" when reading the text to what they perceive when they listen or watch' },
+  { notation: 'US.CC.6.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast texts in different forms or genres in terms of their approaches to similar themes and topics' },
+  { notation: 'US.CC.6.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'cite textual evidence to support analysis of what the text says explicitly as well as inferences drawn from the text' },
+  { notation: 'US.CC.6.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'determine a central idea of a text and how it is conveyed through particular details; provide a summary of the text distinct from personal opinions or judgments' },
+  { notation: 'US.CC.6.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'analyze in detail how a key individual, event, or idea is introduced, illustrated, and elaborated in a text' },
+  { notation: 'US.CC.6.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including figurative, connotative, and technical meanings' },
+  { notation: 'US.CC.6.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'analyze how a particular sentence, paragraph, chapter, or section fits into the overall structure of a text and contributes to the development of the ideas' },
+  { notation: 'US.CC.6.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine an author\'s point of view or purpose in a text and explain how it is conveyed in the text' },
+  { notation: 'US.CC.6.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'integrate information presented in different media or formats as well as in words to develop a coherent understanding of a topic or issue' },
+  { notation: 'US.CC.6.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'trace and evaluate the argument and specific claims in a text, distinguishing claims that are supported by reasons and evidence from claims that are not' },
+  { notation: 'US.CC.6.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast one author\'s presentation of events with that of another' },
+  { notation: 'US.CC.6.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write arguments to support claims with clear reasons and relevant evidence' },
+  { notation: 'US.CC.6.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts to examine a topic and convey ideas, concepts, and information through the selection, organization, and analysis of relevant content' },
+  { notation: 'US.CC.6.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives to develop real or imagined experiences or events using effective technique, relevant descriptive details, and well-structured event sequences' },
+  { notation: 'US.CC.6.ELA.W.4', domain: 'Writing', cluster: 'Production and Distribution', description: 'produce clear and coherent writing in which the development, organization, and style are appropriate to task, purpose, and audience' },
+  { notation: 'US.CC.6.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with some guidance and support from peers and adults, develop and strengthen writing as needed by planning, revising, editing, rewriting, or trying a new approach' },
+  { notation: 'US.CC.6.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'use technology, including the Internet, to produce and publish writing as well as to interact and collaborate with others' },
+  { notation: 'US.CC.6.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'conduct short research projects to answer a question, drawing on several sources and refocusing the inquiry when appropriate' },
+  { notation: 'US.CC.6.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'gather relevant information from multiple print and digital sources; assess the credibility of each source; and quote or paraphrase the data and conclusions of others while avoiding plagiarism and providing basic bibliographic information for sources' },
+  { notation: 'US.CC.6.ELA.W.9', domain: 'Writing', cluster: 'Research', description: 'draw evidence from literary or informational texts to support analysis, reflection, and research' },
+  { notation: 'US.CC.6.ELA.W.10', domain: 'Writing', cluster: 'Range of Writing', description: 'write routinely over extended time frames (time for research, reflection, and revision) and shorter time frames (a single sitting or a day or two) for a range of discipline-specific tasks, purposes, and audiences' },
+  { notation: 'US.CC.6.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'engage effectively in a range of collaborative discussions with diverse partners on grade 6 topics, texts, and issues, building on others\' ideas and expressing their own clearly' },
+  { notation: 'US.CC.6.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'interpret information presented in diverse media and formats and explain how it contributes to a topic, text, or issue under study' },
+  { notation: 'US.CC.6.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'delineate a speaker\'s argument and specific claims, distinguishing claims that are supported by reasons and evidence from claims that are not' },
+  { notation: 'US.CC.6.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'present claims and findings, sequencing ideas logically and using pertinent descriptions, facts, and details to accentuate main ideas or themes; use appropriate eye contact, adequate volume, and clear pronunciation' },
+  { notation: 'US.CC.6.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'include multimedia components and visual displays in presentations to clarify information' },
+  { notation: 'US.CC.6.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'adapt speech to a variety of contexts and tasks, demonstrating command of formal English when indicated or appropriate' },
+  { notation: 'US.CC.6.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.6.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.6.ELA.L.3', domain: 'Language', cluster: 'Knowledge of Language', description: 'use knowledge of language and its conventions when writing, speaking, reading, or listening' },
+  { notation: 'US.CC.6.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 6 reading and content, choosing flexibly from a range of strategies' },
+  { notation: 'US.CC.6.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'demonstrate understanding of figurative language, word relationships, and nuances in word meanings' },
+  { notation: 'US.CC.6.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'acquire and use accurately grade-appropriate general academic and domain-specific words and phrases; gather vocabulary knowledge when considering a word or phrase important to comprehension or expression' },
+];
+
+const grade7Standards: CommonCoreELAStandard[] = [
+  { notation: 'US.CC.7.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'cite several pieces of textual evidence to support analysis of what the text says explicitly as well as inferences drawn from the text' },
+  { notation: 'US.CC.7.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'determine a theme or central idea of a text and analyze its development over the course of the text; provide an objective summary of the text' },
+  { notation: 'US.CC.7.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'analyze how particular elements of a story or drama interact (e.g., how setting shapes the characters or plot)' },
+  { notation: 'US.CC.7.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including figurative and connotative meanings; analyze the impact of rhymes and other repetitions of sounds on a specific verse or stanza of a poem or section of a story or drama' },
+  { notation: 'US.CC.7.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'analyze how a drama\'s or poem\'s form or structure contributes to its meaning' },
+  { notation: 'US.CC.7.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'analyze how an author develops and contrasts the points of view of different characters or narrators in a text' },
+  { notation: 'US.CC.7.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast a written story, drama, or poem to its audio, filmed, staged, or multimedia version, analyzing the effects of techniques unique to each medium' },
+  { notation: 'US.CC.7.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast a fictional portrayal of a time, place, or character and a historical account of the same period as a means of understanding how authors of fiction use or alter history' },
+  { notation: 'US.CC.7.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'cite several pieces of textual evidence to support analysis of what the text says explicitly as well as inferences drawn from the text' },
+  { notation: 'US.CC.7.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'determine two or more central ideas in a text and analyze their development over the course of the text; provide an objective summary of the text' },
+  { notation: 'US.CC.7.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'analyze the interactions between individuals, events, and ideas in a text' },
+  { notation: 'US.CC.7.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including figurative, connotative, and technical meanings; analyze the impact of a specific word choice on meaning and tone' },
+  { notation: 'US.CC.7.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'analyze the structure an author uses to organize a text, including how the major sections contribute to the whole and to the development of the ideas' },
+  { notation: 'US.CC.7.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine an author\'s point of view or purpose in a text and analyze how the author distinguishes his or her position from that of others' },
+  { notation: 'US.CC.7.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'compare and contrast a text to an audio, video, or multimedia version of the text, analyzing each medium\'s portrayal of the subject' },
+  { notation: 'US.CC.7.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'trace and evaluate the argument and specific claims in a text, assessing whether the reasoning is sound and the evidence is relevant and sufficient to support the claims' },
+  { notation: 'US.CC.7.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'analyze how two or more authors writing about the same topic shape their presentations of key information by emphasizing different evidence or advancing different interpretations of facts' },
+  { notation: 'US.CC.7.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write arguments to support claims with clear reasons and relevant evidence' },
+  { notation: 'US.CC.7.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts to examine a topic and convey ideas, concepts, and information through the selection, organization, and analysis of relevant content' },
+  { notation: 'US.CC.7.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives to develop real or imagined experiences or events using effective technique, relevant descriptive details, and well-structured event sequences' },
+  { notation: 'US.CC.7.ELA.W.4', domain: 'Writing', cluster: 'Production and Distribution', description: 'produce clear and coherent writing in which the development, organization, and style are appropriate to task, purpose, and audience' },
+  { notation: 'US.CC.7.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with some guidance and support from peers and adults, develop and strengthen writing as needed by planning, revising, editing, rewriting, or trying a new approach, focusing on how well purpose and audience have been addressed' },
+  { notation: 'US.CC.7.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'use technology, including the Internet, to produce and publish writing and link to and cite sources as well as to interact and collaborate with others, including linking to and citing sources' },
+  { notation: 'US.CC.7.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'conduct short research projects to answer a question, drawing on several sources and generating additional related, focused questions for further research and investigation' },
+  { notation: 'US.CC.7.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'gather relevant information from multiple print and digital sources, using search terms effectively; assess the credibility and accuracy of each source; and quote or paraphrase the data and conclusions of others while avoiding plagiarism and following a standard format for citation' },
+  { notation: 'US.CC.7.ELA.W.9', domain: 'Writing', cluster: 'Research', description: 'draw evidence from literary or informational texts to support analysis, reflection, and research' },
+  { notation: 'US.CC.7.ELA.W.10', domain: 'Writing', cluster: 'Range of Writing', description: 'write routinely over extended time frames (time for research, reflection, and revision) and shorter time frames (a single sitting or a day or two) for a range of discipline-specific tasks, purposes, and audiences' },
+  { notation: 'US.CC.7.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'engage effectively in a range of collaborative discussions with diverse partners on grade 7 topics, texts, and issues, building on others\' ideas and expressing their own clearly' },
+  { notation: 'US.CC.7.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'analyze the main ideas and supporting details presented in diverse media and formats and explain how the ideas clarify a topic, text, or issue under study' },
+  { notation: 'US.CC.7.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'delineate a speaker\'s argument and specific claims, evaluating the soundness of the reasoning and the relevance and sufficiency of the evidence' },
+  { notation: 'US.CC.7.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'present claims and findings, emphasizing salient points in a focused, coherent manner with pertinent descriptions, facts, details, and examples; use appropriate eye contact, adequate volume, and clear pronunciation' },
+  { notation: 'US.CC.7.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'include multimedia components and visual displays in presentations to clarify claims and findings and emphasize salient points' },
+  { notation: 'US.CC.7.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'adapt speech to a variety of contexts and tasks, demonstrating command of formal English when indicated or appropriate' },
+  { notation: 'US.CC.7.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.7.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.7.ELA.L.3', domain: 'Language', cluster: 'Knowledge of Language', description: 'use knowledge of language and its conventions when writing, speaking, reading, or listening' },
+  { notation: 'US.CC.7.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 7 reading and content, choosing flexibly from a range of strategies' },
+  { notation: 'US.CC.7.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'demonstrate understanding of figurative language, word relationships, and nuances in word meanings' },
+  { notation: 'US.CC.7.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'acquire and use accurately grade-appropriate general academic and domain-specific words and phrases; gather vocabulary knowledge when considering a word or phrase important to comprehension or expression' },
+];
+
+const grade8Standards: CommonCoreELAStandard[] = [
+  { notation: 'US.CC.8.ELA.RL.1', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'cite the textual evidence that most strongly supports an analysis of what the text says explicitly as well as inferences drawn from the text' },
+  { notation: 'US.CC.8.ELA.RL.2', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'determine a theme or central idea of a text and analyze its development over the course of the text, including its relationship to the characters, setting, and plot; provide an objective summary of the text' },
+  { notation: 'US.CC.8.ELA.RL.3', domain: 'Reading Literature', cluster: 'Key Ideas and Details', description: 'analyze how particular lines of dialogue or incidents in a story or drama propel the action, reveal aspects of a character, or provoke a decision' },
+  { notation: 'US.CC.8.ELA.RL.4', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including figurative and connotative meanings; analyze the impact of specific word choices on meaning and tone, including analogies or allusions to other texts' },
+  { notation: 'US.CC.8.ELA.RL.5', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'compare and contrast the structure of two or more texts and analyze how the differing structure of each text contributes to its meaning and style' },
+  { notation: 'US.CC.8.ELA.RL.6', domain: 'Reading Literature', cluster: 'Craft and Structure', description: 'analyze how differences in the points of view of the characters and the audience or reader create such effects as suspense or humor' },
+  { notation: 'US.CC.8.ELA.RL.7', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'analyze the extent to which a filmed or live production of a story or drama stays faithful to or departs from the text or script, evaluating the choices made by the director or actors' },
+  { notation: 'US.CC.8.ELA.RL.9', domain: 'Reading Literature', cluster: 'Integration of Knowledge and Ideas', description: 'analyze how a modern work of fiction draws on themes, patterns of events, or character types from myths, traditional stories, or religious works, describing how the material is rendered new' },
+  { notation: 'US.CC.8.ELA.RI.1', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'cite the textual evidence that most strongly supports an analysis of what the text says explicitly as well as inferences drawn from the text' },
+  { notation: 'US.CC.8.ELA.RI.2', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'determine a central idea of a text and analyze its development over the course of the text, including its relationship to supporting ideas; provide an objective summary of the text' },
+  { notation: 'US.CC.8.ELA.RI.3', domain: 'Reading Informational Text', cluster: 'Key Ideas and Details', description: 'analyze how a text makes connections among and distinctions between individuals, ideas, or events' },
+  { notation: 'US.CC.8.ELA.RI.4', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine the meaning of words and phrases as they are used in a text, including figurative, connotative, and technical meanings; analyze the impact of specific word choices on meaning and tone, including analogies or allusions to other texts' },
+  { notation: 'US.CC.8.ELA.RI.5', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'analyze in detail the structure of a specific paragraph in a text, including the role of particular sentences in developing and refining a key concept' },
+  { notation: 'US.CC.8.ELA.RI.6', domain: 'Reading Informational Text', cluster: 'Craft and Structure', description: 'determine an author\'s point of view or purpose in a text and analyze how the author acknowledges and responds to conflicting evidence or viewpoints' },
+  { notation: 'US.CC.8.ELA.RI.7', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'evaluate the advantages and disadvantages of using different mediums to present a particular topic or idea' },
+  { notation: 'US.CC.8.ELA.RI.8', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'delineate and evaluate the argument and specific claims in a text, assessing whether the reasoning is sound and the evidence is relevant and sufficient; recognize when irrelevant evidence is introduced' },
+  { notation: 'US.CC.8.ELA.RI.9', domain: 'Reading Informational Text', cluster: 'Integration of Knowledge and Ideas', description: 'analyze a case in which two or more texts provide conflicting information on the same topic and identify where the texts disagree on matters of fact or interpretation' },
+  { notation: 'US.CC.8.ELA.W.1', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write arguments to support claims with clear reasons and relevant evidence' },
+  { notation: 'US.CC.8.ELA.W.2', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write informative/explanatory texts to examine a topic and convey ideas, concepts, and information through the selection, organization, and analysis of relevant content' },
+  { notation: 'US.CC.8.ELA.W.3', domain: 'Writing', cluster: 'Text Types and Purposes', description: 'write narratives to develop real or imagined experiences or events using effective technique, relevant descriptive details, and well-structured event sequences' },
+  { notation: 'US.CC.8.ELA.W.4', domain: 'Writing', cluster: 'Production and Distribution', description: 'produce clear and coherent writing in which the development, organization, and style are appropriate to task, purpose, and audience' },
+  { notation: 'US.CC.8.ELA.W.5', domain: 'Writing', cluster: 'Production and Distribution', description: 'with some guidance and support from peers and adults, develop and strengthen writing as needed by planning, revising, editing, rewriting, or trying a new approach, focusing on how well purpose and audience have been addressed' },
+  { notation: 'US.CC.8.ELA.W.6', domain: 'Writing', cluster: 'Production and Distribution', description: 'use technology, including the Internet, to produce and publish writing and present the relationships between information and ideas efficiently as well as to interact and collaborate with others' },
+  { notation: 'US.CC.8.ELA.W.7', domain: 'Writing', cluster: 'Research', description: 'conduct short research projects to answer a question (including a self-generated question), drawing on several sources and generating additional related, focused questions that allow for multiple avenues of exploration' },
+  { notation: 'US.CC.8.ELA.W.8', domain: 'Writing', cluster: 'Research', description: 'gather relevant information from multiple print and digital sources, using search terms effectively; assess the credibility and accuracy of each source; and quote or paraphrase the data and conclusions of others while avoiding plagiarism and following a standard format for citation' },
+  { notation: 'US.CC.8.ELA.W.9', domain: 'Writing', cluster: 'Research', description: 'draw evidence from literary or informational texts to support analysis, reflection, and research' },
+  { notation: 'US.CC.8.ELA.W.10', domain: 'Writing', cluster: 'Range of Writing', description: 'write routinely over extended time frames (time for research, reflection, and revision) and shorter time frames (a single sitting or a day or two) for a range of discipline-specific tasks, purposes, and audiences' },
+  { notation: 'US.CC.8.ELA.SL.1', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'engage effectively in a range of collaborative discussions with diverse partners on grade 8 topics, texts, and issues, building on others\' ideas and expressing their own clearly' },
+  { notation: 'US.CC.8.ELA.SL.2', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'analyze the purpose of information presented in diverse media and formats and evaluate the motives behind its presentation' },
+  { notation: 'US.CC.8.ELA.SL.3', domain: 'Speaking and Listening', cluster: 'Comprehension and Collaboration', description: 'delineate a speaker\'s argument and specific claims, evaluating the soundness of the reasoning and relevance and sufficiency of the evidence and identifying when irrelevant evidence is introduced' },
+  { notation: 'US.CC.8.ELA.SL.4', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'present claims and findings, emphasizing salient points in a focused, coherent manner with relevant evidence, sound valid reasoning, and well-chosen details; use appropriate eye contact, adequate volume, and clear pronunciation' },
+  { notation: 'US.CC.8.ELA.SL.5', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'integrate multimedia and visual displays into presentations to clarify information, strengthen claims and evidence, and add interest' },
+  { notation: 'US.CC.8.ELA.SL.6', domain: 'Speaking and Listening', cluster: 'Presentation of Knowledge and Ideas', description: 'adapt speech to a variety of contexts and tasks, demonstrating command of formal English when indicated or appropriate' },
+  { notation: 'US.CC.8.ELA.L.1', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English grammar and usage when writing or speaking' },
+  { notation: 'US.CC.8.ELA.L.2', domain: 'Language', cluster: 'Conventions of Standard English', description: 'demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing' },
+  { notation: 'US.CC.8.ELA.L.3', domain: 'Language', cluster: 'Knowledge of Language', description: 'use knowledge of language and its conventions when writing, speaking, reading, or listening' },
+  { notation: 'US.CC.8.ELA.L.4', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'determine or clarify the meaning of unknown and multiple-meaning words or phrases based on grade 8 reading and content, choosing flexibly from a range of strategies' },
+  { notation: 'US.CC.8.ELA.L.5', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'demonstrate understanding of figurative language, word relationships, and nuances in word meanings' },
+  { notation: 'US.CC.8.ELA.L.6', domain: 'Language', cluster: 'Vocabulary Acquisition and Use', description: 'acquire and use accurately grade-appropriate general academic and domain-specific words and phrases; gather vocabulary knowledge when considering a word or phrase important to comprehension or expression' },
+];
+
+// =============================================================================
+// EXPORT
+// =============================================================================
+
+export const commonCoreELACurriculum: CommonCoreELACurriculum = {
+  code: 'US_COMMON_CORE',
+  name: 'Common Core State Standards',
+  country: 'US',
+  version: '2010',
+  sourceUrl: 'https://www.corestandards.org/ELA-Literacy/',
+  subject: 'ENGLISH',
+  grades: [
+    { grade: 0, gradeLabel: 'K', ageRangeMin: 5, ageRangeMax: 6, standards: kindergartenStandards },
+    { grade: 1, gradeLabel: '1', ageRangeMin: 6, ageRangeMax: 7, standards: grade1Standards },
+    { grade: 2, gradeLabel: '2', ageRangeMin: 7, ageRangeMax: 8, standards: grade2Standards },
+    { grade: 3, gradeLabel: '3', ageRangeMin: 8, ageRangeMax: 9, standards: grade3Standards },
+    { grade: 4, gradeLabel: '4', ageRangeMin: 9, ageRangeMax: 10, standards: grade4Standards },
+    { grade: 5, gradeLabel: '5', ageRangeMin: 10, ageRangeMax: 11, standards: grade5Standards },
+    { grade: 6, gradeLabel: '6', ageRangeMin: 11, ageRangeMax: 12, standards: grade6Standards },
+    { grade: 7, gradeLabel: '7', ageRangeMin: 12, ageRangeMax: 13, standards: grade7Standards },
+    { grade: 8, gradeLabel: '8', ageRangeMin: 13, ageRangeMax: 14, standards: grade8Standards },
+  ],
+};
+
+export function getTotalCommonCoreELAStandardsCount(): number {
+  return commonCoreELACurriculum.grades.reduce((total, grade) => total + grade.standards.length, 0);
+}
+
+export function getCommonCoreELAStandardsCountByGrade(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const grade of commonCoreELACurriculum.grades) {
+    counts[`Grade ${grade.gradeLabel}`] = grade.standards.length;
+  }
+  return counts;
+}
+
+export function getCommonCoreELAStandardsCountByDomain(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const grade of commonCoreELACurriculum.grades) {
+    for (const std of grade.standards) {
+      counts[std.domain] = (counts[std.domain] || 0) + 1;
+    }
+  }
+  return counts;
+}
