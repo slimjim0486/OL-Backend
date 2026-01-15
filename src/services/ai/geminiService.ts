@@ -497,7 +497,7 @@ export class GeminiService {
           enum: ['MATH', 'SCIENCE', 'ENGLISH', 'ARABIC', 'ISLAMIC_STUDIES', 'SOCIAL_STUDIES', 'ART', 'MUSIC', 'OTHER'],
           description: 'The subject area'
         },
-        gradeLevel: { type: 'string', description: 'Estimated grade level (K-8)' },
+        gradeLevel: { type: 'string', description: 'Estimated grade level (K-9)' },
         keyConcepts: {
           type: 'array',
           items: { type: 'string' },

@@ -15,105 +15,105 @@ datasource db {
 // ============================================
 
 model Parent {
-  id               String   @id @default(uuid())
-  email            String   @unique
-  passwordHash     String?  // Optional for OAuth users
-  firstName        String?
-  lastName         String?
-  phone            String?
-  country          String   @default("AE")
-  timezone         String   @default("Asia/Dubai")
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String? // Optional for OAuth users
+  firstName    String?
+  lastName     String?
+  phone        String?
+  country      String  @default("AE")
+  timezone     String  @default("Asia/Dubai")
 
   // OAuth providers
-  googleId         String?  @unique  // Google OAuth sub (unique identifier)
-  authProvider     String   @default("email")  // "email" | "google"
+  googleId     String? @unique // Google OAuth sub (unique identifier)
+  authProvider String  @default("email") // "email" | "google"
 
   // Email verification
-  emailVerified    Boolean  @default(false)
-  emailVerifiedAt  DateTime?
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
 
   // KBQ Security Answers (hashed for verification)
-  kbqAnswers       Json?    // Hashed answers: { questionId: hashedAnswer }
+  kbqAnswers Json? // Hashed answers: { questionId: hashedAnswer }
 
   // Consent tracking
-  consents         Consent[]
+  consents Consent[]
 
   // Subscription
   subscriptionTier      SubscriptionTier   @default(FREE)
   subscriptionStatus    SubscriptionStatus @default(ACTIVE)
   stripeCustomerId      String?
-  stripeSubscriptionId  String?            // Active Stripe subscription ID
+  stripeSubscriptionId  String? // Active Stripe subscription ID
   subscriptionExpiresAt DateTime?
-  trialEndsAt           DateTime?          // Trial period end date
+  trialEndsAt           DateTime? // Trial period end date
 
   // Relationships
-  children         Child[]
-  noteComments     NoteComment[]
+  children           Child[]
+  noteComments       NoteComment[]
   privacyPreferences ParentPrivacyPreferences?
-  lessonUsage      ParentLessonUsage[]
+  lessonUsage        ParentLessonUsage[]
 
   // Referral & Sharing
   referralCode       ReferralCode?
-  referredBy         Referral?           @relation("ReferredParent")
+  referredBy         Referral?                 @relation("ReferredParent")
   referralRewards    ReferralReward[]
   shareableContents  ShareableContent[]
   sharingPreferences ParentSharingPreferences?
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  lastLoginAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
 
   @@index([email])
-  @@index([subscriptionTier, subscriptionStatus])  // MRR/revenue queries
-  @@index([createdAt])                             // Cohort analysis
-  @@index([country])                               // Geographic segmentation
+  @@index([subscriptionTier, subscriptionStatus]) // MRR/revenue queries
+  @@index([createdAt]) // Cohort analysis
+  @@index([country]) // Geographic segmentation
 }
 
 model ParentPrivacyPreferences {
-  id               String   @id @default(uuid())
-  parentId         String   @unique
-  parent           Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  parentId String @unique
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   // Data Collection Preferences
-  learningAnalytics   Boolean  @default(true)  // Track progress, strengths, areas for improvement
-  usageAnalytics      Boolean  @default(true)  // Help understand app usage
-  personalization     Boolean  @default(true)  // Use data for personalized content
+  learningAnalytics Boolean @default(true) // Track progress, strengths, areas for improvement
+  usageAnalytics    Boolean @default(true) // Help understand app usage
+  personalization   Boolean @default(true) // Use data for personalized content
 
   // Data Sharing Preferences
-  thirdPartyAnalytics Boolean  @default(false) // Share anonymized data with analytics providers
-  improvementResearch Boolean  @default(false) // Contribute to educational research
+  thirdPartyAnalytics Boolean @default(false) // Share anonymized data with analytics providers
+  improvementResearch Boolean @default(false) // Contribute to educational research
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Child {
-  id               String   @id @default(uuid())
-  parentId         String
-  parent           Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   // Profile
-  displayName      String   // "Banana Explorer", etc. (no real name required)
-  avatarUrl        String?
-  pin              String   @db.Char(4) // 4-digit PIN for profile switching
-  dateOfBirth      DateTime // For age calculation, never exposed
-  ageGroup         AgeGroup // Calculated: YOUNG (4-7) or OLDER (8-12)
+  displayName String // "Banana Explorer", etc. (no real name required)
+  avatarUrl   String?
+  pin         String   @db.Char(4) // 4-digit PIN for profile switching
+  dateOfBirth DateTime // For age calculation, never exposed
+  ageGroup    AgeGroup // Calculated: YOUNG (4-7) or OLDER (8-12)
 
   // PIN Security (brute force protection)
-  pinAttempts      Int      @default(0)  // Failed PIN attempts
-  pinLockedUntil   DateTime?             // Lockout time if too many failures
+  pinAttempts    Int       @default(0) // Failed PIN attempts
+  pinLockedUntil DateTime? // Lockout time if too many failures
 
   // Learning preferences
-  gradeLevel       Int?     // 1-6
-  curriculumType   CurriculumType?
-  preferredLanguage String  @default("en")
-  learningStyle    LearningStyle?
+  gradeLevel        Int? // 1-6
+  curriculumType    CurriculumType?
+  preferredLanguage String          @default("en")
+  learningStyle     LearningStyle?
 
   // Privacy settings
-  voiceEnabled     Boolean  @default(true)
-  avatarVisible    Boolean  @default(true)
+  voiceEnabled  Boolean @default(true)
+  avatarVisible Boolean @default(true)
 
   // Relationships
   lessons          Lesson[]
@@ -127,60 +127,64 @@ model Child {
   textSelections   TextSelection[]
   exerciseAttempts ExerciseAttempt[]
   notes            Note[]
-  activitySessions ActivitySession[]   // Analytics: DAU/WAU/MAU tracking
+  activitySessions ActivitySession[] // Analytics: DAU/WAU/MAU tracking
+
+  // Curriculum Standards Progress
+  standardProgress   ChildStandardProgress[]
+  curriculumSwitches CurriculumSwitch[]
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  lastActiveAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastActiveAt DateTime?
 
   @@index([parentId])
-  @@index([parentId, ageGroup])       // Dashboard age-group filtering
-  @@index([parentId, lastActiveAt])   // Activity tracking queries
-  @@index([createdAt])                // Cohort analysis
+  @@index([parentId, ageGroup]) // Dashboard age-group filtering
+  @@index([parentId, lastActiveAt]) // Activity tracking queries
+  @@index([createdAt]) // Cohort analysis
 }
 
 model Consent {
-  id               String   @id @default(uuid())
-  parentId         String
-  parent           Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   // Verification method
-  method           ConsentMethod
-  status           ConsentStatus
+  method ConsentMethod
+  status ConsentStatus
 
   // Verification details (encrypted)
-  verificationData Json?    // Encrypted transaction ID, etc.
+  verificationData Json? // Encrypted transaction ID, etc.
   ipAddress        String?
   userAgent        String?
 
   // Timestamps
-  consentGivenAt   DateTime?
-  expiresAt        DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  consentGivenAt DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([parentId, status])
 }
 
 // Parent lesson usage tracking (for FREE tier limits)
 model ParentLessonUsage {
-  id               String   @id @default(uuid())
-  parentId         String
-  parent           Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   // Monthly tracking
-  month            DateTime @db.Date  // First day of the month (for grouping)
-  lessonsCreated   Int      @default(0)
+  month          DateTime @db.Date // First day of the month (for grouping)
+  lessonsCreated Int      @default(0)
 
   // Notification tracking (to avoid sending duplicate emails)
-  notified70Pct    Boolean  @default(false)  // Sent warning at 70%
-  notified90Pct    Boolean  @default(false)  // Sent warning at 90%
-  notified100Pct   Boolean  @default(false)  // Sent limit reached notification
+  notified70Pct  Boolean @default(false) // Sent warning at 70%
+  notified90Pct  Boolean @default(false) // Sent warning at 90%
+  notified100Pct Boolean @default(false) // Sent limit reached notification
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([parentId, month])
   @@index([parentId, month])
@@ -191,101 +195,101 @@ model ParentLessonUsage {
 // ============================================
 
 model Lesson {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   // Content metadata
-  title            String
-  summary          String?  @db.Text
-  subject          Subject?
-  gradeLevel       String?
-  sourceType       SourceType
+  title      String
+  summary    String?    @db.Text
+  subject    Subject?
+  gradeLevel String?
+  sourceType SourceType
 
   // Original content reference
-  originalFileUrl  String?  // R2 URL
+  originalFileUrl  String? // R2 URL
   originalFileName String?
   originalFileSize Int?
   youtubeUrl       String?
   youtubeVideoId   String?
 
   // AI-processed content
-  extractedText    String?  @db.Text
-  formattedContent String?  @db.Text // HTML with embedded interactive exercise markers
-  chapters         Json?    // Array of chapter objects
-  keyConcepts      String[] // For chat context
-  vocabulary       Json?    // Array of {term, definition, example}
+  extractedText      String?  @db.Text
+  formattedContent   String?  @db.Text // HTML with embedded interactive exercise markers
+  chapters           Json? // Array of chapter objects
+  keyConcepts        String[] // For chat context
+  vocabulary         Json? // Array of {term, definition, example}
   suggestedQuestions String[]
 
   // Processing status
   processingStatus ProcessingStatus @default(PENDING)
   processingError  String?
-  aiConfidence     Float?   // 0-1 confidence score
+  aiConfidence     Float? // 0-1 confidence score
 
   // Safety review
-  safetyReviewed   Boolean  @default(false)
-  safetyFlags      String[] // Any flagged content
+  safetyReviewed Boolean  @default(false)
+  safetyFlags    String[] // Any flagged content
 
   // Audio summary (Ollie's voice)
-  audioSummaryUrl      String?              // R2 URL for audio file
-  audioSummaryDuration Int?                 // Duration in seconds
+  audioSummaryUrl      String? // R2 URL for audio file
+  audioSummaryDuration Int? // Duration in seconds
   audioSummaryStatus   LessonAudioStatus @default(NONE)
 
   // Relationships
-  chatMessages     ChatMessage[]
-  flashcardDecks   FlashcardDeck[]
-  quizzes          Quiz[]
-  textSelections   TextSelection[]
-  exercises        InteractiveExercise[]
-  notes            Note[]
+  chatMessages   ChatMessage[]
+  flashcardDecks FlashcardDeck[]
+  quizzes        Quiz[]
+  textSelections TextSelection[]
+  exercises      InteractiveExercise[]
+  notes          Note[]
 
   // Progress
-  percentComplete  Float    @default(0)
+  percentComplete  Float     @default(0)
   lastAccessedAt   DateTime?
-  timeSpentSeconds Int      @default(0)
+  timeSpentSeconds Int       @default(0)
   completedAt      DateTime? // Set when user clicks "lesson completed"
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([childId, createdAt])
   @@index([processingStatus])
   @@index([childId, completedAt])
-  @@index([childId, subject, processingStatus])    // Subject filtering with status
-  @@index([childId, processingStatus, createdAt])  // Completed lessons by date
+  @@index([childId, subject, processingStatus]) // Subject filtering with status
+  @@index([childId, processingStatus, createdAt]) // Completed lessons by date
 }
 
 model ChatMessage {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  lessonId         String?
-  lesson           Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  id       String  @id @default(uuid())
+  childId  String
+  child    Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
   // Message content
-  role             MessageRole
-  content          String   @db.Text
+  role    MessageRole
+  content String      @db.Text
 
   // AI metadata (for assistant messages)
-  modelUsed        String?  // gemini-1.5-flash, etc.
-  tokensUsed       Int?
-  responseTimeMs   Int?
+  modelUsed      String? // gemini-1.5-flash, etc.
+  tokensUsed     Int?
+  responseTimeMs Int?
 
   // Safety tracking
-  safetyRatings    Json?    // Gemini safety ratings
-  wasFiltered      Boolean  @default(false)
-  filterReason     String?
+  safetyRatings Json? // Gemini safety ratings
+  wasFiltered   Boolean @default(false)
+  filterReason  String?
 
   // Voice integration
-  audioUrl         String?  // TTS audio URL
+  audioUrl String? // TTS audio URL
 
   // Timestamps
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([childId, createdAt])
   @@index([lessonId])
-  @@index([childId, lessonId, createdAt])  // Chat history per lesson
+  @@index([childId, lessonId, createdAt]) // Chat history per lesson
 }
 
 // ============================================
@@ -293,93 +297,93 @@ model ChatMessage {
 // ============================================
 
 model FlashcardDeck {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  lessonId         String?
-  lesson           Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  id       String  @id @default(uuid())
+  childId  String
+  child    Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
-  title            String
-  description      String?
-  subject          Subject?
-  isAIGenerated    Boolean  @default(false)
+  title         String
+  description   String?
+  subject       Subject?
+  isAIGenerated Boolean  @default(false)
 
   // Relationships
-  flashcards       Flashcard[]
+  flashcards Flashcard[]
 
   // Progress
-  masteryLevel     Float    @default(0) // 0-100%
-  lastStudiedAt    DateTime?
+  masteryLevel  Float     @default(0) // 0-100%
+  lastStudiedAt DateTime?
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([childId])
 }
 
 model Flashcard {
-  id               String   @id @default(uuid())
-  deckId           String
-  deck             FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  id     String        @id @default(uuid())
+  deckId String
+  deck   FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
-  front            String   @db.Text
-  back             String   @db.Text
-  imageUrl         String?
-  audioUrl         String?  // TTS pronunciation
+  front    String  @db.Text
+  back     String  @db.Text
+  imageUrl String?
+  audioUrl String? // TTS pronunciation
 
   // Spaced repetition (SM-2 algorithm)
-  easeFactor       Float    @default(2.5)
-  interval         Int      @default(1)  // Days
-  repetitions      Int      @default(0)
-  nextReviewAt     DateTime @default(now())
+  easeFactor   Float    @default(2.5)
+  interval     Int      @default(1) // Days
+  repetitions  Int      @default(0)
+  nextReviewAt DateTime @default(now())
 
   // Statistics
-  timesReviewed    Int      @default(0)
-  timesCorrect     Int      @default(0)
+  timesReviewed Int @default(0)
+  timesCorrect  Int @default(0)
 
   // Order
-  orderIndex       Int      @default(0)
+  orderIndex Int @default(0)
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([deckId, nextReviewAt])
 }
 
 model Quiz {
-  id               String   @id @default(uuid())
-  lessonId         String
-  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  title            String
-  type             QuizType
-  questions        Json     // Array of question objects
+  title     String
+  type      QuizType
+  questions Json // Array of question objects
 
   // Attempts
-  attempts         QuizAttempt[]
+  attempts QuizAttempt[]
 
   // Timestamps
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([lessonId])
 }
 
 model QuizAttempt {
-  id               String   @id @default(uuid())
-  quizId           String
-  quiz             Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
-  answers          Json     // User's answers
-  score            Float    // 0-100
+  answers          Json // User's answers
+  score            Float // 0-100
   timeSpentSeconds Int
 
   // XP awarded
-  xpEarned         Int      @default(0)
+  xpEarned Int @default(0)
 
   // Timestamps
-  completedAt      DateTime @default(now())
+  completedAt DateTime @default(now())
 
   @@index([quizId])
 }
@@ -389,125 +393,125 @@ model QuizAttempt {
 // ============================================
 
 model UserProgress {
-  id               String   @id @default(uuid())
-  childId          String   @unique
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  childId String @unique
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   // XP & Level
-  currentXP        Int      @default(0)
-  totalXP          Int      @default(0)
-  level            Int      @default(1)
+  currentXP Int @default(0)
+  totalXP   Int @default(0)
+  level     Int @default(1)
 
   // Subject-specific progress
-  subjectProgress  Json?    // {math: {xp, level}, science: {xp, level}, ...}
+  subjectProgress Json? // {math: {xp, level}, science: {xp, level}, ...}
 
   // Statistics
-  lessonsCompleted Int      @default(0)
-  questionsAnswered Int     @default(0)
-  flashcardsReviewed Int    @default(0)
-  perfectScores    Int      @default(0)
+  lessonsCompleted      Int @default(0)
+  questionsAnswered     Int @default(0)
+  flashcardsReviewed    Int @default(0)
+  perfectScores         Int @default(0)
   totalStudyTimeSeconds Int @default(0)
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model XPTransaction {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-  amount           Int
-  reason           XPReason
-  sourceType       String?  // "lesson", "flashcard", "quiz", etc.
-  sourceId         String?  // ID of the source entity
+  amount     Int
+  reason     XPReason
+  sourceType String? // "lesson", "flashcard", "quiz", etc.
+  sourceId   String? // ID of the source entity
 
   // Bonus info
-  wasBonus         Boolean  @default(false)
-  bonusMultiplier  Float?
-  bonusReason      String?  // "streak_bonus", "first_of_day", etc.
+  wasBonus        Boolean @default(false)
+  bonusMultiplier Float?
+  bonusReason     String? // "streak_bonus", "first_of_day", etc.
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([childId, createdAt])
 }
 
 model Streak {
-  id               String   @id @default(uuid())
-  childId          String   @unique
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  childId String @unique
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-  current          Int      @default(0)
-  longest          Int      @default(0)
-  lastActivityDate DateTime @db.Date
-  freezeAvailable  Boolean  @default(false)
+  current          Int       @default(0)
+  longest          Int       @default(0)
+  lastActivityDate DateTime  @db.Date
+  freezeAvailable  Boolean   @default(false)
   freezeUsedAt     DateTime?
 
-  updatedAt        DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 model Badge {
-  id               String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Badge definition
-  code             String   @unique // "first_lesson", "streak_7", etc.
-  name             String
-  description      String
-  icon             String   // Emoji or icon name
-  category         BadgeCategory
-  rarity           BadgeRarity
+  code        String        @unique // "first_lesson", "streak_7", etc.
+  name        String
+  description String
+  icon        String // Emoji or icon name
+  category    BadgeCategory
+  rarity      BadgeRarity
 
   // Requirements
-  requirements     Json     // Criteria for unlocking
-  xpReward         Int      @default(0)
+  requirements Json // Criteria for unlocking
+  xpReward     Int  @default(0)
 
   // Earned instances
-  earnedBy         EarnedBadge[]
+  earnedBy EarnedBadge[]
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model EarnedBadge {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  badgeId          String
-  badge            Badge    @relation(fields: [badgeId], references: [id])
+  id      String @id @default(uuid())
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  badgeId String
+  badge   Badge  @relation(fields: [badgeId], references: [id])
 
-  earnedAt         DateTime @default(now())
+  earnedAt DateTime @default(now())
 
   @@unique([childId, badgeId])
   @@index([childId])
-  @@index([childId, earnedAt])  // Recent badges display
+  @@index([childId, earnedAt]) // Recent badges display
 }
 
 model DailyChallenge {
-  id               String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  date             DateTime @db.Date @unique
-  type             ChallengeType
-  target           Int
-  description      String
-  xpReward         Int
+  date        DateTime      @unique @db.Date
+  type        ChallengeType
+  target      Int
+  description String
+  xpReward    Int
 
   // Completions
-  completions      ChallengeCompletion[]
+  completions ChallengeCompletion[]
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([date])
 }
 
 model ChallengeCompletion {
-  id               String   @id @default(uuid())
-  challengeId      String
-  challenge        DailyChallenge @relation(fields: [challengeId], references: [id])
-  childId          String
+  id          String         @id @default(uuid())
+  challengeId String
+  challenge   DailyChallenge @relation(fields: [challengeId], references: [id])
+  childId     String
 
-  progress         Int      @default(0)
-  completed        Boolean  @default(false)
-  completedAt      DateTime?
+  progress    Int       @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
 
   @@unique([challengeId, childId])
 }
@@ -517,24 +521,24 @@ model ChallengeCompletion {
 // ============================================
 
 model TextSelection {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  lessonId         String
-  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  childId  String
+  child    Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  selectedText     String   @db.Text
-  beforeContext    String?  @db.Text
-  afterContext     String?  @db.Text
-  pageNumber       Int?
+  selectedText  String  @db.Text
+  beforeContext String? @db.Text
+  afterContext  String? @db.Text
+  pageNumber    Int?
 
-  actionType       SelectionAction
-  userQuestion     String?
-  resultData       Json     // Action-specific result
+  actionType   SelectionAction
+  userQuestion String?
+  resultData   Json // Action-specific result
 
-  xpAwarded        Int      @default(0)
+  xpAwarded Int @default(0)
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([childId, createdAt])
   @@index([lessonId])
@@ -545,34 +549,34 @@ model TextSelection {
 // ============================================
 
 model Note {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
-  lessonId         String?
-  lesson           Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  id       String  @id @default(uuid())
+  childId  String
+  child    Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
   // Content
-  title            String   @db.VarChar(255)
-  content          String   @db.Text          // Rich text (HTML)
-  originalText     String?  @db.Text          // Original highlighted text that started the note
-  subject          Subject?
-  contentFormat    NoteContentFormat @default(RICH_TEXT)
+  title         String            @db.VarChar(255)
+  content       String            @db.Text // Rich text (HTML)
+  originalText  String?           @db.Text // Original highlighted text that started the note
+  subject       Subject?
+  contentFormat NoteContentFormat @default(RICH_TEXT)
 
   // Personalization
-  coverColor       String?  @default("#FFD93D")
-  coverStickers    String[]                   // Array of sticker IDs selected by child
-  coverPattern     String?  @default("dots")  // Pattern: dots, lines, stars, hearts, etc.
+  coverColor    String?  @default("#FFD93D")
+  coverStickers String[] // Array of sticker IDs selected by child
+  coverPattern  String?  @default("dots") // Pattern: dots, lines, stars, hearts, etc.
 
   // Organization
-  isPinned         Boolean  @default(false)
-  orderIndex       Int      @default(0)
+  isPinned   Boolean @default(false)
+  orderIndex Int     @default(0)
 
   // Parent interaction
-  parentComments   NoteComment[]
+  parentComments NoteComment[]
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([childId, subject])
   @@index([childId, lessonId])
@@ -580,19 +584,19 @@ model Note {
 }
 
 model NoteComment {
-  id               String   @id @default(uuid())
-  noteId           String
-  note             Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  parentId         String
-  parent           Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  noteId   String
+  note     Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   // Content
-  content          String   @db.Text
-  emoji            String?  // Optional emoji reaction
+  content String  @db.Text
+  emoji   String? // Optional emoji reaction
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([noteId, createdAt])
 }
@@ -602,56 +606,56 @@ model NoteComment {
 // ============================================
 
 model InteractiveExercise {
-  id               String   @id @default(uuid())
-  lessonId         String
-  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   // Exercise identification
-  type             ExerciseType
-  orderIndex       Int      @default(0)
+  type       ExerciseType
+  orderIndex Int          @default(0)
 
   // Content
-  questionText     String   @db.Text        // "1/2 × 1/4 = ___"
-  contextText      String?  @db.Text        // Surrounding text for context
-  originalPosition String?                   // Reference to position in source
+  questionText     String  @db.Text // "1/2 × 1/4 = ___"
+  contextText      String? @db.Text // Surrounding text for context
+  originalPosition String? // Reference to position in source
 
   // Answer data
-  expectedAnswer   String   @db.Text        // "1/8"
-  acceptableAnswers String[]                 // ["0.125", "one eighth"]
-  answerType       AnswerType @default(TEXT) // TEXT, NUMBER, SELECTION
-  options          Json?                     // For multiple choice: ["Option A", "Option B", ...]
+  expectedAnswer    String     @db.Text // "1/8"
+  acceptableAnswers String[] // ["0.125", "one eighth"]
+  answerType        AnswerType @default(TEXT) // TEXT, NUMBER, SELECTION
+  options           Json? // For multiple choice: ["Option A", "Option B", ...]
 
   // Hints and guidance
-  hint1            String?  @db.Text        // First hint after wrong attempt
-  hint2            String?  @db.Text        // Second hint
-  explanation      String?  @db.Text        // Shown after correct/max attempts
+  hint1       String? @db.Text // First hint after wrong attempt
+  hint2       String? @db.Text // Second hint
+  explanation String? @db.Text // Shown after correct/max attempts
 
   // Metadata
-  difficulty       ExerciseDifficulty @default(MEDIUM)
-  xpReward         Int      @default(10)
+  difficulty ExerciseDifficulty @default(MEDIUM)
+  xpReward   Int                @default(10)
 
   // Relations
-  attempts         ExerciseAttempt[]
+  attempts ExerciseAttempt[]
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([lessonId, orderIndex])
 }
 
 model ExerciseAttempt {
-  id               String   @id @default(uuid())
-  exerciseId       String
-  exercise         InteractiveExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  id         String              @id @default(uuid())
+  exerciseId String
+  exercise   InteractiveExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  childId    String
+  child      Child               @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-  submittedAnswer  String   @db.Text
-  isCorrect        Boolean
-  attemptNumber    Int      @default(1)
-  aiFeedback       String?  @db.Text        // Jeffrey's personalized feedback
-  xpAwarded        Int      @default(0)
+  submittedAnswer String  @db.Text
+  isCorrect       Boolean
+  attemptNumber   Int     @default(1)
+  aiFeedback      String? @db.Text // Jeffrey's personalized feedback
+  xpAwarded       Int     @default(0)
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([exerciseId, childId])
   @@index([childId, createdAt])
@@ -662,31 +666,31 @@ model ExerciseAttempt {
 // ============================================
 
 model SafetyLog {
-  id               String   @id @default(uuid())
-  childId          String
-  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-  incidentType     SafetyIncidentType
-  severity         SafetySeverity
+  incidentType SafetyIncidentType
+  severity     SafetySeverity
 
   // Context
-  inputText        String?  @db.Text
-  outputText       String?  @db.Text
-  lessonId         String?
+  inputText  String? @db.Text
+  outputText String? @db.Text
+  lessonId   String?
 
   // AI safety ratings
   geminiSafetyRatings Json?
 
   // Flags
-  flags            String[]
+  flags String[]
 
   // Resolution
-  wasBlocked       Boolean  @default(false)
-  parentNotified   Boolean  @default(false)
+  wasBlocked       Boolean   @default(false)
+  parentNotified   Boolean   @default(false)
   parentNotifiedAt DateTime?
-  parentAction     String?  // "acknowledged", "restricted", etc.
+  parentAction     String? // "acknowledged", "restricted", etc.
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([childId, createdAt])
   @@index([severity])
@@ -697,120 +701,120 @@ model SafetyLog {
 // ============================================
 
 model Organization {
-  id               String   @id @default(uuid())
-  name             String
-  slug             String   @unique  // For subdomain routing later
-  type             OrganizationType
+  id   String           @id @default(uuid())
+  name String
+  slug String           @unique // For subdomain routing later
+  type OrganizationType
 
   // Billing & Subscription
-  stripeCustomerId String?
-  subscriptionTier OrgSubscriptionTier @default(STARTER)
-  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId   String?
+  subscriptionTier   OrgSubscriptionTier @default(STARTER)
+  subscriptionStatus SubscriptionStatus  @default(ACTIVE)
 
   // Token Quotas
-  monthlyTokenQuota   BigInt   @default(1000000)  // 1M tokens/month starter
-  currentMonthUsage   BigInt   @default(0)
-  quotaResetDate      DateTime @default(now())
+  monthlyTokenQuota BigInt   @default(1000000) // 1M tokens/month starter
+  currentMonthUsage BigInt   @default(0)
+  quotaResetDate    DateTime @default(now())
 
   // Relationships
-  teachers         Teacher[]
-  tokenUsageLogs   OrgTokenUsageLog[]
+  teachers       Teacher[]
+  tokenUsageLogs OrgTokenUsageLog[]
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([slug])
-  @@index([subscriptionStatus, quotaResetDate])  // Quota reset cron job
+  @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
 }
 
 model Teacher {
-  id               String   @id @default(uuid())
-  email            String   @unique
-  passwordHash     String?  // Optional for OAuth users
-  firstName        String?
-  lastName         String?
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String? // Optional for OAuth users
+  firstName    String?
+  lastName     String?
 
   // OAuth providers
-  googleId         String?  @unique  // Google OAuth sub (unique identifier)
-  authProvider     String   @default("email")  // "email" | "google"
+  googleId     String? @unique // Google OAuth sub (unique identifier)
+  authProvider String  @default("email") // "email" | "google"
 
   // Profile details
-  schoolName       String?              // School or organization name
-  primarySubject   Subject?             // Primary teaching subject
-  gradeRange       String?              // e.g., "ELEMENTARY", "MIDDLE", "HIGH", "MIXED"
+  schoolName     String? // School or organization name
+  primarySubject Subject? // Primary teaching subject
+  gradeRange     String? // e.g., "ELEMENTARY", "MIDDLE", "HIGH", "MIXED"
 
   // Email verification
-  emailVerified    Boolean  @default(false)
-  emailVerifiedAt  DateTime?
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
 
   // Notification preferences
-  notifyProductUpdates  Boolean @default(true)   // Product updates and news
-  notifyTipsAndTutorials Boolean @default(true)  // Tips and tutorials
-  notifyUsageAlerts     Boolean @default(true)   // Usage/credit alerts
-  notifyWeeklyDigest    Boolean @default(false)  // Weekly activity digest
+  notifyProductUpdates   Boolean @default(true) // Product updates and news
+  notifyTipsAndTutorials Boolean @default(true) // Tips and tutorials
+  notifyUsageAlerts      Boolean @default(true) // Usage/credit alerts
+  notifyWeeklyDigest     Boolean @default(false) // Weekly activity digest
 
   // Organization (null for independent teachers)
-  organizationId   String?
-  organization     Organization? @relation(fields: [organizationId], references: [id])
-  role             TeacherRole @default(TEACHER)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  role           TeacherRole   @default(TEACHER)
 
   // Individual subscription (when no org)
   subscriptionTier      TeacherSubscriptionTier @default(FREE)
-  subscriptionStatus    SubscriptionStatus @default(ACTIVE)
+  subscriptionStatus    SubscriptionStatus      @default(ACTIVE)
   stripeCustomerId      String?
-  stripeSubscriptionId  String?              // Active Stripe subscription ID
+  stripeSubscriptionId  String? // Active Stripe subscription ID
   subscriptionExpiresAt DateTime?
 
   // Trial period
-  trialEndsAt           DateTime?            // When trial period ends (null = no trial)
+  trialEndsAt DateTime? // When trial period ends (null = no trial)
 
   // Token Quotas (individual)
-  monthlyTokenQuota     BigInt   @default(100000)  // 100K tokens/month free (100 credits)
-  currentMonthUsage     BigInt   @default(0)
-  quotaResetDate        DateTime @default(now())
+  monthlyTokenQuota BigInt   @default(100000) // 100K tokens/month free (100 credits)
+  currentMonthUsage BigInt   @default(0)
+  quotaResetDate    DateTime @default(now())
 
   // Credit System (December 2025)
-  rolledOverCredits     Int      @default(0)       // Credits rolled over from previous month
-  bonusCredits          Int      @default(0)       // Credits from credit pack purchases (never expire)
+  rolledOverCredits Int @default(0) // Credits rolled over from previous month
+  bonusCredits      Int @default(0) // Credits from credit pack purchases (never expire)
 
   // Credit usage notification tracking (to avoid duplicate emails)
-  notifiedWarning70     Boolean  @default(false)   // Sent warning at 70% usage
-  notifiedWarning90     Boolean  @default(false)   // Sent warning at 90% usage
-  notifiedLimitReached  Boolean  @default(false)   // Sent limit reached notification
-  lastNotificationReset DateTime?                  // When notifications were last reset (tracks month)
+  notifiedWarning70     Boolean   @default(false) // Sent warning at 70% usage
+  notifiedWarning90     Boolean   @default(false) // Sent warning at 90% usage
+  notifiedLimitReached  Boolean   @default(false) // Sent limit reached notification
+  lastNotificationReset DateTime? // When notifications were last reset (tracks month)
 
   // Google Drive integration
-  googleDriveTokens  Json?
+  googleDriveTokens Json?
 
   // Relationships
-  content          TeacherContent[]
-  rubrics          Rubric[]
-  gradingJobs      GradingJob[]
-  templates        ContentTemplate[]
-  tokenUsageLogs   TokenUsageLog[]
-  classrooms       Classroom[]
-  audioUpdates     TeacherAudioUpdate[]
-  substitutePlans  SubstitutePlan[]
-  iepGoalSessions  IEPGoalSession[]
+  content         TeacherContent[]
+  rubrics         Rubric[]
+  gradingJobs     GradingJob[]
+  templates       ContentTemplate[]
+  tokenUsageLogs  TokenUsageLog[]
+  classrooms      Classroom[]
+  audioUpdates    TeacherAudioUpdate[]
+  substitutePlans SubstitutePlan[]
+  iepGoalSessions IEPGoalSession[]
 
   // Referral & Sharing
-  referralCode       ReferralCode?
-  referredBy         Referral?           @relation("ReferredTeacher")
-  referralRewards    ReferralReward[]
-  shareableContents  ShareableContent[]
+  referralCode      ReferralCode?
+  referredBy        Referral?          @relation("ReferredTeacher")
+  referralRewards   ReferralReward[]
+  shareableContents ShareableContent[]
 
   // Onboarding
-  tutorialCompletedAt  DateTime?            // When dashboard tutorial was completed (null = not completed)
+  tutorialCompletedAt DateTime? // When dashboard tutorial was completed (null = not completed)
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  lastLoginAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
 
   @@index([email])
   @@index([organizationId])
-  @@index([subscriptionStatus, quotaResetDate])  // Quota reset cron job
+  @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
 }
 
 // ============================================
@@ -818,48 +822,48 @@ model Teacher {
 // ============================================
 
 model TokenUsageLog {
-  id               String   @id @default(uuid())
-  teacherId        String
-  teacher          Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Usage details
-  operation        TokenOperation
-  tokensUsed       Int
-  modelUsed        String   // gemini-2.5-flash, gemini-3-pro, etc.
+  operation  TokenOperation
+  tokensUsed Int
+  modelUsed  String // gemini-2.5-flash, gemini-3-pro, etc.
 
   // Context
-  resourceType     String?  // "content", "grading", "quiz", etc.
-  resourceId       String?
+  resourceType String? // "content", "grading", "quiz", etc.
+  resourceId   String?
 
   // Cost tracking
-  estimatedCost    Decimal? @db.Decimal(10, 6)  // USD
+  estimatedCost Decimal? @db.Decimal(10, 6) // USD
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([teacherId, createdAt])
   @@index([operation])
-  @@index([teacherId, operation, createdAt])  // Usage analytics by operation
+  @@index([teacherId, operation, createdAt]) // Usage analytics by operation
 }
 
 model OrgTokenUsageLog {
-  id               String   @id @default(uuid())
-  organizationId   String
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  teacherId        String
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teacherId      String
 
   // Same fields as TokenUsageLog
-  operation        TokenOperation
-  tokensUsed       Int
-  modelUsed        String
-  resourceType     String?
-  resourceId       String?
-  estimatedCost    Decimal? @db.Decimal(10, 6)
+  operation     TokenOperation
+  tokensUsed    Int
+  modelUsed     String
+  resourceType  String?
+  resourceId    String?
+  estimatedCost Decimal?       @db.Decimal(10, 6)
 
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([organizationId, createdAt])
   @@index([teacherId, createdAt])
-  @@index([organizationId, operation, createdAt])  // Org usage analytics by operation
+  @@index([organizationId, operation, createdAt]) // Org usage analytics by operation
 }
 
 // ============================================
@@ -867,45 +871,45 @@ model OrgTokenUsageLog {
 // ============================================
 
 model TeacherContent {
-  id               String   @id @default(uuid())
-  teacherId        String
-  teacher          Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Content metadata
-  title            String
-  description      String?  @db.Text
-  subject          Subject?
-  gradeLevel       String?  // "K", "1", "2-3", "4-6", etc.
-  contentType      TeacherContentType
+  title       String
+  description String?            @db.Text
+  subject     Subject?
+  gradeLevel  String? // "K", "1", "2-3", "4-6", etc.
+  contentType TeacherContentType
 
   // Source material
   sourceType       SourceType?
   originalFileUrl  String?
   originalFileName String?
-  extractedText    String?  @db.Text
+  extractedText    String?     @db.Text
 
   // Generated content (JSON structures)
-  lessonContent    Json?    // Structured lesson with sections
-  quizContent      Json?    // Quiz questions and answers
-  flashcardContent Json?    // Flashcard deck
-  infographicUrl   String?  // Generated infographic image
+  lessonContent    Json? // Structured lesson with sections
+  quizContent      Json? // Quiz questions and answers
+  flashcardContent Json? // Flashcard deck
+  infographicUrl   String? // Generated infographic image
 
   // Publishing
-  status           ContentStatus @default(DRAFT)
-  isPublic         Boolean  @default(false)
-  publishedAt      DateTime?
+  status      ContentStatus @default(DRAFT)
+  isPublic    Boolean       @default(false)
+  publishedAt DateTime?
 
   // Template reference
-  templateId       String?
-  template         ContentTemplate? @relation(fields: [templateId], references: [id])
+  templateId String?
+  template   ContentTemplate? @relation(fields: [templateId], references: [id])
 
   // AI metadata
-  tokensUsed       Int      @default(0)
-  aiModelUsed      String?
+  tokensUsed  Int     @default(0)
+  aiModelUsed String?
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([teacherId, contentType])
   @@index([subject, gradeLevel])
@@ -913,28 +917,28 @@ model TeacherContent {
 }
 
 model ContentTemplate {
-  id               String   @id @default(uuid())
-  teacherId        String
-  teacher          Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  name             String
-  description      String?
-  contentType      TeacherContentType
-  subject          Subject?
-  gradeLevel       String?
+  name        String
+  description String?
+  contentType TeacherContentType
+  subject     Subject?
+  gradeLevel  String?
 
   // Template structure
-  structure        Json     // Sections, prompts, formatting rules
-  defaultSettings  Json?    // Default AI parameters
+  structure       Json // Sections, prompts, formatting rules
+  defaultSettings Json? // Default AI parameters
 
   // Usage tracking
-  usageCount       Int      @default(0)
+  usageCount Int @default(0)
 
   // Relationships
-  content          TeacherContent[]
+  content TeacherContent[]
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([teacherId])
 }
@@ -944,117 +948,117 @@ model ContentTemplate {
 // ============================================
 
 model Rubric {
-  id               String   @id @default(uuid())
-  teacherId        String
-  teacher          Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  name             String
-  description      String?  @db.Text
-  subject          Subject?
-  gradeLevel       String?
+  name        String
+  description String?  @db.Text
+  subject     Subject?
+  gradeLevel  String?
 
   // Rubric structure
-  criteria         Json     // Array of {name, description, weight, levels: [{score, label, description}]}
-  maxScore         Int
+  criteria Json // Array of {name, description, weight, levels: [{score, label, description}]}
+  maxScore Int
 
   // Scoring config
   scoringType      ScoringType @default(POINTS)
-  passingThreshold Float?   // Minimum passing score/percentage
+  passingThreshold Float? // Minimum passing score/percentage
 
   // AI grading config
-  gradingPrompt    String?  @db.Text  // Custom prompt additions
-  confidenceThreshold Float @default(0.7)  // Below this, flag for review
+  gradingPrompt       String? @db.Text // Custom prompt additions
+  confidenceThreshold Float   @default(0.7) // Below this, flag for review
 
   // Usage
-  usageCount       Int      @default(0)
+  usageCount Int @default(0)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  gradingJobs      GradingJob[]
+  gradingJobs GradingJob[]
 
   @@index([teacherId])
   @@index([subject])
 }
 
 model GradingJob {
-  id               String   @id @default(uuid())
-  teacherId        String
-  teacher          Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  rubricId         String
-  rubric           Rubric   @relation(fields: [rubricId], references: [id])
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  rubricId  String
+  rubric    Rubric  @relation(fields: [rubricId], references: [id])
 
   // Job metadata
-  name             String
-  description      String?
-  status           GradingJobStatus @default(PENDING)
+  name        String
+  description String?
+  status      GradingJobStatus @default(PENDING)
 
   // Batch info
-  totalSubmissions Int      @default(0)
-  gradedCount      Int      @default(0)
-  errorCount       Int      @default(0)
+  totalSubmissions Int @default(0)
+  gradedCount      Int @default(0)
+  errorCount       Int @default(0)
 
   // Processing
-  startedAt        DateTime?
-  completedAt      DateTime?
-  processingError  String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  processingError String?
 
   // Token usage
-  totalTokensUsed  Int      @default(0)
+  totalTokensUsed Int @default(0)
 
   // Relationships
-  submissions      GradingSubmission[]
+  submissions GradingSubmission[]
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([teacherId, status])
   @@index([rubricId])
 }
 
 model GradingSubmission {
-  id               String   @id @default(uuid())
-  gradingJobId     String
-  gradingJob       GradingJob @relation(fields: [gradingJobId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  gradingJobId String
+  gradingJob   GradingJob @relation(fields: [gradingJobId], references: [id], onDelete: Cascade)
 
   // Submission identification
-  studentIdentifier String  // Anonymous ID or name (teacher choice)
+  studentIdentifier String // Anonymous ID or name (teacher choice)
 
   // Source
-  fileUrl          String?
-  fileName         String?
-  extractedText    String?  @db.Text
+  fileUrl       String?
+  fileName      String?
+  extractedText String? @db.Text
 
   // AI Grading Results
-  status           SubmissionStatus @default(PENDING)
+  status SubmissionStatus @default(PENDING)
 
   // Scoring (per criteria)
-  criteriaScores   Json?    // {criterionId: {score, feedback, confidence}}
-  totalScore       Float?
-  percentageScore  Float?
-  letterGrade      String?
+  criteriaScores  Json? // {criterionId: {score, feedback, confidence}}
+  totalScore      Float?
+  percentageScore Float?
+  letterGrade     String?
 
   // AI Feedback
-  overallFeedback  String?  @db.Text
-  strengths        String[] // Key strengths identified
-  improvements     String[] // Areas for improvement
+  overallFeedback String?  @db.Text
+  strengths       String[] // Key strengths identified
+  improvements    String[] // Areas for improvement
 
   // Confidence & Review
-  confidenceScore  Float?   // 0-1, AI's confidence in grading
-  flaggedForReview Boolean  @default(false)
+  confidenceScore  Float? // 0-1, AI's confidence in grading
+  flaggedForReview Boolean @default(false)
   flagReason       String?
 
   // Teacher Override
-  teacherReviewed  Boolean  @default(false)
-  teacherOverride  Json?    // {criterionId: {score, feedback}}
-  teacherNotes     String?  @db.Text
-  finalizedAt      DateTime?
+  teacherReviewed Boolean   @default(false)
+  teacherOverride Json? // {criterionId: {score, feedback}}
+  teacherNotes    String?   @db.Text
+  finalizedAt     DateTime?
 
   // Token usage
-  tokensUsed       Int      @default(0)
+  tokensUsed Int @default(0)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([gradingJobId, status])
   @@index([flaggedForReview])
@@ -1065,23 +1069,23 @@ model GradingSubmission {
 // ============================================
 
 model Classroom {
-  id               String   @id @default(uuid())
-  teacherId        String
-  teacher          Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  name             String
-  subject          Subject?
-  gradeLevel       String?
+  name       String
+  subject    Subject?
+  gradeLevel String?
 
   // Access code for students/parents
-  accessCode       String   @unique
-  isActive         Boolean  @default(true)
+  accessCode String  @unique
+  isActive   Boolean @default(true)
 
   // Future: Link to Child accounts via Parent consent
   // students         ClassroomStudent[]
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([teacherId])
   @@index([accessCode])
@@ -1092,37 +1096,37 @@ model Classroom {
 // ============================================
 
 model TeacherAudioUpdate {
-  id            String      @id @default(uuid())
-  teacherId     String
-  teacher       Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Content
-  title         String                           // e.g., "Week of Dec 23 - Math & Science Update"
-  script        String      @db.Text             // AI-generated podcast script
-  customNotes   String?     @db.Text             // Teacher's optional custom notes to include
+  title       String // e.g., "Week of Dec 23 - Math & Science Update"
+  script      String  @db.Text // AI-generated podcast script
+  customNotes String? @db.Text // Teacher's optional custom notes to include
 
   // Audio file
-  audioUrl      String?                          // GCS/R2 URL to the generated audio file
-  duration      Int?                             // Audio duration in seconds
+  audioUrl String? // GCS/R2 URL to the generated audio file
+  duration Int? // Audio duration in seconds
 
   // Configuration
-  language      String      @default("en")       // Audio language (en, ar, es, fr, etc.)
-  voiceId       String?                          // Selected TTS voice ID
+  language String  @default("en") // Audio language (en, ar, es, fr, etc.)
+  voiceId  String? // Selected TTS voice ID
 
   // Source lessons
-  lessonIds     String[]                         // IDs of TeacherContent used to generate this update
+  lessonIds String[] // IDs of TeacherContent used to generate this update
 
   // Status tracking
-  status        AudioStatus @default(DRAFT)
+  status AudioStatus @default(DRAFT)
 
   // Generation metadata
-  tokensUsed    Int         @default(0)          // Tokens used for script generation
-  modelUsed     String?                          // AI model used (gemini-3-flash, etc.)
+  tokensUsed Int     @default(0) // Tokens used for script generation
+  modelUsed  String? // AI model used (gemini-3-flash, etc.)
 
   // Timestamps
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  publishedAt   DateTime?                        // When status changed to PUBLISHED
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime? // When status changed to PUBLISHED
 
   @@index([teacherId])
   @@index([teacherId, status])
@@ -1134,43 +1138,43 @@ model TeacherAudioUpdate {
 // ============================================
 
 model SubstitutePlan {
-  id            String      @id @default(uuid())
-  teacherId     String
-  teacher       Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Plan metadata
-  title         String                           // e.g., "Sub Plan - Dec 23, 2025"
-  date          DateTime    @db.Date             // Date the sub plan is for
-  gradeLevel    String?                          // Grade level (e.g., "3rd Grade", "K-2")
+  title      String // e.g., "Sub Plan - Dec 23, 2025"
+  date       DateTime @db.Date // Date the sub plan is for
+  gradeLevel String? // Grade level (e.g., "3rd Grade", "K-2")
 
   // Schedule
-  schedule      Json                             // Array of time blocks with activities
+  schedule Json // Array of time blocks with activities
 
   // Classroom info (optional, teacher can choose to include)
-  classroomInfo Json?                            // Seating chart ref, routines, attention signals
+  classroomInfo Json? // Seating chart ref, routines, attention signals
 
   // Generated content sections
-  activities    Json                             // Detailed activity instructions
-  materials     Json?                            // Materials list with locations
-  emergencyInfo Json?                            // Emergency contacts, procedures
-  studentNotes  Json?                            // Helpful students, special needs notes
+  activities    Json // Detailed activity instructions
+  materials     Json? // Materials list with locations
+  emergencyInfo Json? // Emergency contacts, procedures
+  studentNotes  Json? // Helpful students, special needs notes
 
   // Backup plans
-  backupActivities Json?                         // "If tech fails" alternatives
+  backupActivities Json? // "If tech fails" alternatives
 
   // Source lessons
-  lessonIds     String[]                         // IDs of TeacherContent used to generate
+  lessonIds String[] // IDs of TeacherContent used to generate
 
   // Export
-  pdfUrl        String?                          // Generated PDF URL
+  pdfUrl String? // Generated PDF URL
 
   // Generation metadata
-  tokensUsed    Int         @default(0)
-  modelUsed     String?
+  tokensUsed Int     @default(0)
+  modelUsed  String?
 
   // Timestamps
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([teacherId])
   @@index([teacherId, date])
@@ -1182,40 +1186,40 @@ model SubstitutePlan {
 // ============================================
 
 model IEPGoalSession {
-  id                String   @id @default(uuid())
-  teacherId         String
-  teacher           Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Student info (privacy-safe - no names stored, just reference)
-  studentIdentifier String?                      // Optional teacher reference (e.g., "Student A")
-  gradeLevel        String                       // e.g., "3rd Grade", "K", "5th"
+  studentIdentifier String? // Optional teacher reference (e.g., "Student A")
+  gradeLevel        String // e.g., "3rd Grade", "K", "5th"
 
   // IEP Context
   disabilityCategory DisabilityCategory
-  subjectArea       IEPSubjectArea
+  subjectArea        IEPSubjectArea
 
   // Present Levels
-  presentLevels     String   @db.Text            // Current performance description
-  strengths         String?  @db.Text            // Student strengths
-  challenges        String?  @db.Text            // Areas of difficulty
+  presentLevels String  @db.Text // Current performance description
+  strengths     String? @db.Text // Student strengths
+  challenges    String? @db.Text // Areas of difficulty
 
   // Generated Content
-  generatedGoals    Json                         // Array of SMART goal objects
-  selectedGoals     Json?                        // Goals teacher selected/edited
-  accommodations    Json                         // Suggested accommodations by category
-  progressMonitoring Json?                       // Progress monitoring suggestions
+  generatedGoals     Json // Array of SMART goal objects
+  selectedGoals      Json? // Goals teacher selected/edited
+  accommodations     Json // Suggested accommodations by category
+  progressMonitoring Json? // Progress monitoring suggestions
 
   // Goal timeline
-  goalStartDate     DateTime? @db.Date
-  goalEndDate       DateTime? @db.Date           // Typically 1 year from start
+  goalStartDate DateTime? @db.Date
+  goalEndDate   DateTime? @db.Date // Typically 1 year from start
 
   // Generation metadata
-  tokensUsed        Int      @default(0)
-  modelUsed         String?
+  tokensUsed Int     @default(0)
+  modelUsed  String?
 
   // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([teacherId])
   @@index([teacherId, disabilityCategory])
@@ -1223,19 +1227,19 @@ model IEPGoalSession {
 }
 
 enum DisabilityCategory {
-  SPECIFIC_LEARNING_DISABILITY    // SLD - Dyslexia, Dyscalculia, Dysgraphia
-  SPEECH_LANGUAGE_IMPAIRMENT      // Speech/Language
-  OTHER_HEALTH_IMPAIRMENT         // ADHD, health conditions
-  AUTISM_SPECTRUM                 // ASD
-  EMOTIONAL_DISTURBANCE           // ED/EBD
-  INTELLECTUAL_DISABILITY         // ID
-  DEVELOPMENTAL_DELAY             // DD (ages 3-9)
-  MULTIPLE_DISABILITIES           // More than one category
-  HEARING_IMPAIRMENT              // DHH
-  VISUAL_IMPAIRMENT               // VI
-  ORTHOPEDIC_IMPAIRMENT           // OI
-  TRAUMATIC_BRAIN_INJURY          // TBI
-  DEAF_BLINDNESS                  // Combined hearing and vision loss
+  SPECIFIC_LEARNING_DISABILITY // SLD - Dyslexia, Dyscalculia, Dysgraphia
+  SPEECH_LANGUAGE_IMPAIRMENT // Speech/Language
+  OTHER_HEALTH_IMPAIRMENT // ADHD, health conditions
+  AUTISM_SPECTRUM // ASD
+  EMOTIONAL_DISTURBANCE // ED/EBD
+  INTELLECTUAL_DISABILITY // ID
+  DEVELOPMENTAL_DELAY // DD (ages 3-9)
+  MULTIPLE_DISABILITIES // More than one category
+  HEARING_IMPAIRMENT // DHH
+  VISUAL_IMPAIRMENT // VI
+  ORTHOPEDIC_IMPAIRMENT // OI
+  TRAUMATIC_BRAIN_INJURY // TBI
+  DEAF_BLINDNESS // Combined hearing and vision loss
 }
 
 enum IEPSubjectArea {
@@ -1261,118 +1265,338 @@ enum IEPSubjectArea {
 // ============================================
 
 model Admin {
-  id               String    @id @default(uuid())
-  email            String    @unique
-  passwordHash     String
-  name             String
-  role             AdminRole @default(ANALYST)
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         AdminRole @default(ANALYST)
 
   // Security
-  emailVerified    Boolean   @default(false)
-  emailVerifiedAt  DateTime?
-  lastLoginAt      DateTime?
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
 
   // Timestamps
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([email])
 }
 
 enum AdminRole {
-  SUPER_ADMIN    // Full access, can create other admins
-  ANALYST        // Read-only access to analytics
+  SUPER_ADMIN // Full access, can create other admins
+  ANALYST // Read-only access to analytics
 }
 
 // Activity tracking for DAU/WAU/MAU calculations
 model ActivitySession {
-  id              String   @id @default(uuid())
-  childId         String
-  child           Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   // Session timing
   startedAt       DateTime
   endedAt         DateTime?
-  durationMinutes Int      @default(0)
+  durationMinutes Int       @default(0)
 
   // Activity breakdown (JSON for flexibility)
   // Structure: { chat: 10, flashcards: 5, upload: 2, quiz: 3, lesson: 15 }
-  activities      Json     @default("{}")
+  activities Json @default("{}")
 
   // Gamification
-  xpEarned        Int      @default(0)
-  lessonsStarted  Int      @default(0)
-  lessonsCompleted Int     @default(0)
+  xpEarned         Int @default(0)
+  lessonsStarted   Int @default(0)
+  lessonsCompleted Int @default(0)
 
   // Denormalized date fields for efficient GROUP BY queries
-  createdDate     DateTime @db.Date          // Date only (for DAU)
-  weekStart       DateTime @db.Date          // Monday of the week (for WAU)
-  monthStart      DateTime @db.Date          // First of the month (for MAU)
+  createdDate DateTime @db.Date // Date only (for DAU)
+  weekStart   DateTime @db.Date // Monday of the week (for WAU)
+  monthStart  DateTime @db.Date // First of the month (for MAU)
 
   // Device/platform (for segmentation)
-  platform        String?                    // "ios", "android", "web"
-  deviceType      String?                    // "mobile", "tablet", "desktop"
+  platform   String? // "ios", "android", "web"
+  deviceType String? // "mobile", "tablet", "desktop"
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   // CRITICAL INDEXES for analytics queries
-  @@index([createdDate])                                    // DAU queries
-  @@index([childId, createdDate])                          // Per-child activity
-  @@index([weekStart])                                      // WAU queries
-  @@index([monthStart])                                     // MAU queries
+  @@index([createdDate]) // DAU queries
+  @@index([childId, createdDate]) // Per-child activity
+  @@index([weekStart]) // WAU queries
+  @@index([monthStart]) // MAU queries
 }
 
 // Pre-computed daily metrics (populated by nightly job)
 model DailyAnalyticsSnapshot {
-  id                   String   @id @default(uuid())
-  date                 DateTime @unique @db.Date
+  id   String   @id @default(uuid())
+  date DateTime @unique @db.Date
 
   // User counts
-  dauCount             Int      @default(0)          // Active users today
-  newUsersCount        Int      @default(0)          // New signups today
+  dauCount      Int @default(0) // Active users today
+  newUsersCount Int @default(0) // New signups today
 
   // Engagement metrics
-  totalSessions        Int      @default(0)
-  avgSessionMinutes    Float    @default(0)
-  totalXpAwarded       Int      @default(0)
+  totalSessions     Int   @default(0)
+  avgSessionMinutes Float @default(0)
+  totalXpAwarded    Int   @default(0)
 
   // Lesson metrics
-  lessonsCreated       Int      @default(0)
-  lessonsCompleted     Int      @default(0)
+  lessonsCreated   Int @default(0)
+  lessonsCompleted Int @default(0)
 
   // Revenue metrics (snapshot at end of day)
-  totalFreeUsers       Int      @default(0)
-  totalFamilyUsers     Int      @default(0)
-  totalFamilyPlusUsers Int      @default(0)
-  estimatedMrr         Decimal  @db.Decimal(10, 2)
+  totalFreeUsers       Int     @default(0)
+  totalFamilyUsers     Int     @default(0)
+  totalFamilyPlusUsers Int     @default(0)
+  estimatedMrr         Decimal @db.Decimal(10, 2)
 
   // Teacher portal
-  teacherDauCount      Int      @default(0)
+  teacherDauCount Int @default(0)
 
-  computedAt           DateTime @default(now())
+  computedAt DateTime @default(now())
 
   @@index([date])
 }
 
 // Pre-computed cohort retention (populated by weekly job)
 model CohortRetentionSnapshot {
-  id              String   @id @default(uuid())
-  cohortMonth     DateTime @db.Date             // e.g., 2024-01-01
-  monthNumber     Int                           // 0 = signup month, 1, 2, ... 12
+  id          String   @id @default(uuid())
+  cohortMonth DateTime @db.Date // e.g., 2024-01-01
+  monthNumber Int // 0 = signup month, 1, 2, ... 12
 
   // Metrics
-  cohortSize      Int                           // Users who signed up in this month
-  activeUsers     Int                           // Users active in monthNumber
-  retentionRate   Float                         // activeUsers / cohortSize * 100
+  cohortSize    Int // Users who signed up in this month
+  activeUsers   Int // Users active in monthNumber
+  retentionRate Float // activeUsers / cohortSize * 100
 
   // Segmentation (optional)
-  segment         String?  @default("all")      // "all", "free", "paid", etc.
+  segment String? @default("all") // "all", "free", "paid", etc.
 
-  computedAt      DateTime @default(now())
+  computedAt DateTime @default(now())
 
   @@unique([cohortMonth, monthNumber, segment])
   @@index([cohortMonth])
   @@index([computedAt])
+}
+
+// ============================================
+// CURRICULUM STANDARDS SYSTEM
+// ============================================
+
+// Curriculum jurisdiction (country/organization/board)
+model CurriculumJurisdiction {
+  id           String  @id @default(uuid())
+  code         String  @unique // "UK_NATIONAL_CURRICULUM", "US_COMMON_CORE", "IB_PYP", "CBSE", "ICSE"
+  name         String // "British National Curriculum"
+  country      String? // "GB", "US", "IN", null for international
+  organization String? // "IBO", "NCERT", etc.
+
+  // Metadata
+  sourceUrl    String? // Where standards came from
+  lastSyncedAt DateTime?
+  version      String? // "2014", "2024-25"
+
+  // Relationships
+  standardSets StandardSet[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([country])
+}
+
+// Group of standards (e.g., "Year 1 Mathematics")
+model StandardSet {
+  id             String                 @id @default(uuid())
+  jurisdictionId String
+  jurisdiction   CurriculumJurisdiction @relation(fields: [jurisdictionId], references: [id])
+
+  // Identification
+  externalId String? // ID from source API (e.g., CSP GUID)
+  code       String // "UK.KS1.Y1.MA", "PHASE_2_NUMBER"
+
+  // Classification
+  title           String // "Year 1 Mathematics"
+  subject         Subject // MATH, SCIENCE, ENGLISH, etc.
+  educationLevels String[] // ["Y1"] for Year 1, ["K"] for Kindergarten
+  gradeLevel      Int? // Numeric grade (0=K, 1-6)
+  ageRangeMin     Int? // Minimum age (e.g., 5)
+  ageRangeMax     Int? // Maximum age (e.g., 7)
+  phase           Int? // For IB PYP phases (1-4)
+  keyStage        Int? // For British NC (1-2 for primary)
+
+  // Metadata
+  documentTitle String? // Source document name
+  documentYear  String? // "2014"
+
+  // Relationships
+  standards LearningStandard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([jurisdictionId, code])
+  @@index([jurisdictionId, subject, gradeLevel])
+  @@index([subject, educationLevels])
+}
+
+// Individual learning standard/outcome
+model LearningStandard {
+  id            String      @id @default(uuid())
+  standardSetId String
+  standardSet   StandardSet @relation(fields: [standardSetId], references: [id])
+
+  // Identification
+  externalId String? // ID from source (CSP GUID, ASN identifier)
+  notation   String? // "UK.KS1.Y1.MA.NPV.1", "1.NBT.4"
+
+  // Content
+  description      String  @db.Text // The actual standard text
+  shortDescription String? // Abbreviated version for UI
+
+  // Hierarchy
+  parentId String? // Parent standard for nested hierarchies
+  parent   LearningStandard?  @relation("StandardHierarchy", fields: [parentId], references: [id])
+  children LearningStandard[] @relation("StandardHierarchy")
+  depth    Int                @default(0) // 0 = top level, 1 = child, etc.
+  position Int                @default(0) // Sort order within parent
+
+  // Classification
+  strand         String? // "Number - Place Value", "Geometry", "Data Handling"
+  conceptualArea String? // More specific topic area
+  bloomsLevel    String? // "Remember", "Understand", "Apply", etc.
+  isStatutory    Boolean @default(true) // For British NC: statutory vs non-statutory
+
+  // Non-statutory guidance (British NC specific)
+  guidance String? @db.Text // Notes and guidance (non-statutory)
+
+  // Ancestor trail (for search/display)
+  ancestorDescriptions String[] // ["Number and Operations", "Base Ten"]
+
+  // Cross-curriculum mapping
+  equivalentStandards StandardEquivalence[] @relation("SourceStandard")
+  equivalentTo        StandardEquivalence[] @relation("TargetStandard")
+
+  // Content alignment
+  contentAlignments ContentStandardAlignment[]
+  progressRecords   ChildStandardProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([standardSetId, notation])
+  @@index([standardSetId, position])
+  @@index([notation])
+  @@index([strand, conceptualArea])
+}
+
+// Cross-curriculum equivalence mapping
+model StandardEquivalence {
+  id String @id @default(uuid())
+
+  sourceStandardId String
+  sourceStandard   LearningStandard @relation("SourceStandard", fields: [sourceStandardId], references: [id])
+
+  targetStandardId String
+  targetStandard   LearningStandard @relation("TargetStandard", fields: [targetStandardId], references: [id])
+
+  // Mapping quality
+  equivalenceType EquivalenceType // EXACT, PARTIAL, PREREQUISITE, ADVANCED
+  confidence      Float           @default(0.8) // 0.0 - 1.0
+  notes           String?         @db.Text // Explanation of the mapping
+
+  // Verification
+  verifiedBy String? // "AI", "EXPERT", "COMMUNITY"
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([sourceStandardId, targetStandardId])
+  @@index([sourceStandardId])
+  @@index([targetStandardId])
+}
+
+// Link content (lessons, quizzes, flashcards) to standards
+model ContentStandardAlignment {
+  id String @id @default(uuid())
+
+  // Polymorphic content reference
+  contentType AlignableContentType // LESSON, QUIZ, FLASHCARD_DECK, TEACHER_CONTENT
+  contentId   String // ID of the content item
+
+  standardId String
+  standard   LearningStandard @relation(fields: [standardId], references: [id])
+
+  // Alignment quality
+  alignmentStrength Float   @default(1.0) // 0.0 - 1.0 (how well it covers the standard)
+  isPrimary         Boolean @default(false) // Is this the main standard for the content?
+
+  // How alignment was determined
+  alignedBy String? // "AI", "TEACHER", "SYSTEM"
+
+  createdAt DateTime @default(now())
+
+  @@unique([contentType, contentId, standardId])
+  @@index([standardId])
+  @@index([contentType, contentId])
+}
+
+// Track child's progress on specific standards
+model ChildStandardProgress {
+  id String @id @default(uuid())
+
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  standardId String
+  standard   LearningStandard @relation(fields: [standardId], references: [id])
+
+  // Progress tracking
+  status       StandardMasteryStatus @default(NOT_STARTED)
+  masteryScore Float? // 0.0 - 1.0
+
+  // Evidence
+  attemptsCount   Int       @default(0)
+  correctCount    Int       @default(0)
+  lastAttemptAt   DateTime?
+  firstMasteredAt DateTime?
+
+  // Curriculum context (when this progress was earned)
+  curriculumType CurriculumType
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([childId, standardId])
+  @@index([childId, status])
+  @@index([childId, curriculumType])
+}
+
+// Curriculum switch history and gap analysis
+model CurriculumSwitch {
+  id String @id @default(uuid())
+
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  // Switch details
+  fromCurriculum CurriculumType
+  toCurriculum   CurriculumType
+  fromGrade      Int?
+  toGrade        Int?
+
+  // Analysis results (stored as JSON for flexibility)
+  gapAnalysis        Json? // { gaps: [...], strengths: [...] }
+  recommendedLessons Json? // Suggested catch-up content
+
+  // Status
+  analysisCompletedAt DateTime?
+  acknowledgedAt      DateTime? // Parent saw the analysis
+
+  createdAt DateTime @default(now())
+
+  @@index([childId])
 }
 
 // ============================================
@@ -1381,67 +1605,67 @@ model CohortRetentionSnapshot {
 
 // Referral codes for parents and teachers
 model ReferralCode {
-  id                  String   @id @default(uuid())
-  code                String   @unique          // e.g., "SARAH-AB12" - readable, opaque
+  id   String @id @default(uuid())
+  code String @unique // e.g., "SARAH-AB12" - readable, opaque
 
   // Owner (one of these will be set)
-  parentId            String?  @unique
-  parent              Parent?  @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  teacherId           String?  @unique
-  teacher             Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  parentId  String?  @unique
+  parent    Parent?  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  teacherId String?  @unique
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Stats
-  totalReferrals      Int      @default(0)      // Total signups using this code
-  successfulReferrals Int      @default(0)      // Conversions (trial -> paid)
+  totalReferrals      Int @default(0) // Total signups using this code
+  successfulReferrals Int @default(0) // Conversions (trial -> paid)
 
   // Status
-  isActive            Boolean  @default(true)
+  isActive Boolean @default(true)
 
   // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  referrals           Referral[]
-  shareableContents   ShareableContent[]
+  referrals         Referral[]
+  shareableContents ShareableContent[]
 
   @@index([code])
 }
 
 // Individual referral tracking
 model Referral {
-  id               String   @id @default(uuid())
-  referralCodeId   String
-  referralCode     ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+  id             String       @id @default(uuid())
+  referralCodeId String
+  referralCode   ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
 
   // Who was referred (one of these will be set after signup)
-  referredParentId   String?  @unique
-  referredParent     Parent?  @relation("ReferredParent", fields: [referredParentId], references: [id], onDelete: SetNull)
-  referredTeacherId  String?  @unique
-  referredTeacher    Teacher? @relation("ReferredTeacher", fields: [referredTeacherId], references: [id], onDelete: SetNull)
+  referredParentId  String?  @unique
+  referredParent    Parent?  @relation("ReferredParent", fields: [referredParentId], references: [id], onDelete: SetNull)
+  referredTeacherId String?  @unique
+  referredTeacher   Teacher? @relation("ReferredTeacher", fields: [referredTeacherId], references: [id], onDelete: SetNull)
 
   // Tracking
-  channel          ShareChannel                 // WhatsApp, Email, Instagram, Link, etc.
-  status           ReferralStatus @default(PENDING)
+  channel ShareChannel // WhatsApp, Email, Instagram, Link, etc.
+  status  ReferralStatus @default(PENDING)
 
   // Attribution
-  attributedAt     DateTime @default(now())     // When the referral code was used
-  signedUpAt       DateTime?                    // When they created an account
-  subscribedAt     DateTime?                    // When they became paid subscriber
+  attributedAt DateTime  @default(now()) // When the referral code was used
+  signedUpAt   DateTime? // When they created an account
+  subscribedAt DateTime? // When they became paid subscriber
 
   // Rewards
-  referrerRewardId   String?                    // Stripe coupon ID or subscription credit ID
-  refereeDiscountId  String?                    // Stripe coupon ID applied to referee
-  referrerRewarded   Boolean  @default(false)
-  refereeRewarded    Boolean  @default(false)
+  referrerRewardId  String? // Stripe coupon ID or subscription credit ID
+  refereeDiscountId String? // Stripe coupon ID applied to referee
+  referrerRewarded  Boolean @default(false)
+  refereeRewarded   Boolean @default(false)
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  expiresAt        DateTime                     // 30-day attribution window
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime // 30-day attribution window
 
   // Relations
-  rewards          ReferralReward[]
+  rewards ReferralReward[]
 
   @@index([referralCodeId])
   @@index([status])
@@ -1451,43 +1675,43 @@ model Referral {
 
 // Shareable content snapshots (privacy-safe, immutable)
 model ShareableContent {
-  id               String   @id @default(uuid())
-  token            String   @unique             // Opaque share token in URL
+  id    String @id @default(uuid())
+  token String @unique // Opaque share token in URL
 
   // Owner (parent creates, teacher can create for audio updates)
-  parentId         String?
-  parent           Parent?  @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  teacherId        String?
-  teacher          Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Parent?  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Content type
-  contentType      ShareableContentType
+  contentType ShareableContentType
 
   // Privacy-safe snapshot data (no child IDs, names, or PII)
-  snapshotData     Json                         // Pre-rendered, privacy-safe content
+  snapshotData Json // Pre-rendered, privacy-safe content
 
   // Metadata (for OG tags)
-  title            String
-  description      String?
-  imageUrl         String?                      // Pre-generated OG image stored in R2
+  title       String
+  description String?
+  imageUrl    String? // Pre-generated OG image stored in R2
 
   // Optional referral code embedding
-  referralCodeId   String?
-  referralCode     ReferralCode? @relation(fields: [referralCodeId], references: [id])
+  referralCodeId String?
+  referralCode   ReferralCode? @relation(fields: [referralCodeId], references: [id])
 
   // Stats
-  viewCount        Int      @default(0)
-  shareCount       Int      @default(0)
+  viewCount  Int @default(0)
+  shareCount Int @default(0)
 
   // Status
-  isActive         Boolean  @default(true)
-  expiresAt        DateTime?                    // Optional expiry for time-sensitive content
+  isActive  Boolean   @default(true)
+  expiresAt DateTime? // Optional expiry for time-sensitive content
 
   // Timestamps
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  shareEvents      ShareEvent[]
+  shareEvents ShareEvent[]
 
   @@index([token])
   @@index([parentId])
@@ -1497,25 +1721,25 @@ model ShareableContent {
 
 // Share tracking for analytics
 model ShareEvent {
-  id                 String   @id @default(uuid())
+  id                 String            @id @default(uuid())
   shareableContentId String?
   shareableContent   ShareableContent? @relation(fields: [shareableContentId], references: [id], onDelete: SetNull)
 
   // Who shared
-  parentId           String?
-  teacherId          String?
+  parentId  String?
+  teacherId String?
 
   // Where
-  channel            ShareChannel
-  platform           String?                    // iOS, Android, Web
+  channel  ShareChannel
+  platform String? // iOS, Android, Web
 
   // Result
-  wasOpened          Boolean  @default(false)
-  openedAt           DateTime?
-  convertedToSignup  Boolean  @default(false)
+  wasOpened         Boolean   @default(false)
+  openedAt          DateTime?
+  convertedToSignup Boolean   @default(false)
 
   // Timestamps
-  createdAt          DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([channel])
   @@index([createdAt])
@@ -1525,29 +1749,29 @@ model ShareEvent {
 
 // Referral rewards ledger
 model ReferralReward {
-  id               String   @id @default(uuid())
-  referralId       String
-  referral         Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  referralId String
+  referral   Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
 
   // Recipient
-  parentId         String?
-  parent           Parent?  @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  teacherId        String?
-  teacher          Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Parent?  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Reward details
-  rewardType       RewardType
-  amount           Decimal? @db.Decimal(10, 2)  // For credits or monetary value
-  stripeCouponId   String?                      // Stripe coupon if applicable
-  description      String
+  rewardType     RewardType
+  amount         Decimal?   @db.Decimal(10, 2) // For credits or monetary value
+  stripeCouponId String? // Stripe coupon if applicable
+  description    String
 
   // Status
-  status           RewardStatus @default(PENDING)
-  appliedAt        DateTime?
-  expiresAt        DateTime?
+  status    RewardStatus @default(PENDING)
+  appliedAt DateTime?
+  expiresAt DateTime?
 
   // Timestamps
-  createdAt        DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([parentId])
   @@index([teacherId])
@@ -1556,20 +1780,20 @@ model ReferralReward {
 
 // Parent sharing preferences (per-child controls)
 model ParentSharingPreferences {
-  id               String   @id @default(uuid())
-  parentId         String   @unique
-  parent           Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  parentId String @unique
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   // Global settings
-  enableSharing    Boolean  @default(true)      // Master toggle
+  enableSharing Boolean @default(true) // Master toggle
 
   // Per-child settings stored as JSON
   // Format: { [childId]: { showName: true, showAvatar: true, enablePrompts: true } }
-  childSettings    Json     @default("{}")
+  childSettings Json @default("{}")
 
   // Timestamps
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============================================
@@ -1591,8 +1815,8 @@ enum SubscriptionStatus {
 }
 
 enum AgeGroup {
-  YOUNG  // 4-7
-  OLDER  // 8-12
+  YOUNG // 4-7
+  OLDER // 8-12
 }
 
 enum CurriculumType {
@@ -1613,7 +1837,7 @@ enum LearningStyle {
 
 enum ConsentMethod {
   CREDIT_CARD
-  KBQ        // Knowledge-based questions
+  KBQ // Knowledge-based questions
   MANUAL_REVIEW
 }
 
@@ -1780,14 +2004,14 @@ enum OrganizationType {
 }
 
 enum OrgSubscriptionTier {
-  STARTER      // 10 teachers, 1M tokens/month
+  STARTER // 10 teachers, 1M tokens/month
   PROFESSIONAL // 50 teachers, 5M tokens/month
-  ENTERPRISE   // Unlimited teachers, custom tokens
+  ENTERPRISE // Unlimited teachers, custom tokens
 }
 
 enum TeacherSubscriptionTier {
-  FREE         // 100K tokens/month
-  BASIC        // 500K tokens/month
+  FREE // 100K tokens/month
+  BASIC // 500K tokens/month
   PROFESSIONAL // 2M tokens/month
 }
 
@@ -1824,7 +2048,7 @@ enum TokenOperation {
   GRADING_BATCH
   FEEDBACK_GENERATION
   CHAT
-  AUDIO_UPDATE        // Podcast-style audio class updates for parents
+  AUDIO_UPDATE // Podcast-style audio class updates for parents
   SUB_PLAN_GENERATION // Emergency substitute teacher plans
   IEP_GOAL_GENERATION // SMART IEP goals and accommodations
 }
@@ -1855,17 +2079,17 @@ enum SubmissionStatus {
 }
 
 enum AudioStatus {
-  DRAFT       // Script generated, not yet converted to audio
-  GENERATING  // Audio generation in progress
-  READY       // Audio ready for review
-  PUBLISHED   // Published and available to parents
+  DRAFT // Script generated, not yet converted to audio
+  GENERATING // Audio generation in progress
+  READY // Audio ready for review
+  PUBLISHED // Published and available to parents
 }
 
 enum LessonAudioStatus {
-  NONE        // No audio summary yet
-  GENERATING  // Audio generation in progress
-  READY       // Audio ready for playback
-  FAILED      // Generation failed
+  NONE // No audio summary yet
+  GENERATING // Audio generation in progress
+  READY // Audio ready for playback
+  FAILED // Generation failed
 }
 
 // ============================================
@@ -1885,33 +2109,61 @@ enum ShareChannel {
 }
 
 enum ReferralStatus {
-  PENDING           // Code used but no signup yet
-  SIGNED_UP         // Account created
-  TRIALING          // In trial period
-  CONVERTED         // Became paid subscriber
-  EXPIRED           // Attribution window passed
-  CANCELLED         // Subscription cancelled
+  PENDING // Code used but no signup yet
+  SIGNED_UP // Account created
+  TRIALING // In trial period
+  CONVERTED // Became paid subscriber
+  EXPIRED // Attribution window passed
+  CANCELLED // Subscription cancelled
 }
 
 enum ShareableContentType {
-  BADGE             // Child earned a badge
-  STREAK_MILESTONE  // 7-day, 30-day, 100-day streaks
-  QUIZ_RESULT       // Quiz performance
-  PROGRESS_REPORT   // Weekly/monthly summary
-  LEVEL_UP          // Reached a new level
-  TEACHER_AUDIO     // Teacher audio update (for classroom parents)
+  BADGE // Child earned a badge
+  STREAK_MILESTONE // 7-day, 30-day, 100-day streaks
+  QUIZ_RESULT // Quiz performance
+  PROGRESS_REPORT // Weekly/monthly summary
+  LEVEL_UP // Reached a new level
+  TEACHER_AUDIO // Teacher audio update (for classroom parents)
 }
 
 enum RewardType {
-  FREE_MONTH            // One month free subscription
-  SUBSCRIPTION_CREDIT   // Credit toward subscription
-  TEACHER_CREDITS       // Teacher AI credits
-  DISCOUNT_COUPON       // Percentage off
+  FREE_MONTH // One month free subscription
+  SUBSCRIPTION_CREDIT // Credit toward subscription
+  TEACHER_CREDITS // Teacher AI credits
+  DISCOUNT_COUPON // Percentage off
 }
 
 enum RewardStatus {
-  PENDING          // Waiting for conversion
-  AVAILABLE        // Ready to redeem
-  APPLIED          // Applied to account
-  EXPIRED          // Not redeemed in time
+  PENDING // Waiting for conversion
+  AVAILABLE // Ready to redeem
+  APPLIED // Applied to account
+  EXPIRED // Not redeemed in time
+}
+
+// ============================================
+// CURRICULUM STANDARDS ENUMS
+// ============================================
+
+enum EquivalenceType {
+  EXACT // Standards are equivalent
+  PARTIAL // Partial overlap
+  PREREQUISITE // Source is prerequisite to target
+  ADVANCED // Source is more advanced than target
+  RELATED // Conceptually related but different scope
+}
+
+enum AlignableContentType {
+  LESSON
+  QUIZ
+  FLASHCARD_DECK
+  EXERCISE
+  TEACHER_CONTENT
+}
+
+enum StandardMasteryStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  APPROACHING
+  PROFICIENT
+  MASTERED
 }

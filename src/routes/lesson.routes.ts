@@ -16,6 +16,7 @@ import { config } from '../config/index.js';
 import { AgeGroup, Subject, SourceType, CurriculumType, LessonAudioStatus } from '@prisma/client';
 import { lessonSummaryService } from '../services/learning/lessonSummaryService.js';
 import { getSampleLessonsByAgeGroup, getSampleLessonById, SampleLesson } from '../data/sampleLessons.js';
+import { alignmentService, AlignmentResult } from '../services/curriculum/index.js';
 
 const router = Router();
 
@@ -303,6 +304,31 @@ router.post(
         subject: subject as Subject | undefined,
       });
 
+      // Align content to curriculum standards (if curriculum is set)
+      let alignmentResult: AlignmentResult | null = null;
+      if (child.curriculumType) {
+        try {
+          alignmentResult = await alignmentService.alignContentToStandards(
+            content,
+            analysis.subject,
+            analysis.gradeLevel,
+            child.curriculumType,
+            child.gradeLevel
+          );
+
+          logger.info('Content aligned to curriculum standards', {
+            curriculumType: child.curriculumType,
+            standardsFound: alignmentResult.alignedStandards.length,
+            primaryStandards: alignmentResult.primaryStandards.length,
+          });
+        } catch (alignError) {
+          // Log but don't fail the lesson creation
+          logger.error('Curriculum alignment failed', {
+            error: alignError instanceof Error ? alignError.message : 'Unknown error',
+          });
+        }
+      }
+
       // Determine subject: use provided subject, or AI-detected subject from analysis
       const validSubjects = ['MATH', 'SCIENCE', 'ENGLISH', 'ARABIC', 'ISLAMIC_STUDIES', 'SOCIAL_STUDIES', 'ART', 'MUSIC', 'OTHER'];
       const detectedSubject = analysis.subject && validSubjects.includes(analysis.subject)
@@ -376,6 +402,15 @@ router.post(
         data: {
           lesson: updatedLesson,
           analysis,
+          // Include curriculum alignment if available
+          curriculumAlignment: alignmentResult ? {
+            alignedStandards: alignmentResult.alignedStandards,
+            primaryStandards: alignmentResult.primaryStandards,
+            curriculumUsed: alignmentResult.curriculumUsed,
+            subjectUsed: alignmentResult.subjectUsed,
+            gradeLevelUsed: alignmentResult.gradeLevelUsed,
+            totalStandardsChecked: alignmentResult.totalStandardsChecked,
+          } : null,
         },
       });
     } catch (error) {

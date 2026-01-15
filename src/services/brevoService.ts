@@ -17,7 +17,7 @@ export const BREVO_LISTS = {
 } as const;
 
 export type UserType = 'PARENT' | 'TEACHER';
-export type GradeRange = 'K-2' | '3-6' | '7-8';
+export type GradeRange = 'K-2' | '3-6' | '7-9';
 
 export interface BrevoContactData {
   email: string;
@@ -30,15 +30,15 @@ export interface BrevoContactData {
 }
 
 /**
- * Map a grade level (0-8) to a marketing segment
+ * Map a grade level (0-9) to a marketing segment
  * K-2: Kindergarten through 2nd grade (grades 0-2)
  * 3-6: 3rd through 6th grade (grades 3-6)
- * 7-8: 7th through 8th grade (grades 7-8)
+ * 7-9: 7th through 9th grade (grades 7-9)
  */
 export function getGradeRange(gradeLevel: number): GradeRange {
   if (gradeLevel <= 2) return 'K-2';
   if (gradeLevel <= 6) return '3-6';
-  return '7-8';
+  return '7-9';
 }
 
 interface BrevoCreateContactPayload {

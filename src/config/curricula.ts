@@ -96,6 +96,13 @@ export const GRADE_LEVEL_CONFIGS: Record<number, GradeLevelConfig> = {
     workingMemoryChunks: 9,
     optimalSessionMinutes: 50,
   },
+  9: {
+    maxSentenceLength: 28,
+    vocabularyTier: 'technical',
+    instructionStyle: 'Independent research with critical evaluation, hypothesis testing, and collaborative discourse',
+    workingMemoryChunks: 10,
+    optimalSessionMinutes: 55,
+  },
 };
 
 // Curriculum-specific configurations
@@ -327,8 +334,8 @@ export function getCurriculumConfig(curriculumType: CurriculumType): CurriculumC
  * Get grade level configuration
  */
 export function getGradeLevelConfig(gradeLevel: number): GradeLevelConfig {
-  // Clamp grade level to valid range (0-8)
-  const clampedGrade = Math.max(0, Math.min(8, gradeLevel));
+  // Clamp grade level to valid range (0-9)
+  const clampedGrade = Math.max(0, Math.min(9, gradeLevel));
   return GRADE_LEVEL_CONFIGS[clampedGrade];
 }
 

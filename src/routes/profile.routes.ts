@@ -86,8 +86,8 @@ router.post(
         throw new ValidationError('Age must be between 4 and 14');
       }
 
-      if (grade === undefined || grade === null || grade < 0 || grade > 8) {
-        throw new ValidationError('Grade must be between 0 (Pre-K) and 8');
+      if (grade === undefined || grade === null || grade < 0 || grade > 9) {
+        throw new ValidationError('Grade must be between 0 (Pre-K) and 9');
       }
 
       // Check parent's subscription limit
