@@ -44,6 +44,8 @@ import currencyRoutes from './routes/currency.routes.js';
 import leadsRoutes from './routes/leads.routes.js';
 import referralRoutes from './routes/referral.routes.js';
 import shareRoutes from './routes/share.routes.js';
+import curriculumRoutes from './routes/curriculum.routes.js';
+import progressRoutes from './routes/progress.routes.js';
 
 // Services initialization
 import { initializeContentProcessor, shutdownContentProcessor } from './services/learning/contentProcessor.js';
@@ -179,6 +181,12 @@ app.use('/api/referrals', referralRoutes);
 
 // Share routes (shareable content)
 app.use('/api/share', shareRoutes);
+
+// Curriculum routes (standards mapping)
+app.use('/api/curricula', curriculumRoutes);
+
+// Progress routes (curriculum progress tracking)
+app.use('/api/progress', progressRoutes);
 
 // ============================================
 // ERROR HANDLING

@@ -7,7 +7,9 @@ import { genAI } from '../config/gemini.js';
 import { config } from '../config/index.js';
 import { prisma } from '../config/database.js';
 import { logger } from '../utils/logger.js';
-import { AgeGroup } from '@prisma/client';
+import { AgeGroup, CurriculumType } from '@prisma/client';
+import { xpEngine, XP_VALUES } from '../services/gamification/xpEngine.js';
+import { progressService } from '../services/curriculum/progressService.js';
 
 const router = Router();
 
@@ -21,6 +23,13 @@ const generateFlashcardsSchema = z.object({
   childId: z.string().optional().nullable(),
   ageGroup: z.enum(['YOUNG', 'OLDER']).optional(),
   lessonId: z.string().optional(),
+});
+
+const reviewFlashcardSchema = z.object({
+  deckId: z.string().min(1, 'Deck ID is required'),
+  cardId: z.string().min(1, 'Card ID is required'),
+  isCorrect: z.boolean(),
+  responseTimeMs: z.number().min(0).optional(),
 });
 
 // ============================================
@@ -71,6 +80,162 @@ router.post(
       });
     } catch (error) {
       logger.error('Flashcard generation error', { error });
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/flashcards/review
+ * Record flashcard review result, update progress, award XP
+ */
+router.post(
+  '/review',
+  authenticate,
+  validateInput(reviewFlashcardSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { deckId, cardId, isCorrect, responseTimeMs } = req.body;
+
+      // Get child ID - only allow child sessions for flashcard review
+      if (!req.child) {
+        return res.status(401).json({
+          success: false,
+          error: 'Child session required for flashcard review',
+        });
+      }
+
+      const childId = req.child.id;
+
+      // Get deck with lesson info
+      const deck = await prisma.flashcardDeck.findUnique({
+        where: { id: deckId },
+        include: {
+          lesson: { select: { id: true } },
+          child: { select: { curriculumType: true } },
+        },
+      });
+
+      if (!deck) {
+        return res.status(404).json({ success: false, error: 'Flashcard deck not found' });
+      }
+
+      // Verify the deck belongs to this child
+      if (deck.childId !== childId) {
+        return res.status(403).json({ success: false, error: 'Access denied to this flashcard deck' });
+      }
+
+      // Get the specific flashcard
+      const flashcard = await prisma.flashcard.findUnique({
+        where: { id: cardId },
+      });
+
+      if (!flashcard || flashcard.deckId !== deckId) {
+        return res.status(404).json({ success: false, error: 'Flashcard not found in this deck' });
+      }
+
+      // Update flashcard statistics
+      await prisma.flashcard.update({
+        where: { id: cardId },
+        data: {
+          timesReviewed: { increment: 1 },
+          timesCorrect: isCorrect ? { increment: 1 } : undefined,
+        },
+      });
+
+      // Award XP
+      let xpResult = null;
+      try {
+        const xpAmount = isCorrect ? XP_VALUES.FLASHCARD_CORRECT : XP_VALUES.FLASHCARD_REVIEW;
+        xpResult = await xpEngine.awardXP(childId, {
+          amount: xpAmount,
+          reason: isCorrect ? 'FLASHCARD_CORRECT' : 'FLASHCARD_REVIEW',
+          sourceType: 'flashcard',
+          sourceId: cardId,
+        });
+
+        logger.info('XP awarded for flashcard review', {
+          childId,
+          cardId,
+          isCorrect,
+          xpAwarded: xpResult.xpAwarded,
+        });
+      } catch (xpError) {
+        logger.error('XP award failed for flashcard', {
+          error: xpError instanceof Error ? xpError.message : 'Unknown error',
+          childId,
+          cardId,
+        });
+      }
+
+      // Update curriculum progress if lesson is linked
+      if (deck.lessonId && deck.child.curriculumType) {
+        try {
+          const alignments = await progressService.getContentAlignments('LESSON', deck.lessonId);
+
+          if (alignments.length > 0) {
+            await progressService.updateProgressBatch(
+              childId,
+              deck.child.curriculumType,
+              alignments.map(a => ({
+                standardId: a.standardId,
+                isCorrect,
+              }))
+            );
+
+            logger.info('Curriculum progress updated for flashcard', {
+              childId,
+              lessonId: deck.lessonId,
+              standardsUpdated: alignments.length,
+            });
+          }
+        } catch (progressError) {
+          logger.error('Progress update failed for flashcard', {
+            error: progressError instanceof Error ? progressError.message : 'Unknown error',
+            childId,
+          });
+        }
+      }
+
+      // Update UserProgress stats
+      try {
+        await prisma.userProgress.upsert({
+          where: { childId },
+          update: {
+            flashcardsReviewed: { increment: 1 },
+          },
+          create: {
+            childId,
+            flashcardsReviewed: 1,
+          },
+        });
+      } catch (statsError) {
+        logger.error('UserProgress update failed', { error: statsError });
+      }
+
+      // Update deck's lastStudiedAt
+      await prisma.flashcardDeck.update({
+        where: { id: deckId },
+        data: { lastStudiedAt: new Date() },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          cardId,
+          isCorrect,
+          xp: xpResult
+            ? {
+                awarded: xpResult.xpAwarded,
+                leveledUp: xpResult.leveledUp,
+                newLevel: xpResult.newLevel,
+                newBadges: xpResult.newBadges,
+              }
+            : null,
+        },
+      });
+    } catch (error) {
+      logger.error('Flashcard review error', { error });
       next(error);
     }
   }

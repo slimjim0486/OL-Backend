@@ -7,7 +7,9 @@ import { genAI } from '../config/gemini.js';
 import { config } from '../config/index.js';
 import { prisma } from '../config/database.js';
 import { logger } from '../utils/logger.js';
-import { AgeGroup } from '@prisma/client';
+import { AgeGroup, CurriculumType } from '@prisma/client';
+import { xpEngine, XP_VALUES } from '../services/gamification/xpEngine.js';
+import { progressService } from '../services/curriculum/progressService.js';
 
 const router = Router();
 
@@ -22,6 +24,21 @@ const generateQuizSchema = z.object({
   childId: z.string().optional().nullable(),
   ageGroup: z.enum(['YOUNG', 'OLDER']).optional(),
   lessonId: z.string().optional(),
+});
+
+const submitQuizSchema = z.object({
+  lessonId: z.string().min(1, 'Lesson ID is required'),
+  answers: z.array(
+    z.object({
+      questionId: z.string(),
+      questionIndex: z.number(),
+      selectedAnswer: z.number(), // Index of selected option
+      isCorrect: z.boolean(),
+    })
+  ).min(1, 'At least one answer is required'),
+  totalQuestions: z.number().min(1),
+  timeSpentSeconds: z.number().min(0).optional().default(0),
+  quizTitle: z.string().optional(),
 });
 
 // ============================================
@@ -73,6 +90,199 @@ router.post(
       });
     } catch (error) {
       logger.error('Quiz generation error', { error });
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/quizzes/submit
+ * Submit quiz answers, calculate score, update progress, award XP
+ */
+router.post(
+  '/submit',
+  authenticate,
+  validateInput(submitQuizSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { lessonId, answers, totalQuestions, timeSpentSeconds, quizTitle } = req.body;
+
+      // Determine child ID and curriculum type
+      let childId: string;
+      let curriculumType: CurriculumType | null = null;
+
+      if (req.child) {
+        childId = req.child.id;
+        const childData = await prisma.child.findUnique({
+          where: { id: childId },
+          select: { curriculumType: true },
+        });
+        curriculumType = childData?.curriculumType || null;
+      } else if (req.parent) {
+        // Get lesson to find child
+        const lesson = await prisma.lesson.findUnique({
+          where: { id: lessonId },
+          select: {
+            childId: true,
+            child: { select: { curriculumType: true } },
+          },
+        });
+        if (!lesson) {
+          return res.status(404).json({ success: false, error: 'Lesson not found' });
+        }
+        childId = lesson.childId;
+        curriculumType = lesson.child.curriculumType;
+      } else {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+
+      // Calculate score
+      const correctCount = answers.filter((a: { isCorrect: boolean }) => a.isCorrect).length;
+      const score = Math.round((correctCount / totalQuestions) * 100);
+      const isPerfect = score === 100;
+
+      logger.info('Quiz submission received', {
+        childId,
+        lessonId,
+        correctCount,
+        totalQuestions,
+        score,
+        isPerfect,
+      });
+
+      // Get or create quiz record
+      let quiz = await prisma.quiz.findFirst({
+        where: { lessonId },
+      });
+
+      if (!quiz) {
+        // Create quiz record if it doesn't exist
+        quiz = await prisma.quiz.create({
+          data: {
+            lessonId,
+            title: quizTitle || 'Generated Quiz',
+            type: 'MULTIPLE_CHOICE',
+            questions: answers,
+          },
+        });
+      }
+
+      // Record quiz attempt
+      const attempt = await prisma.quizAttempt.create({
+        data: {
+          quizId: quiz.id,
+          answers: answers,
+          score,
+          timeSpentSeconds: timeSpentSeconds || 0,
+          xpEarned: 0, // Will update after XP calculation
+        },
+      });
+
+      // Award XP
+      let xpResult = null;
+      try {
+        const xpAmount = isPerfect ? XP_VALUES.QUIZ_PERFECT : XP_VALUES.QUIZ_COMPLETE;
+        xpResult = await xpEngine.awardXP(childId, {
+          amount: xpAmount,
+          reason: isPerfect ? 'QUIZ_PERFECT' : 'QUIZ_COMPLETE',
+          sourceType: 'quiz',
+          sourceId: quiz.id,
+        });
+
+        // Update attempt with XP earned
+        await prisma.quizAttempt.update({
+          where: { id: attempt.id },
+          data: { xpEarned: xpResult.xpAwarded },
+        });
+
+        logger.info('XP awarded for quiz', {
+          childId,
+          quizId: quiz.id,
+          xpAwarded: xpResult.xpAwarded,
+          isPerfect,
+        });
+      } catch (xpError) {
+        logger.error('XP award failed', {
+          error: xpError instanceof Error ? xpError.message : 'Unknown error',
+          childId,
+          quizId: quiz.id,
+        });
+      }
+
+      // Update curriculum progress if lesson has alignments
+      if (curriculumType) {
+        try {
+          const alignments = await progressService.getContentAlignments('LESSON', lessonId);
+
+          if (alignments.length > 0) {
+            // For each aligned standard, update progress based on quiz performance
+            // Consider 70%+ score as demonstrating proficiency for the standard
+            const progressUpdates = alignments.map(alignment => ({
+              standardId: alignment.standardId,
+              isCorrect: score >= 70,
+            }));
+
+            await progressService.updateProgressBatch(
+              childId,
+              curriculumType,
+              progressUpdates
+            );
+
+            logger.info('Curriculum progress updated', {
+              childId,
+              lessonId,
+              standardsUpdated: progressUpdates.length,
+              quizScore: score,
+            });
+          }
+        } catch (progressError) {
+          logger.error('Progress update failed', {
+            error: progressError instanceof Error ? progressError.message : 'Unknown error',
+            childId,
+            lessonId,
+          });
+        }
+      }
+
+      // Update UserProgress stats
+      try {
+        await prisma.userProgress.upsert({
+          where: { childId },
+          update: {
+            questionsAnswered: { increment: totalQuestions },
+            perfectScores: isPerfect ? { increment: 1 } : undefined,
+          },
+          create: {
+            childId,
+            questionsAnswered: totalQuestions,
+            perfectScores: isPerfect ? 1 : 0,
+          },
+        });
+      } catch (statsError) {
+        logger.error('UserProgress update failed', { error: statsError });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          attemptId: attempt.id,
+          quizId: quiz.id,
+          score,
+          correctCount,
+          totalQuestions,
+          isPerfect,
+          xp: xpResult
+            ? {
+                awarded: xpResult.xpAwarded,
+                leveledUp: xpResult.leveledUp,
+                newLevel: xpResult.newLevel,
+                newBadges: xpResult.newBadges,
+              }
+            : null,
+        },
+      });
+    } catch (error) {
+      logger.error('Quiz submission error', { error });
       next(error);
     }
   }

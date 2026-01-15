@@ -16,7 +16,7 @@ import { config } from '../config/index.js';
 import { AgeGroup, Subject, SourceType, CurriculumType, LessonAudioStatus } from '@prisma/client';
 import { lessonSummaryService } from '../services/learning/lessonSummaryService.js';
 import { getSampleLessonsByAgeGroup, getSampleLessonById, SampleLesson } from '../data/sampleLessons.js';
-import { alignmentService, AlignmentResult } from '../services/curriculum/index.js';
+import { alignmentService, AlignmentResult, progressService } from '../services/curriculum/index.js';
 
 const router = Router();
 
@@ -396,6 +396,28 @@ router.post(
 
       // Record lesson creation for usage tracking (after successful creation)
       await parentUsageService.recordLessonCreation(child.parentId);
+
+      // Save curriculum alignments to database (if alignment was successful)
+      if (alignmentResult && alignmentResult.alignedStandards.length > 0) {
+        try {
+          const { progressService } = await import('../services/curriculum/progressService.js');
+          await progressService.saveContentAlignments({
+            contentType: 'LESSON',
+            contentId: lesson.id,
+            alignedStandards: alignmentResult.alignedStandards,
+          });
+          logger.info('Curriculum alignments saved to database', {
+            lessonId: lesson.id,
+            alignmentCount: alignmentResult.alignedStandards.length,
+          });
+        } catch (saveError) {
+          // Log but don't fail the lesson creation
+          logger.error('Failed to save curriculum alignments', {
+            error: saveError instanceof Error ? saveError.message : 'Unknown error',
+            lessonId: lesson.id,
+          });
+        }
+      }
 
       res.json({
         success: true,
@@ -843,11 +865,96 @@ router.post(
 
       logger.info(`Lesson ${lessonId} marked as completed by child ${childId}`);
 
+      // Award XP for lesson completion
+      let xpResult = null;
+      try {
+        const { xpEngine, XP_VALUES } = await import('../services/gamification/xpEngine.js');
+        xpResult = await xpEngine.awardXP(childId, {
+          amount: XP_VALUES.LESSON_COMPLETE,
+          reason: 'LESSON_COMPLETE',
+          sourceType: 'lesson',
+          sourceId: lessonId,
+        });
+
+        logger.info('XP awarded for lesson completion', {
+          childId,
+          lessonId,
+          xpAwarded: xpResult.xpAwarded,
+        });
+
+        // Update UserProgress stats
+        await prisma.userProgress.upsert({
+          where: { childId },
+          update: {
+            lessonsCompleted: { increment: 1 },
+          },
+          create: {
+            childId,
+            lessonsCompleted: 1,
+          },
+        });
+      } catch (xpError) {
+        logger.error('XP award failed on lesson complete', {
+          error: xpError instanceof Error ? xpError.message : 'Unknown error',
+          childId,
+          lessonId,
+        });
+      }
+
+      // Update mastery progress for aligned curriculum standards
+      // Completing a lesson is a significant achievement, so we treat it as a "correct" attempt
+      try {
+        // Get the child's curriculum type
+        const child = await prisma.child.findUnique({
+          where: { id: childId },
+          select: { curriculumType: true },
+        });
+
+        if (child?.curriculumType) {
+          // Get standards aligned to this lesson
+          const alignments = await progressService.getContentAlignments('LESSON', lessonId);
+
+          if (alignments.length > 0) {
+            // Update progress for each aligned standard
+            // Lesson completion counts as 1 correct attempt per standard
+            await progressService.updateProgressBatch(
+              childId,
+              child.curriculumType,
+              alignments.map(a => ({
+                standardId: a.standardId,
+                isCorrect: true, // Completing the lesson = successful engagement with the standard
+              }))
+            );
+
+            logger.info('Updated mastery progress on lesson completion', {
+              childId,
+              lessonId,
+              standardsUpdated: alignments.length,
+            });
+          }
+        }
+      } catch (progressError) {
+        // Don't fail the request if progress tracking fails
+        logger.error('Mastery progress update failed on lesson complete', {
+          error: progressError instanceof Error ? progressError.message : 'Unknown error',
+          childId,
+          lessonId,
+        });
+      }
+
       res.json({
         success: true,
         data: {
           lesson: updatedLesson,
           completedAt: updatedLesson.completedAt,
+          xp: xpResult
+            ? {
+                awarded: xpResult.xpAwarded,
+                leveledUp: xpResult.leveledUp,
+                newLevel: xpResult.newLevel,
+                newBadges: xpResult.newBadges,
+              }
+            : null,
         },
       });
     } catch (error) {
