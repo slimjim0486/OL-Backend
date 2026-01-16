@@ -252,40 +252,40 @@ export const badgeService = {
       let earned = false;
 
       // Check level requirements
-      if (requirements.level && context.level >= requirements.level) {
+      if (typeof requirements.level === 'number' && context.level >= requirements.level) {
         earned = true;
       }
 
       // Check lesson requirements (use actual count from Lesson table)
-      if (requirements.lessonsCompleted) {
+      if (typeof requirements.lessonsCompleted === 'number') {
         if (actualLessonsCompleted >= requirements.lessonsCompleted) {
           earned = true;
         }
       }
 
       // Check streak requirements
-      if (requirements.streakDays && streak) {
+      if (typeof requirements.streakDays === 'number' && streak) {
         if (streak.current >= requirements.streakDays) {
           earned = true;
         }
       }
 
       // Check perfect score requirements
-      if (requirements.perfectScores && progress) {
+      if (typeof requirements.perfectScores === 'number' && progress) {
         if (progress.perfectScores >= requirements.perfectScores) {
           earned = true;
         }
       }
 
       // Check flashcard requirements
-      if (requirements.flashcardsReviewed && progress) {
+      if (typeof requirements.flashcardsReviewed === 'number' && progress) {
         if (progress.flashcardsReviewed >= requirements.flashcardsReviewed) {
           earned = true;
         }
       }
 
       // Check question requirements
-      if (requirements.questionsAsked && progress) {
+      if (typeof requirements.questionsAsked === 'number' && progress) {
         if (progress.questionsAnswered >= requirements.questionsAsked) {
           earned = true;
         }
