@@ -11,11 +11,13 @@ import {
 import { config } from '../../config/index.js';
 import { promptBuilder, LessonContext } from './promptBuilder.js';
 import { safetyFilters, SafetyValidation } from './safetyFilters.js';
+import { translateGemmaService } from './translateGemmaService.js';
+import { isLanguageSupported, SupportedLanguage } from '../../config/translateGemma.js';
 import { AgeGroup, Subject, ChatMessage, CurriculumType } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 import type { ContentBlock } from '../formatting/contentBlocks.js';
 
-// Google Cloud Translation API v2 REST endpoint
+// Google Cloud Translation API v2 REST endpoint (fallback when TranslateGemma unavailable)
 const GOOGLE_TRANSLATE_API_URL = 'https://translation.googleapis.com/language/translate/v2';
 
 /**
@@ -1192,8 +1194,11 @@ If the PDF is unreadable or contains no educational content, still return the JS
 
   /**
    * Translate selected text to a target language using hybrid approach:
-   * 1. Google Cloud Translate API for reliable, accurate translation
-   * 2. Gemini AI for kid-friendly pronunciation and explanation
+   * 1. TranslateGemma (primary) - Open translation model via Vertex AI
+   * 2. Google Cloud Translate API (fallback) - When TranslateGemma unavailable
+   *
+   * TranslateGemma provides higher quality translations, especially for educational
+   * content and Gulf region languages (Arabic, Hindi, Urdu).
    */
   async translateText(
     text: string,
@@ -1203,9 +1208,7 @@ If the PDF is unreadable or contains no educational content, still return the JS
       gradeLevel?: number | null;
     }
   ): Promise<TranslationResult> {
-    const isYoung = context.ageGroup === 'YOUNG';
-
-    // Language code mapping for Google Translate
+    // Language code mapping for both TranslateGemma and Google Translate
     const languageCodeMap: Record<string, string> = {
       'arabic': 'ar',
       'spanish': 'es',
@@ -1239,14 +1242,53 @@ If the PDF is unreadable or contains no educational content, still return the JS
 
     const targetLangCode = languageCodeMap[targetLanguage.toLowerCase()] || targetLanguage.substring(0, 2).toLowerCase();
 
-    logger.info('Starting hybrid translation', {
+    logger.info('Starting translation', {
       text: text.substring(0, 100),
       targetLanguage,
       targetLangCode,
       ageGroup: context.ageGroup,
     });
 
-    // Step 1: Use Google Cloud Translate REST API for reliable translation
+    // Step 1: Try TranslateGemma (primary) if language is supported
+    if (isLanguageSupported(targetLangCode)) {
+      try {
+        const translateGemmaResult = await translateGemmaService.translate({
+          text,
+          targetLanguage: targetLangCode as SupportedLanguage,
+          sourceLanguage: 'en', // Assume English source for now
+        });
+
+        if (translateGemmaResult) {
+          logger.info('TranslateGemma translation successful', {
+            originalLength: text.length,
+            translatedLength: translateGemmaResult.translatedText.length,
+            targetLangCode,
+            cached: translateGemmaResult.cached,
+          });
+
+          return {
+            originalText: text,
+            translatedText: translateGemmaResult.translatedText,
+            targetLanguage,
+            pronunciation: undefined,
+            simpleExplanation: undefined,
+          };
+        }
+
+        // TranslateGemma returned null (not configured or unavailable)
+        logger.info('TranslateGemma unavailable, falling back to Google Translate');
+      } catch (translateGemmaError) {
+        logger.warn('TranslateGemma failed, falling back to Google Translate', {
+          error: translateGemmaError instanceof Error ? translateGemmaError.message : 'Unknown error',
+        });
+      }
+    } else {
+      logger.debug('Language not supported by TranslateGemma, using Google Translate', {
+        targetLangCode,
+      });
+    }
+
+    // Step 2: Fallback to Google Cloud Translate REST API
     let translatedText: string;
     try {
       // Use dedicated Cloud Translation API key (separate from Gemini API key)
@@ -1258,7 +1300,7 @@ If the PDF is unreadable or contains no educational content, still return the JS
         throw new Error('Empty translation from Google Translate');
       }
 
-      logger.info('Google Translate successful', {
+      logger.info('Google Translate successful (fallback)', {
         originalLength: text.length,
         translatedLength: translatedText.length,
         targetLangCode,
