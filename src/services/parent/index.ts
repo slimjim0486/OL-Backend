@@ -4,7 +4,9 @@
  * Exports all parent-related services:
  * - usageService: Lesson usage tracking for FREE tier limits
  * - subscriptionService: Stripe subscription management
+ * - progressReportService: Curriculum-appropriate progress reports
  */
 
 export { parentUsageService } from './usageService.js';
 export { familySubscriptionService } from './subscriptionService.js';
+export { progressReportService } from './progressReportService.js';

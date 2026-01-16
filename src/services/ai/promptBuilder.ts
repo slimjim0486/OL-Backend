@@ -2,9 +2,11 @@
 import { AgeGroup, Subject, CurriculumType } from '@prisma/client';
 import {
   getCurriculumGuidance,
+  getCurriculumTeachingApproach,
   getFlashcardCurriculumGuidance,
   getQuizCurriculumGuidance,
   getGradeLevelConfig,
+  getCurriculumConfig,
 } from '../../config/curricula.js';
 
 export interface LessonContext {
