@@ -289,17 +289,35 @@ export const authService = {
     let ticket;
     try {
       const client = getGoogleClient();
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      logger.info('Verifying Google ID token', { audience: clientId?.substring(0, 20) + '...' });
+
+      // Accept tokens from multiple client IDs (Web, iOS, Android)
+      // This is required because native apps use different OAuth client IDs
+      const webClientId = process.env.GOOGLE_CLIENT_ID;
+      const iosClientId = process.env.GOOGLE_IOS_CLIENT_ID;
+      const androidClientId = process.env.GOOGLE_ANDROID_CLIENT_ID;
+
+      // Build array of valid audiences (filter out undefined)
+      const validAudiences = [webClientId, iosClientId, androidClientId].filter(Boolean) as string[];
+
+      if (validAudiences.length === 0) {
+        throw new Error('No Google client IDs configured');
+      }
+
+      logger.info('Verifying Google ID token', {
+        audienceCount: validAudiences.length,
+        audiences: validAudiences.map(a => a?.substring(0, 20) + '...'),
+      });
+
       ticket = await client.verifyIdToken({
         idToken,
-        audience: clientId,
+        audience: validAudiences,
       });
     } catch (error: any) {
       logger.error('Google ID token verification failed', {
         error: error?.message || error,
         stack: error?.stack,
-        clientId: process.env.GOOGLE_CLIENT_ID?.substring(0, 30),
+        webClientId: process.env.GOOGLE_CLIENT_ID?.substring(0, 30),
+        iosClientId: process.env.GOOGLE_IOS_CLIENT_ID?.substring(0, 30),
       });
       throw new UnauthorizedError('Invalid Google credentials');
     }
