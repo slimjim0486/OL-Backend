@@ -18,6 +18,7 @@ export const XP_VALUES = {
   TEXT_SELECTION: 2,
   FIRST_OF_DAY: 25,       // First activity of the day
   BADGE_EARNED: 0,        // XP from badge itself
+  WELCOME_BONUS: 25,      // First-time welcome package
 } as const;
 
 // Level thresholds (XP required for each level)
@@ -301,5 +302,97 @@ export const xpEngine = {
     const averageDailyXP = Math.round(monthXP / 30);
 
     return { todayXP, weekXP, monthXP, averageDailyXP };
+  },
+
+  /**
+   * Award welcome bonus to a new user
+   * Idempotent - only awards once per child
+   */
+  async awardWelcomeBonus(childId: string): Promise<{
+    success: boolean;
+    alreadyAwarded?: boolean;
+    badge?: {
+      code: string;
+      name: string;
+      description: string;
+      icon: string;
+      rarity: string;
+      category: string;
+    };
+    xpAwarded?: number;
+    totalXP?: number;
+    level?: number;
+  }> {
+    // Get or create progress record
+    let progress = await prisma.userProgress.findUnique({
+      where: { childId },
+    });
+
+    if (!progress) {
+      progress = await prisma.userProgress.create({
+        data: { childId },
+      });
+    }
+
+    // Check if already received welcome bonus
+    if (progress.hasReceivedWelcomeBonus) {
+      return {
+        success: true,
+        alreadyAwarded: true,
+      };
+    }
+
+    // Award 25 XP (flat, no bonuses)
+    const xpAmount = XP_VALUES.WELCOME_BONUS;
+
+    // Record XP transaction
+    await prisma.xPTransaction.create({
+      data: {
+        childId,
+        amount: xpAmount,
+        reason: 'WELCOME_BONUS',
+        sourceType: 'welcome',
+        sourceId: null,
+        wasBonus: false,
+        bonusMultiplier: null,
+        bonusReason: null,
+      },
+    });
+
+    // Calculate new level
+    const newTotalXP = progress.totalXP + xpAmount;
+    const { level, xpIntoLevel } = calculateLevel(newTotalXP);
+
+    // Update progress and mark welcome bonus as received
+    await prisma.userProgress.update({
+      where: { childId },
+      data: {
+        currentXP: xpIntoLevel,
+        totalXP: newTotalXP,
+        level,
+        hasReceivedWelcomeBonus: true,
+      },
+    });
+
+    // Award welcome badge
+    const badgeResult = await badgeService.awardWelcomeBadge(childId);
+
+    return {
+      success: true,
+      alreadyAwarded: false,
+      badge: badgeResult
+        ? {
+            code: badgeResult.badge.code,
+            name: badgeResult.badge.name,
+            description: badgeResult.badge.description,
+            icon: badgeResult.badge.icon,
+            rarity: badgeResult.badge.rarity,
+            category: badgeResult.badge.category,
+          }
+        : undefined,
+      xpAwarded: xpAmount,
+      totalXP: newTotalXP,
+      level,
+    };
   },
 };

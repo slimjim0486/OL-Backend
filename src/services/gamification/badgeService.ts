@@ -4,6 +4,18 @@ import { Badge, EarnedBadge, BadgeCategory, BadgeRarity, XPReason } from '@prism
 
 // Badge definitions
 const BADGE_DEFINITIONS = [
+  // Welcome badge (awarded manually via welcome bonus flow)
+  {
+    code: 'welcome_explorer',
+    name: 'Welcome Explorer',
+    description: 'Started your learning journey!',
+    icon: '🚀',
+    category: 'SPECIAL' as BadgeCategory,
+    rarity: 'COMMON' as BadgeRarity,
+    requirements: { manual: true }, // Awarded manually, not via checkAndAwardBadges
+    xpReward: 0, // XP awarded separately (25)
+  },
+
   // Learning badges
   {
     code: 'first_lesson',
@@ -232,7 +244,11 @@ export const badgeService = {
     for (const badge of allBadges) {
       if (earnedBadgeIds.has(badge.id)) continue;
 
-      const requirements = badge.requirements as Record<string, number>;
+      const requirements = badge.requirements as Record<string, number | boolean>;
+
+      // Skip manually-awarded badges (like welcome_explorer)
+      if (requirements.manual === true) continue;
+
       let earned = false;
 
       // Check level requirements
@@ -358,5 +374,58 @@ export const badgeService = {
     return prisma.badge.findUnique({
       where: { code },
     });
+  },
+
+  /**
+   * Award the welcome explorer badge to a child
+   * Returns null if already awarded
+   */
+  async awardWelcomeBadge(childId: string): Promise<{
+    badge: Badge;
+    earnedAt: Date;
+  } | null> {
+    // Get the welcome badge
+    const welcomeBadge = await prisma.badge.findUnique({
+      where: { code: 'welcome_explorer' },
+    });
+
+    if (!welcomeBadge) {
+      // Badge not in database yet, initialize badges
+      await this.initializeBadges();
+      const newBadge = await prisma.badge.findUnique({
+        where: { code: 'welcome_explorer' },
+      });
+      if (!newBadge) {
+        throw new Error('Failed to initialize welcome_explorer badge');
+      }
+      return this.awardWelcomeBadge(childId);
+    }
+
+    // Check if already earned
+    const existing = await prisma.earnedBadge.findUnique({
+      where: {
+        childId_badgeId: {
+          childId,
+          badgeId: welcomeBadge.id,
+        },
+      },
+    });
+
+    if (existing) {
+      return null; // Already has the badge
+    }
+
+    // Award the badge
+    const earnedBadge = await prisma.earnedBadge.create({
+      data: {
+        childId,
+        badgeId: welcomeBadge.id,
+      },
+    });
+
+    return {
+      badge: welcomeBadge,
+      earnedAt: earnedBadge.earnedAt,
+    };
   },
 };

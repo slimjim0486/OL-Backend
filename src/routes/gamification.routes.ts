@@ -262,4 +262,30 @@ router.get(
   }
 );
 
+/**
+ * POST /api/gamification/welcome-bonus
+ * Award welcome bonus (25 XP + Welcome Explorer badge) to new users
+ * Idempotent - calling multiple times only awards once
+ */
+router.post(
+  '/welcome-bonus',
+  authenticate,
+  requireChild,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const childId = req.child!.id;
+
+      const result = await xpEngine.awardWelcomeBonus(childId);
+
+      res.json({
+        success: result.success,
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Error awarding welcome bonus', { error, childId: req.child?.id });
+      next(error);
+    }
+  }
+);
+
 export default router;

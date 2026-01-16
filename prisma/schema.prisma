@@ -38,6 +38,9 @@ model Parent {
   // Consent tracking
   consents Consent[]
 
+  // Language preferences (for translations via TranslateGemma)
+  preferredLanguage String @default("en") // ar, hi, fr, en, es, ur - for parent communication
+
   // Subscription
   subscriptionTier      SubscriptionTier   @default(FREE)
   subscriptionStatus    SubscriptionStatus @default(ACTIVE)
@@ -411,6 +414,9 @@ model UserProgress {
   flashcardsReviewed    Int @default(0)
   perfectScores         Int @default(0)
   totalStudyTimeSeconds Int @default(0)
+
+  // Welcome bonus tracking
+  hasReceivedWelcomeBonus Boolean @default(false)
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -1916,6 +1922,7 @@ enum XPReason {
   EXERCISE_PERFECT
   NOTE_CREATED
   NOTE_EDITED
+  WELCOME_BONUS
 }
 
 enum BadgeCategory {
