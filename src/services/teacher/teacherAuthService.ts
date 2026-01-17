@@ -150,9 +150,9 @@ export const teacherAuthService = {
       logger.error('Failed to send teacher welcome email', { error: err, teacherId: teacher.id });
     });
 
-    // Send email verification link (not OTP - lower friction)
-    this.sendVerificationLink(teacher.email, teacher.id).catch(err => {
-      logger.error('Failed to send teacher verification link', { error: err, teacherId: teacher.id });
+    // Send email verification OTP (simpler for teachers than clicking links)
+    this.sendVerificationOtp(teacher.email).catch(err => {
+      logger.error('Failed to send teacher verification OTP', { error: err, teacherId: teacher.id });
     });
 
     // Track referral if code was provided

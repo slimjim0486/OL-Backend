@@ -104,7 +104,7 @@ router.post(
             resetDate: result.quota.resetDate,
           },
         },
-        message: 'Account created. A verification link has been sent to your email.',
+        message: 'Account created. A verification code has been sent to your email.',
       });
     } catch (error) {
       next(error);
