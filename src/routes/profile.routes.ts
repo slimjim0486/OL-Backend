@@ -6,6 +6,7 @@ import { ValidationError, NotFoundError } from '../middleware/errorHandler.js';
 import { AgeGroup, LearningStyle, CurriculumType } from '@prisma/client';
 import { getChildLimitForTier } from '../config/stripeProductsFamily.js';
 import { updateParentGradeRanges } from '../services/brevoService.js';
+import { voiceConsentService } from '../services/auth/voiceConsentService.js';
 
 const router = Router();
 
@@ -140,6 +141,19 @@ router.post(
           createdAt: true,
         },
       });
+
+      // Auto-grant voice consent for the new child (parent is creating the account)
+      try {
+        await voiceConsentService.grantVoiceConsent(
+          parentId,
+          child.id,
+          req.ip || req.socket.remoteAddress,
+          req.get('User-Agent')
+        );
+      } catch (voiceError) {
+        // Log but don't fail child creation if voice consent fails
+        console.error('Failed to auto-grant voice consent:', voiceError);
+      }
 
       // Add calculated age to response
       const childWithAge = {
