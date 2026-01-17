@@ -10,9 +10,14 @@ import { voiceConsentService } from '../services/auth/voiceConsentService.js';
 import { VoiceContextType } from '@prisma/client';
 import { logger } from '../utils/logger.js';
 import { ValidationError } from '../middleware/errorHandler.js';
-import multer from 'multer';
+import multer, { FileFilterCallback } from 'multer';
 
 const router = Router();
+
+// Extend Express Request to include multer file
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
 
 // Configure multer for in-memory audio upload (never touches disk)
 const upload = multer({
@@ -21,11 +26,11 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB max (roughly 2.5 min of audio)
     files: 1,
   },
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     if (sttService.validateAudioFormat(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new ValidationError(
+      cb(new Error(
         `Unsupported audio format: ${file.mimetype}. Supported: ${sttService.getSupportedFormats().join(', ')}`
       ));
     }
@@ -81,7 +86,7 @@ router.get(
   '/consent-status',
   authenticate,
   checkVoiceAvailability(),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.child) {
         return res.json({
@@ -124,7 +129,7 @@ router.post(
   authenticate,
   requireVoiceConsent(),
   upload.single('audio'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new ValidationError('No audio file provided');
@@ -189,7 +194,7 @@ router.post(
   authenticate,
   requireVoiceConsent(),
   upload.single('audio'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new ValidationError('No audio file provided');
@@ -261,7 +266,7 @@ router.post(
   authenticate,
   requireVoiceConsent(),
   upload.single('audio'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new ValidationError('No audio file provided');
@@ -334,7 +339,7 @@ router.post(
   authenticate,
   requireVoiceConsent(),
   upload.single('audio'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new ValidationError('No audio file provided');
