@@ -113,13 +113,15 @@ export const teacherAuthService = {
     // Hash password
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Create teacher account
+    // Create teacher account (emailVerified: true - no OTP required for teachers)
     const teacher = await prisma.teacher.create({
       data: {
         email: email.toLowerCase(),
         passwordHash,
         firstName,
         lastName,
+        emailVerified: true, // Auto-verified - no OTP friction for teachers
+        emailVerifiedAt: new Date(),
         organizationId: organizationId || null,
         role: organizationId ? 'TEACHER' : 'TEACHER', // Default role
         subscriptionTier: organizationId ? 'FREE' : 'FREE', // Free tier for individual teachers
@@ -150,10 +152,8 @@ export const teacherAuthService = {
       logger.error('Failed to send teacher welcome email', { error: err, teacherId: teacher.id });
     });
 
-    // Send email verification OTP (simpler for teachers than clicking links)
-    this.sendVerificationOtp(teacher.email).catch(err => {
-      logger.error('Failed to send teacher verification OTP', { error: err, teacherId: teacher.id });
-    });
+    // NOTE: Email verification OTP removed - teachers are auto-verified on signup
+    // to reduce friction. Payment verification is sufficient for paid tiers.
 
     // Track referral if code was provided
     let referralApplied = false;

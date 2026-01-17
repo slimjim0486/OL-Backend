@@ -812,8 +812,8 @@ model Teacher {
   primarySubject Subject? // Primary teaching subject
   gradeRange     String? // e.g., "ELEMENTARY", "MIDDLE", "HIGH", "MIXED"
 
-  // Email verification
-  emailVerified   Boolean   @default(false)
+  // Email verification (disabled - teachers are auto-verified on signup)
+  emailVerified   Boolean   @default(true)
   emailVerifiedAt DateTime?
 
   // Notification preferences
