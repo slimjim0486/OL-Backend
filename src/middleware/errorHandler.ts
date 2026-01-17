@@ -62,6 +62,12 @@ export class PaymentRequiredError extends AppError {
   }
 }
 
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string = 'Service temporarily unavailable') {
+    super(message, 503);
+  }
+}
+
 // Error handler middleware
 export function errorHandler(
   err: Error,

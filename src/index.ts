@@ -46,6 +46,7 @@ import referralRoutes from './routes/referral.routes.js';
 import shareRoutes from './routes/share.routes.js';
 import curriculumRoutes from './routes/curriculum.routes.js';
 import progressRoutes from './routes/progress.routes.js';
+import voiceRoutes from './routes/voice.routes.js';
 
 // Services initialization
 import { initializeContentProcessor, shutdownContentProcessor } from './services/learning/contentProcessor.js';
@@ -187,6 +188,9 @@ app.use('/api/curricula', curriculumRoutes);
 
 // Progress routes (curriculum progress tracking)
 app.use('/api/progress', progressRoutes);
+
+// Voice routes (STT for child voice input)
+app.use('/api/voice', voiceRoutes);
 
 // ============================================
 // ERROR HANDLING

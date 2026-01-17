@@ -7,6 +7,7 @@
 import { Router } from 'express';
 import subscriptionRoutes from './subscription.routes.js';
 import languageRoutes from './language.routes.js';
+import voiceConsentRoutes from './voiceConsent.routes.js';
 
 const router = Router();
 
@@ -15,5 +16,8 @@ router.use('/subscription', subscriptionRoutes);
 
 // Mount language preference routes (TranslateGemma integration)
 router.use('/language', languageRoutes);
+
+// Mount voice consent routes (COPPA-compliant voice input permissions)
+router.use('/voice-consent', voiceConsentRoutes);
 
 export default router;

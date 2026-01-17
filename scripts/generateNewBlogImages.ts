@@ -27,59 +27,44 @@ const OUTPUT_DIR = path.join(__dirname, '../../frontend/public/images/blog');
 // New blog post image prompts
 const NEW_BLOG_IMAGE_PROMPTS = [
   {
-    name: 'comparison-trap',
-    altText: 'Parent and child reading together peacefully, celebrating individual learning journey',
-    prompt: `Create a warm, emotionally resonant illustration of a parent and child sharing a peaceful reading moment together, free from comparison anxiety.
+    name: 'bilingual-children-gulf',
+    altText: 'Multi-generational Gulf family sharing a bilingual learning moment with Arabic and English books',
+    prompt: `Create a warm, emotionally resonant illustration for a blog post about bilingual children in Gulf families.
 
-SCENE COMPOSITION: A parent and young child (around 6-8 years old) sit together on a comfortable couch or reading nook, sharing a picture book. The scene radiates calm, connection, and joy - the antithesis of academic pressure. This is a moment of pure presence.
+SCENE COMPOSITION: A cozy Middle Eastern living room with a multi-generational family moment. A young child (around 7 years old) sits between their parent and grandparent. On the coffee table, there are both Arabic and English children's books visible. The child has a thoughtful, slightly uncertain expression - caught between two worlds but surrounded by love.
 
-THE PARENT: Their expression shows complete presence and peace - no anxiety, no comparison, just joy in their child. They're looking at the child with warmth and acceptance, or together with the child at the book. Body language is relaxed, perhaps with arm around the child. Any ethnicity/gender.
+THE FAMILY: A mother or father in their 30s-40s, dressed in a mix of modern and traditional Gulf attire. A grandmother or grandfather in traditional Emirati/Gulf clothing (kandura, abaya, or similar). The child in casual modern clothes. All have warm, supportive expressions.
 
-THE CHILD: Reading or pointing at the book with genuine engagement and confidence. Their posture shows comfort and security - leaning into the parent, completely at ease. Their expression shows the joy of learning at their own pace. No stress, just curiosity and happiness.
+ENVIRONMENT: A warm, inviting Gulf-style living room - comfortable majlis seating with traditional cushions, modern touches mixed with cultural elements. A traditional Arabic coffee pot (dallah) on the table alongside children's books in both Arabic and English scripts.
 
-THE BOOK: A colorful picture book between them, suggesting early reading - not a chapter book, not "advanced" material. The book represents learning at the child's own pace, and that's beautiful.
+EMOTIONAL TONE: The core message is "two languages, one loving family." The image should feel hopeful and supportive, not stressful. Show the beauty and complexity of bilingual upbringing - the child is cherished regardless of which language they speak.
 
-ENVIRONMENT: A cozy, warm home setting - soft cushions, warm lighting (perhaps golden hour light through a window), comfortable textures. The space feels safe, unhurried, and free from pressure. Perhaps a bookshelf with varied books in the background.
+LIGHTING: Warm, golden evening light suggesting a comfortable family gathering. Soft and embracing.
 
-EMOTIONAL TONE: The core message is "this is enough, this child is enough, this moment is enough." The image should make parents feel permission to let go of comparison. Peace, acceptance, joy.
+COLOR PALETTE: Warm, nurturing colors - golden yellows, soft teals, warm browns, cream tones. Cozy and inviting with subtle Gulf cultural elements.
 
-LIGHTING: Warm, golden, embracing light - like a hug. Soft shadows, no harsh contrasts. The kind of lighting that makes you feel safe and loved.
-
-COLOR PALETTE: Warm, nurturing colors - soft oranges, warm yellows, cream tones, gentle greens. Cozy and inviting. The palette should feel like coming home.
-
-STYLE: Warm, emotional illustration style similar to beloved children's book illustrations. Soft edges, expressive faces, gentle colors. The image should evoke feelings of comfort and acceptance. Professional quality suitable for a blog header about escaping comparison anxiety.`,
+STYLE: Modern illustration style, slightly stylized but not cartoonish. Soft edges, expressive faces, professional quality suitable for a blog header. The atmosphere should feel like home and belonging.`,
   },
   {
-    name: 'teacher-burnout',
-    altText: 'Teacher finding renewed joy and purpose in the classroom with students',
-    prompt: `Create an uplifting, hopeful illustration of a teacher who has rediscovered their joy and purpose - the "after" of burnout recovery.
+    name: 'neurodiverse-learning-support',
+    altText: 'Parent and child having a breakthrough learning moment with supportive tools and technology',
+    prompt: `Create an empowering, emotionally resonant illustration for a blog post about supporting neurodiverse children with learning differences.
 
-SCENE COMPOSITION: A teacher (late 20s to early 40s, any gender/ethnicity) is in the middle of a joyful classroom moment - perhaps telling a story that has students laughing, demonstrating something with animated gestures, or sharing a genuine smile with engaged students. This is teaching as it should be - human connection and shared discovery.
+SCENE COMPOSITION: A bright, organized home study space where a parent and child (around 9-10 years old) are working together. The child's face shows a moment of "aha!" understanding - that breakthrough moment when something finally clicks. Around them are various learning tools: colorful visual aids, a tablet showing an educational app, fidget tools on the desk, noise-canceling headphones nearby.
 
-THE TEACHER: Their expression shows genuine joy, energy, and presence - the light in their eyes that made them become a teacher. They're animated, engaged, laughing or smiling authentically. Their posture is open and energetic - leaning forward with enthusiasm, hands expressive. This is NOT a stock photo smile - this is real joy.
+THE CHILD: A confident, engaged child (Middle Eastern or South Asian features to represent Gulf region families) showing genuine excitement at understanding something. NOT struggling or sad - this is the "after" moment of success. Eyes bright, maybe pointing at something on the tablet with pride.
 
-THE STUDENTS: A small group (3-5) of diverse students visible, all engaged and happy. They might be laughing at a joke, leaning in with curiosity, or raising hands with excitement. The students reflect the teacher's energy back - when the teacher is alive, so is the classroom.
+THE PARENT: Patient, supportive body language without hovering. Perhaps sitting beside the child at eye level, showing encouragement and joy at the child's success. Their expression shows pride and relief.
 
-THE MOMENT: Capture a specific joyful teaching moment - perhaps:
-- The teacher acting out something from a story with dramatic gestures
-- Students laughing together at a math joke the teacher just told
-- A hands-on activity where everyone is discovering something together
-- The teacher high-fiving a student who just had a breakthrough
+LEARNING ENVIRONMENT: A home study space that feels organized but not clinical - colorful but calming. Visual schedule or chart on the wall, good lighting, plants adding life. The space feels designed for success.
 
-CLASSROOM ENVIRONMENT: A bright, welcoming classroom with:
-- Natural light streaming through windows
-- Colorful but organized space
-- Student work displayed on walls
-- Plants or cheerful decorations
-- The feeling of a space where learning is alive
+EMOTIONAL TONE: The core message is "different, not less" - showing a child who is thriving with the right support. Hope, capability, breakthrough, and joy. This is NOT about struggle - it's about success.
 
-LIGHTING: Bright, warm, optimistic lighting - like morning light full of possibility. Perhaps sunlight streaming in, creating a sense of new beginnings. The lighting should feel hopeful and energizing.
+LIGHTING: Bright, optimistic light streaming through a window suggesting possibility and hope. Warm and energizing.
 
-CONTRAST WITH BURNOUT: This image should feel like the opposite of 2 AM grading sessions. Bright vs dark. Connected vs isolated. Joyful vs exhausted. This is what teaching looks like when teachers have their time and energy back.
+COLOR PALETTE: Uplifting colors - soft purples, calming blues, warm oranges and yellows. The palette should feel hopeful and modern.
 
-COLOR PALETTE: Bright, hopeful colors - sunny yellows, fresh greens, warm oranges, clear blues. The palette should feel like possibility and renewal. Nothing muted or tired.
-
-STYLE: Warm, expressive illustration style that captures emotion and energy. The image should make teachers remember why they started. Should make viewers smile and feel hope. Professional quality suitable for a blog about teacher burnout recovery and rediscovering purpose.`,
+STYLE: Modern, clean illustration style - welcoming and professional. Soft but clear edges, expressive faces showing genuine emotion. Professional quality suitable for a blog header about neurodiversity and learning differences.`,
   },
 ];
 

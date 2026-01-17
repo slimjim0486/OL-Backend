@@ -20,12 +20,12 @@ export const BUCKETS = {
 } as const;
 
 // CDN path prefixes for each bucket
-// When using R2.dev public URLs (one URL per bucket), set these to empty strings
-// When using a unified CDN domain with routing, use path prefixes
+// cdn.orbitlearn.app uses Cloudflare Worker routing: /uploads/*, /static/*
+// aiContent uses direct R2.dev URL (no prefix needed)
 export const CDN_PATHS = {
-  uploads: '',      // R2.dev URLs point directly to bucket root
-  aiContent: '',
-  static: '',
+  uploads: '/uploads',
+  aiContent: '',        // Uses CDN_BASE_URL_AI_CONTENT (direct R2.dev URL)
+  static: '/static',
 } as const;
 
 export type BucketName = keyof typeof BUCKETS;

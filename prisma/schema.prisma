@@ -62,6 +62,9 @@ model Parent {
   shareableContents  ShareableContent[]
   sharingPreferences ParentSharingPreferences?
 
+  // Voice consent for children
+  voiceConsents VoiceConsent[]
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -136,6 +139,10 @@ model Child {
   standardProgress   ChildStandardProgress[]
   curriculumSwitches CurriculumSwitch[]
 
+  // Voice features (COPPA-compliant)
+  voiceConsent        VoiceConsent?
+  voiceTranscriptions VoiceTranscriptionLog[]
+
   // Timestamps
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -168,6 +175,61 @@ model Consent {
   updatedAt      DateTime  @updatedAt
 
   @@index([parentId, status])
+}
+
+// Voice consent for child voice input features (COPPA-compliant)
+model VoiceConsent {
+  id       String @id @default(uuid())
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  childId  String @unique
+  child    Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  // Consent status
+  status VoiceConsentStatus @default(PENDING)
+
+  // Consent timestamps
+  consentGivenAt DateTime?
+  expiresAt      DateTime? // 1 year from consent
+  revokedAt      DateTime?
+
+  // Audit trail
+  ipAddress String?
+  userAgent String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([parentId, childId])
+  @@index([childId, status])
+}
+
+// Voice transcription audit log (metadata only - no audio or transcript content stored)
+model VoiceTranscriptionLog {
+  id      String @id @default(uuid())
+  childId String
+  child   Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  // Audio metadata (no content)
+  audioLengthMs   Int // Duration of audio in milliseconds
+  transcriptionMs Int // Time taken to transcribe
+
+  // AI metadata
+  modelUsed       String // "whisper-1"
+  confidenceScore Float? // 0-1 confidence from Whisper
+
+  // Context (what the transcription was for)
+  contextType VoiceContextType
+  contextId   String? // Quiz ID, Lesson ID, etc.
+
+  // Processing metadata
+  wasRetried Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([childId, createdAt])
+  @@index([contextType, createdAt])
 }
 
 // Parent lesson usage tracking (for FREE tier limits)
@@ -1852,6 +1914,21 @@ enum ConsentStatus {
   VERIFIED
   FAILED
   EXPIRED
+}
+
+enum VoiceConsentStatus {
+  PENDING
+  GRANTED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
+enum VoiceContextType {
+  QUIZ_ANSWER
+  CHAT_MESSAGE
+  EXERCISE_ANSWER
+  FLASHCARD_RESPONSE
 }
 
 enum Subject {

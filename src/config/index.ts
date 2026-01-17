@@ -96,6 +96,15 @@ export const config = {
     webhookSecretFamily: process.env.STRIPE_WEBHOOK_SECRET_FAMILY, // For family/parent subscription events
   },
 
+  // Voice Input (OpenAI Whisper STT)
+  voice: {
+    openaiApiKey: process.env.OPENAI_API_KEY,
+    enabled: process.env.ENABLE_VOICE_INPUT === 'true',
+    maxDurationMs: parseInt(process.env.VOICE_MAX_DURATION_MS || '30000'), // 30 seconds default
+    consentExpiryDays: parseInt(process.env.VOICE_CONSENT_EXPIRY_DAYS || '365'), // 1 year
+    supportedLanguages: ['en', 'ar'], // English and Arabic for Gulf region
+  },
+
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
   debug: process.env.DEBUG === 'true',
