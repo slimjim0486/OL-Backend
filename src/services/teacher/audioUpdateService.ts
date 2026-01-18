@@ -115,7 +115,7 @@ export const audioUpdateService = {
     });
 
     if (lessons.length === 0) {
-      throw new Error('No lessons found with the provided IDs');
+      throw new Error('Selected lessons were not found. They may have been deleted. Please select different lessons.');
     }
 
     // Build lesson summaries for the prompt
@@ -184,7 +184,7 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),
       });
-      throw new Error('Failed to generate audio script');
+      throw new Error('Script generation failed. Try selecting fewer lessons or adding custom notes to guide the content.');
     }
   },
 
@@ -234,7 +234,7 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
       });
 
       if (!response.audioContent) {
-        throw new Error('No audio content generated');
+        throw new Error('Audio generation failed. The script may be too long. Try a shorter duration or edit the script.');
       }
 
       // Calculate approximate duration (150 words per minute for TTS)
@@ -387,7 +387,7 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
     });
 
     if (!existing) {
-      throw new Error('Audio update not found');
+      throw new Error('Audio update not found. It may have been deleted. Go back to create a new one.');
     }
 
     // If updating script, reset audio URL and duration
@@ -423,7 +423,7 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
     });
 
     if (!existing) {
-      throw new Error('Audio update not found');
+      throw new Error('Audio update not found. It may have been deleted. Go back to create a new one.');
     }
 
     await prisma.teacherAudioUpdate.delete({
@@ -446,7 +446,7 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
     });
 
     if (!existing) {
-      throw new Error('Audio update not found');
+      throw new Error('Audio update not found. It may have been deleted. Go back to create a new one.');
     }
 
     // Regenerate the script

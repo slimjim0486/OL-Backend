@@ -90,12 +90,12 @@ export const teacherAuthService = {
     });
 
     if (existingTeacher) {
-      throw new ConflictError('An account with this email already exists');
+      throw new ConflictError('An account with this email already exists. Try signing in instead, or use "Forgot password" if you need to reset it.');
     }
 
     // Validate password strength
     if (password.length < 8) {
-      throw new ValidationError('Password must be at least 8 characters long');
+      throw new ValidationError('Password must be at least 8 characters. Use a mix of letters, numbers, and symbols for better security.');
     }
 
     // If organizationId provided, verify it exists
@@ -336,12 +336,12 @@ export const teacherAuthService = {
         stack: error?.stack,
         clientId: process.env.GOOGLE_CLIENT_ID?.substring(0, 30),
       });
-      throw new UnauthorizedError('Invalid Google credentials');
+      throw new UnauthorizedError('Google sign-in failed. Please try again or use email/password login instead.');
     }
 
     const payload = ticket.getPayload();
     if (!payload) {
-      throw new UnauthorizedError('Invalid Google credentials');
+      throw new UnauthorizedError('Google sign-in failed. Please try again or use email/password login instead.');
     }
 
     const { sub: googleId, email, given_name: firstName, family_name: lastName, email_verified } = payload;
@@ -543,7 +543,7 @@ export const teacherAuthService = {
     );
 
     if (!newSession) {
-      throw new UnauthorizedError('Session compromised. Please log in again.');
+      throw new UnauthorizedError('Your session may have been used elsewhere. Please sign in again for security.');
     }
 
     return {
@@ -894,19 +894,19 @@ export const teacherAuthService = {
     if (teacher.passwordHash) {
       const isValid = await bcrypt.compare(currentPassword, teacher.passwordHash);
       if (!isValid) {
-        throw new UnauthorizedError('Current password is incorrect');
+        throw new UnauthorizedError('Current password is incorrect. Forgot it? Sign out and use "Forgot password" to reset.');
       }
     } else {
       // Google-only user - they're setting a password for the first time
       // Just validate that currentPassword is empty or they acknowledge they don't have one
       if (currentPassword && currentPassword.length > 0) {
-        throw new ValidationError('This account uses Google Sign-In and has no current password. Leave current password empty to set one.');
+        throw new ValidationError('You signed up with Google and don\'t have a password yet. Leave "Current password" empty to set your first password.');
       }
     }
 
     // Validate new password
     if (newPassword.length < 8) {
-      throw new ValidationError('Password must be at least 8 characters long');
+      throw new ValidationError('Password must be at least 8 characters. Use a mix of letters, numbers, and symbols for better security.');
     }
 
     // Update password
@@ -1070,7 +1070,7 @@ export const teacherAuthService = {
     if (teacher.passwordHash) {
       const isValid = await bcrypt.compare(password, teacher.passwordHash);
       if (!isValid) {
-        throw new UnauthorizedError('Invalid password');
+        throw new UnauthorizedError('Incorrect password. Enter your current password to confirm account deletion.');
       }
     }
     // For Google-only users (no passwordHash), deletion is allowed since they're already authenticated

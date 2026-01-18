@@ -175,7 +175,7 @@ export const iepGoalService = {
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),
       });
-      throw new Error('Failed to generate IEP goals');
+      throw new Error('IEP goal generation failed. Try providing more detail in the present levels or selecting a different disability category.');
     }
   },
 
@@ -281,7 +281,7 @@ export const iepGoalService = {
     });
 
     if (!existing) {
-      throw new Error('IEP session not found');
+      throw new Error('IEP session not found. It may have been deleted. Start a new session from the IEP Goals page.');
     }
 
     const updateData: Record<string, unknown> = {};
@@ -312,7 +312,7 @@ export const iepGoalService = {
     });
 
     if (!existing) {
-      throw new Error('IEP session not found');
+      throw new Error('IEP session not found. It may have been deleted. Start a new session from the IEP Goals page.');
     }
 
     await prisma.iEPGoalSession.delete({
@@ -335,7 +335,7 @@ export const iepGoalService = {
     });
 
     if (!existing) {
-      throw new Error('IEP session not found');
+      throw new Error('IEP session not found. It may have been deleted. Start a new session from the IEP Goals page.');
     }
 
     // Regenerate the goals

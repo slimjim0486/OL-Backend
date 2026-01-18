@@ -259,7 +259,7 @@ export const subPlanService = {
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),
       });
-      throw new Error('Failed to generate substitute plan');
+      throw new Error('Sub plan generation failed. Try providing more lesson details or simplifying the schedule.');
     }
   },
 
@@ -373,7 +373,7 @@ export const subPlanService = {
     });
 
     if (!existing) {
-      throw new Error('Substitute plan not found');
+      throw new Error('Sub plan not found. It may have been deleted. Create a new plan from your Content library.');
     }
 
     // Build update data, handling JSON fields properly
@@ -407,7 +407,7 @@ export const subPlanService = {
     });
 
     if (!existing) {
-      throw new Error('Substitute plan not found');
+      throw new Error('Sub plan not found. It may have been deleted. Create a new plan from your Content library.');
     }
 
     await prisma.substitutePlan.delete({
@@ -430,7 +430,7 @@ export const subPlanService = {
     });
 
     if (!existing) {
-      throw new Error('Substitute plan not found');
+      throw new Error('Sub plan not found. It may have been deleted. Create a new plan from your Content library.');
     }
 
     const dateStr = new Date(newDate).toLocaleDateString('en-US', {
@@ -472,7 +472,7 @@ export const subPlanService = {
     });
 
     if (!existing) {
-      throw new Error('Substitute plan not found');
+      throw new Error('Sub plan not found. It may have been deleted. Create a new plan from your Content library.');
     }
 
     // Cast the schedule from JSON

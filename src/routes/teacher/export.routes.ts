@@ -66,7 +66,7 @@ router.get('/:contentId', async (req: Request, res: Response) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        error: 'Content not found',
+        error: 'Content not found. It may have been deleted. Go back to your Content library.',
       });
     }
 
@@ -83,7 +83,7 @@ router.get('/:contentId', async (req: Request, res: Response) => {
     console.error('Export error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to export content',
+      error: 'Export failed. Try again or choose a different format (PDF, DOCX, or PPTX).',
     });
   }
 });
@@ -125,7 +125,7 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        error: 'Content not found',
+        error: 'Content not found. It may have been deleted. Go back to your Content library.',
       });
     }
 
@@ -133,7 +133,7 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
     if (content.contentType !== 'LESSON') {
       return res.status(400).json({
         success: false,
-        error: 'Only lessons can be exported to PowerPoint format',
+        error: 'Only lessons can be exported to PowerPoint. Try PDF export for quizzes and flashcards.',
       });
     }
 
@@ -150,7 +150,7 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
     console.error('PPTX export error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to export PowerPoint',
+      error: 'PowerPoint export failed. Try PDF export instead, or wait a moment and retry.',
     });
   }
 });
@@ -198,7 +198,7 @@ router.post('/batch', async (req: Request, res: Response) => {
     console.error('Batch export error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to export content',
+      error: 'Batch export failed. Try selecting fewer items or exporting individually.',
     });
   }
 });
@@ -226,7 +226,7 @@ router.get('/drive/status', async (req: Request, res: Response) => {
     console.error('Drive status error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to check Drive status',
+      error: 'Unable to check Google Drive connection. Please try again.',
     });
   }
 });

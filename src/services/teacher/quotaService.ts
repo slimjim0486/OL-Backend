@@ -213,10 +213,11 @@ export const quotaService = {
     const estimatedCost = estimate * costPerToken;
 
     let warning: string | undefined;
+    const remainingCredits = tokensToCredits(remaining);
     if (percentUsed >= 90) {
-      warning = 'You have used over 90% of your monthly credit quota. Consider purchasing a credit pack.';
+      warning = `Only ${remainingCredits} credits left this month. Get more credits at Settings → Billing to avoid interruptions.`;
     } else if (percentUsed >= 75) {
-      warning = 'You have used over 75% of your monthly credit quota.';
+      warning = `${remainingCredits} credits remaining this month. Your quota resets on ${resetDate.toLocaleDateString()}.`;
     }
 
     return {
@@ -628,8 +629,10 @@ export const quotaService = {
     const check = await this.checkQuota(teacherId, operation, estimatedTokens);
 
     if (!check.allowed) {
+      const creditsNeeded = tokensToCredits(estimatedTokens || OPERATION_ESTIMATES[operation] || 1000);
       throw new PaymentRequiredError(
-        'Credit quota exceeded. Please purchase a credit pack or upgrade your plan.'
+        `You need ${creditsNeeded} credits for this action but only have ${check.remainingCredits} remaining. ` +
+        `Buy a credit pack or upgrade your plan at Settings → Billing.`
       );
     }
 

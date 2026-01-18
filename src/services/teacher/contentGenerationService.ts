@@ -407,7 +407,7 @@ export const contentGenerationService = {
         blockReason: responseCheck.blockReason,
         finishReason: responseCheck.finishReason,
       });
-      throw new Error('Unable to generate quiz. Please try again or rephrase the content.');
+      throw new Error('Unable to generate quiz for this content. Try simplifying the text or removing any special characters.');
     }
 
     const responseText = responseCheck.responseText;
@@ -443,7 +443,7 @@ export const contentGenerationService = {
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),
       });
-      throw new Error('Failed to generate quiz. Please try again.');
+      throw new Error('Quiz generation failed unexpectedly. Try again, or use shorter source content.');
     }
   },
 
@@ -487,7 +487,7 @@ export const contentGenerationService = {
         blockReason: responseCheck.blockReason,
         finishReason: responseCheck.finishReason,
       });
-      throw new Error('Unable to generate flashcards. Please try again or rephrase the content.');
+      throw new Error('Unable to create flashcards from this content. Try using simpler text or breaking it into smaller sections.');
     }
 
     const responseText = responseCheck.responseText;
@@ -523,7 +523,7 @@ export const contentGenerationService = {
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),
       });
-      throw new Error('Failed to generate flashcards. Please try again.');
+      throw new Error('Flashcard generation failed. Try again with different content or reduce the number of cards.');
     }
   },
 
@@ -565,7 +565,7 @@ export const contentGenerationService = {
         blockReason: responseCheck.blockReason,
         finishReason: responseCheck.finishReason,
       });
-      throw new Error('Unable to generate study guide. Please try again or rephrase the content.');
+      throw new Error('Unable to create study guide. Try using clearer, well-structured content as input.');
     }
 
     const responseText = responseCheck.responseText;
@@ -590,7 +590,7 @@ export const contentGenerationService = {
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),
       });
-      throw new Error('Failed to generate study guide. Please try again.');
+      throw new Error('Study guide generation failed. Try again or choose a different format (outline, detailed, or summary).');
     }
   },
 
@@ -643,7 +643,7 @@ export const contentGenerationService = {
         blockReason: responseCheck.blockReason,
         finishReason: responseCheck.finishReason,
       });
-      throw new Error('Unable to analyze content. Please try again or rephrase the content.');
+      throw new Error('Unable to analyze this content. Make sure it contains readable text (not just images or tables).');
     }
 
     const responseText = responseCheck.responseText;
@@ -667,7 +667,7 @@ export const contentGenerationService = {
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),
       });
-      throw new Error('Failed to analyze content. Please try again.');
+      throw new Error('Content analysis failed. Try pasting the text directly instead of uploading a file.');
     }
   },
 
@@ -754,7 +754,7 @@ Do NOT include any inappropriate or scary imagery. Keep it child-friendly and ed
       }
 
       if (!imageData) {
-        throw new Error('No image generated in response');
+        throw new Error('Infographic generation did not produce an image. Try a simpler topic or different style.');
       }
 
       // Upload to R2
@@ -807,7 +807,7 @@ Do NOT include any inappropriate or scary imagery. Keep it child-friendly and ed
         error: error instanceof Error ? error.message : 'Unknown error',
         topic: input.topic,
       });
-      throw new Error('Failed to generate infographic. Please try again.');
+      throw new Error('Infographic generation failed. Try a different topic or style, or wait a moment and retry.');
     }
   },
 
