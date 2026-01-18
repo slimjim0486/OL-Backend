@@ -101,7 +101,7 @@ router.post(
       if (!req.child) {
         return res.status(401).json({
           success: false,
-          error: 'Child session required for flashcard review',
+          error: 'Please sign in with a child profile to review flashcards.',
         });
       }
 
@@ -117,12 +117,12 @@ router.post(
       });
 
       if (!deck) {
-        return res.status(404).json({ success: false, error: 'Flashcard deck not found' });
+        return res.status(404).json({ success: false, error: 'Flashcard deck not found. It may have been deleted.' });
       }
 
       // Verify the deck belongs to this child
       if (deck.childId !== childId) {
-        return res.status(403).json({ success: false, error: 'Access denied to this flashcard deck' });
+        return res.status(403).json({ success: false, error: 'You don\'t have access to these flashcards.' });
       }
 
       // Get the specific flashcard
@@ -131,7 +131,7 @@ router.post(
       });
 
       if (!flashcard || flashcard.deckId !== deckId) {
-        return res.status(404).json({ success: false, error: 'Flashcard not found in this deck' });
+        return res.status(404).json({ success: false, error: 'Flashcard not found. It may have been deleted or moved.' });
       }
 
       // Update flashcard statistics
@@ -296,7 +296,7 @@ Return ONLY a valid JSON array with this exact format, no other text:
     }));
   } catch (parseError) {
     logger.error('Failed to parse flashcard response', { responseText, parseError });
-    throw new Error('Failed to generate flashcards');
+    throw new Error('Flashcard generation failed unexpectedly. Try again, or use shorter content.');
   }
 }
 

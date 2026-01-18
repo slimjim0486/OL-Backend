@@ -280,11 +280,13 @@ router.post(
       }
 
       // Check lesson usage limits for FREE tier parents
-      const canCreateLesson = await parentUsageService.canCreateLesson(child.parentId);
-      if (!canCreateLesson) {
+      const canCreate = await parentUsageService.canCreateLesson(child.parentId);
+      if (!canCreate) {
+        const usageInfo = await parentUsageService.getUsageInfo(child.parentId);
+        const resetDate = usageInfo.resetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         res.status(402).json({
           success: false,
-          error: 'Monthly lesson limit reached. Please upgrade your subscription to create more lessons.',
+          error: `You've used all ${usageInfo.currentMonth.lessonsLimit} lessons this month. Upgrade to create unlimited lessons, or wait until ${resetDate} when your limit resets.`,
           code: 'LESSON_LIMIT_REACHED',
         });
         return;
@@ -1296,11 +1298,13 @@ router.post(
       }
 
       // Check lesson usage limits for FREE tier parents
-      const canCreateLesson = await parentUsageService.canCreateLesson(child.parentId);
-      if (!canCreateLesson) {
+      const canCreate = await parentUsageService.canCreateLesson(child.parentId);
+      if (!canCreate) {
+        const usageInfo = await parentUsageService.getUsageInfo(child.parentId);
+        const resetDate = usageInfo.resetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         res.status(402).json({
           success: false,
-          error: 'Monthly lesson limit reached. Please upgrade your subscription to create more lessons.',
+          error: `You've used all ${usageInfo.currentMonth.lessonsLimit} lessons this month. Upgrade to create unlimited lessons, or wait until ${resetDate} when your limit resets.`,
           code: 'LESSON_LIMIT_REACHED',
         });
         return;

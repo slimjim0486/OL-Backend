@@ -115,7 +115,7 @@ export const consentService = {
     });
 
     if (!parent) {
-      throw new ValidationError('Parent account not found');
+      throw new ValidationError('Your account was not found. Please sign in again.');
     }
 
     // Create pending consent record
@@ -169,11 +169,11 @@ export const consentService = {
     });
 
     if (!consent) {
-      throw new ValidationError('Consent record not found');
+      throw new ValidationError('Verification session not found. Please start the verification process again.');
     }
 
     if (consent.status !== 'PENDING') {
-      throw new ForbiddenError('Consent already processed');
+      throw new ForbiddenError('This verification has already been completed. Refresh the page to continue.');
     }
 
     // Verify payment intent with Stripe
@@ -185,7 +185,7 @@ export const consentService = {
         paymentIntentId,
         status: verification.status,
       });
-      throw new ValidationError(`Payment verification failed. Status: ${verification.status}`);
+      throw new ValidationError('Card verification was not successful. Please try again with a different card.');
     }
 
     // Verify metadata matches
@@ -195,7 +195,7 @@ export const consentService = {
         paymentIntentId,
         metadataConsentId: verification.metadata?.consentId,
       });
-      throw new ValidationError('Payment verification failed. Consent ID mismatch.');
+      throw new ValidationError('Verification session mismatch. Please start the process again.');
     }
 
     // Mark consent as verified
@@ -316,11 +316,11 @@ export const consentService = {
     for (const { questionId, answer } of answers) {
       const question = KBQ_QUESTIONS.find(q => q.id === questionId);
       if (!question) {
-        throw new ValidationError(`Unknown question: ${questionId}`);
+        throw new ValidationError('Invalid security question. Please refresh and try again.');
       }
 
       if (!question.validation.test(answer)) {
-        throw new ValidationError(`Invalid answer format for: ${question.question}`);
+        throw new ValidationError(`Please enter a valid answer for: "${question.question}". ${question.hint || ''}`);
       }
 
       // Hash the answer (case-insensitive, trimmed)
@@ -476,18 +476,18 @@ export const consentService = {
     });
 
     if (!parent) {
-      throw new ValidationError('Parent account not found');
+      throw new ValidationError('Your account was not found. Please sign in again.');
     }
 
     // Check if user has a password (Google OAuth users don't)
     if (!parent.passwordHash) {
-      throw new ValidationError('Google Sign-In accounts require credit card verification to reset security questions.');
+      throw new ValidationError('Since you use Google Sign-In, please use credit card verification to reset your security questions.');
     }
 
     // Verify password for re-authentication
     const isPasswordValid = await bcrypt.compare(password, parent.passwordHash);
     if (!isPasswordValid) {
-      throw new ForbiddenError('Invalid password');
+      throw new ForbiddenError('Incorrect password. Please try again.');
     }
 
     // Hash and store new answers
@@ -540,7 +540,7 @@ export const consentService = {
     });
 
     if (!parent) {
-      throw new ValidationError('Parent account not found');
+      throw new ValidationError('Your account was not found. Please sign in again.');
     }
 
     // Create a reset token that will be used after CC verification
@@ -617,7 +617,7 @@ export const consentService = {
         paymentIntentId,
         status: verification.status,
       });
-      throw new ValidationError(`Payment verification failed. Status: ${verification.status}`);
+      throw new ValidationError('Card verification was not successful. Please try again with a different card.');
     }
 
     // Verify the payment intent was for this parent
@@ -627,7 +627,7 @@ export const consentService = {
         paymentIntentId,
         metadataParentId: verification.metadata?.parentId,
       });
-      throw new ValidationError('Payment verification failed. Parent ID mismatch.');
+      throw new ValidationError('Verification session mismatch. Please start the process again.');
     }
 
     // Hash and store new answers
@@ -636,11 +636,11 @@ export const consentService = {
     for (const { questionId, answer } of newAnswers) {
       const question = KBQ_QUESTIONS.find(q => q.id === questionId);
       if (!question) {
-        throw new ValidationError(`Unknown question: ${questionId}`);
+        throw new ValidationError('Invalid security question. Please refresh and try again.');
       }
 
       if (!question.validation.test(answer)) {
-        throw new ValidationError(`Invalid answer format for: ${question.question}`);
+        throw new ValidationError(`Please enter a valid answer for: "${question.question}". ${question.hint || ''}`);
       }
 
       const normalizedAnswer = answer.toLowerCase().trim();

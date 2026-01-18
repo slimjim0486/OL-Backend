@@ -99,12 +99,12 @@ export const authService = {
     });
 
     if (existing) {
-      throw new ConflictError('An account with this email already exists');
+      throw new ConflictError('An account with this email already exists. Try signing in instead, or use "Forgot Password" to reset it.');
     }
 
     // Validate password strength
     if (password.length < 8) {
-      throw new ValidationError('Password must be at least 8 characters long');
+      throw new ValidationError('Password must be at least 8 characters. Use a mix of letters, numbers, and symbols for better security.');
     }
 
     // Hash password
@@ -222,7 +222,7 @@ export const authService = {
 
     // Check if user signed up with Google (no password)
     if (!parent.passwordHash) {
-      throw new UnauthorizedError('This account uses Google Sign-In. Please sign in with Google.');
+      throw new UnauthorizedError('This account uses Google Sign-In. Use the "Sign in with Google" button instead.');
     }
 
     // Verify password
@@ -319,12 +319,12 @@ export const authService = {
         webClientId: process.env.GOOGLE_CLIENT_ID?.substring(0, 30),
         iosClientId: process.env.GOOGLE_IOS_CLIENT_ID?.substring(0, 30),
       });
-      throw new UnauthorizedError('Invalid Google credentials');
+      throw new UnauthorizedError('Google sign-in failed. Please try again or use email/password instead.');
     }
 
     const payload = ticket.getPayload();
     if (!payload) {
-      throw new UnauthorizedError('Invalid Google credentials');
+      throw new UnauthorizedError('Google sign-in failed. Please try again or use email/password instead.');
     }
 
     const { sub: googleId, email, given_name: firstName, family_name: lastName, email_verified } = payload;
@@ -544,7 +544,7 @@ export const authService = {
 
     if (!newSession) {
       // Rotation failed - likely due to token reuse detection
-      throw new UnauthorizedError('Session compromised. Please log in again.');
+      throw new UnauthorizedError('Your session may have been used elsewhere. Please sign in again for security.');
     }
 
     // Update session activity
@@ -889,19 +889,19 @@ export const authService = {
 
     // Check if user has a password (Google OAuth users don't)
     if (!parent.passwordHash) {
-      throw new ValidationError('Cannot change password for Google Sign-In accounts. Please manage your password through Google.');
+      throw new ValidationError('You signed up with Google. Your password is managed by Google, not Orbit Learn.');
     }
 
     // Verify current password
     const isValid = await bcrypt.compare(currentPassword, parent.passwordHash);
 
     if (!isValid) {
-      throw new UnauthorizedError('Current password is incorrect');
+      throw new UnauthorizedError('Current password is incorrect. Forgot it? Sign out and use "Forgot Password" to reset.');
     }
 
     // Validate new password
     if (newPassword.length < 8) {
-      throw new ValidationError('Password must be at least 8 characters long');
+      throw new ValidationError('Password must be at least 8 characters. Use a mix of letters, numbers, and symbols for better security.');
     }
 
     // Update password
@@ -1027,13 +1027,13 @@ export const authService = {
 
     // Check if user has a password (Google OAuth users don't)
     if (!parent.passwordHash) {
-      throw new ValidationError('Google Sign-In accounts cannot be deleted with password verification. Please contact support.');
+      throw new ValidationError('For security, Google Sign-In accounts need additional verification. Contact support@orbitlearn.app to delete your account.');
     }
 
     // Verify password before allowing deletion
     const isValid = await bcrypt.compare(password, parent.passwordHash);
     if (!isValid) {
-      throw new UnauthorizedError('Invalid password');
+      throw new UnauthorizedError('Incorrect password. Enter your current password to confirm account deletion.');
     }
 
     // Cancel active Stripe subscription if exists
@@ -1108,13 +1108,13 @@ export const authService = {
 
     // Check if user has a password (Google OAuth users don't)
     if (!parent.passwordHash) {
-      throw new ValidationError('Google Sign-In accounts require alternative verification. Please contact support to reset PIN.');
+      throw new ValidationError('You signed up with Google. Contact support@orbitlearn.app to reset your child\'s PIN.');
     }
 
     // Verify parent password for re-authentication
     const isPasswordValid = await bcrypt.compare(parentPassword, parent.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedError('Invalid password');
+      throw new UnauthorizedError('Incorrect password. Enter your account password to reset your child\'s PIN.');
     }
 
     // Verify child belongs to parent
@@ -1124,7 +1124,7 @@ export const authService = {
     });
 
     if (!child) {
-      throw new NotFoundError('Child profile not found');
+      throw new NotFoundError('Child profile not found. It may have been removed.');
     }
 
     // Update the PIN and reset any lockout

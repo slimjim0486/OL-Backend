@@ -76,19 +76,19 @@ router.post(
 
       // Validation
       if (!displayName || typeof displayName !== 'string' || displayName.trim().length === 0) {
-        throw new ValidationError('Display name is required');
+        throw new ValidationError('Please enter a name for your child.');
       }
 
       if (displayName.length > 50) {
-        throw new ValidationError('Display name must be 50 characters or less');
+        throw new ValidationError('Name is too long. Please use 50 characters or fewer.');
       }
 
       if (!age || typeof age !== 'number' || age < 4 || age > 14) {
-        throw new ValidationError('Age must be between 4 and 14');
+        throw new ValidationError('Orbit Learn is designed for children ages 4-14. Please enter an age in this range.');
       }
 
       if (grade === undefined || grade === null || grade < 0 || grade > 9) {
-        throw new ValidationError('Grade must be between 0 (Pre-K) and 9');
+        throw new ValidationError('Please select a grade level from Pre-K (0) to 9th grade.');
       }
 
       // Check parent's subscription limit
@@ -98,7 +98,7 @@ router.post(
       });
 
       if (!parent) {
-        throw new NotFoundError('Parent not found');
+        throw new NotFoundError('Your account was not found. Please sign in again.');
       }
 
       // Get subscription-based child limit from centralized config
@@ -262,7 +262,7 @@ router.get(
       });
 
       if (!child) {
-        throw new NotFoundError('Child profile not found');
+        throw new NotFoundError('Child profile not found. It may have been deleted.');
       }
 
       // Add calculated age
@@ -306,10 +306,10 @@ router.patch(
 
       if (displayName !== undefined) {
         if (typeof displayName !== 'string' || displayName.trim().length === 0) {
-          throw new ValidationError('Display name cannot be empty');
+          throw new ValidationError('Please enter a name for your child.');
         }
         if (displayName.length > 50) {
-          throw new ValidationError('Display name must be 50 characters or less');
+          throw new ValidationError('Name is too long. Please use 50 characters or fewer.');
         }
         updateData.displayName = displayName.trim();
       }

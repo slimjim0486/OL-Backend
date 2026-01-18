@@ -78,11 +78,11 @@ export const lessonService = {
     });
 
     if (!lesson) {
-      throw new NotFoundError('Lesson not found');
+      throw new NotFoundError('Lesson not found. It may have been deleted.');
     }
 
     if (lesson.childId !== childId) {
-      throw new ForbiddenError('Access denied');
+      throw new ForbiddenError('You don\'t have access to this lesson.');
     }
 
     return lesson;

@@ -75,7 +75,7 @@ export const familySubscriptionService = {
    */
   async getOrCreateCustomer(parentId: string): Promise<string> {
     if (!stripe) {
-      throw new Error('Stripe is not configured');
+      throw new Error('Payment system is temporarily unavailable. Please try again in a few minutes.');
     }
 
     const parent = await prisma.parent.findUnique({
@@ -133,11 +133,11 @@ export const familySubscriptionService = {
     cancelUrl: string
   ): Promise<FamilyCheckoutSessionResult> {
     if (!stripe) {
-      throw new Error('Stripe is not configured');
+      throw new Error('Payment system is temporarily unavailable. Please try again in a few minutes.');
     }
 
     if (tier === 'FREE') {
-      throw new Error('Cannot create checkout session for FREE tier');
+      throw new Error('You are already on the FREE tier. Select a paid plan to upgrade.');
     }
 
     // ANNUAL tier should use FAMILY with annual billing
@@ -148,7 +148,7 @@ export const familySubscriptionService = {
     const priceId = effectiveAnnual ? product.priceIdAnnual : product.priceIdMonthly;
 
     if (!priceId) {
-      throw new Error(`Price ID not configured for ${effectiveTier} ${effectiveAnnual ? 'annual' : 'monthly'}`);
+      throw new Error('This subscription plan is currently unavailable. Please contact support@orbitlearn.app.');
     }
 
     const customerId = await this.getOrCreateCustomer(parentId);
@@ -232,7 +232,7 @@ export const familySubscriptionService = {
     returnUrl: string
   ): Promise<FamilyCustomerPortalResult> {
     if (!stripe) {
-      throw new Error('Stripe is not configured');
+      throw new Error('Payment system is temporarily unavailable. Please try again in a few minutes.');
     }
 
     // Get or create customer - handles manually upgraded users who don't have a Stripe customer
@@ -318,7 +318,7 @@ export const familySubscriptionService = {
    */
   async cancelSubscription(parentId: string): Promise<void> {
     if (!stripe) {
-      throw new Error('Stripe is not configured');
+      throw new Error('Payment system is temporarily unavailable. Please try again in a few minutes.');
     }
 
     const parent = await prisma.parent.findUnique({
@@ -327,7 +327,7 @@ export const familySubscriptionService = {
     });
 
     if (!parent?.stripeSubscriptionId) {
-      throw new Error('No active subscription found');
+      throw new Error('You don\'t have an active subscription to cancel. You\'re on the FREE tier.');
     }
 
     await stripe.subscriptions.update(parent.stripeSubscriptionId, {
@@ -345,7 +345,7 @@ export const familySubscriptionService = {
    */
   async resumeSubscription(parentId: string): Promise<void> {
     if (!stripe) {
-      throw new Error('Stripe is not configured');
+      throw new Error('Payment system is temporarily unavailable. Please try again in a few minutes.');
     }
 
     const parent = await prisma.parent.findUnique({
@@ -354,7 +354,7 @@ export const familySubscriptionService = {
     });
 
     if (!parent?.stripeSubscriptionId) {
-      throw new Error('No subscription found');
+      throw new Error('No subscription found to resume. Subscribe to a plan first.');
     }
 
     await stripe.subscriptions.update(parent.stripeSubscriptionId, {

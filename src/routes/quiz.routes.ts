@@ -128,12 +128,12 @@ router.post(
           },
         });
         if (!lesson) {
-          return res.status(404).json({ success: false, error: 'Lesson not found' });
+          return res.status(404).json({ success: false, error: 'Lesson not found. It may have been deleted.' });
         }
         childId = lesson.childId;
         curriculumType = lesson.child.curriculumType;
       } else {
-        return res.status(401).json({ success: false, error: 'Authentication required' });
+        return res.status(401).json({ success: false, error: 'Please sign in to submit your quiz.' });
       }
 
       // Calculate score
@@ -348,7 +348,7 @@ For correctAnswer, use the index (0-3) of the correct option.`;
     return quiz;
   } catch (parseError) {
     logger.error('Failed to parse quiz response', { responseText, parseError });
-    throw new Error('Failed to generate quiz');
+    throw new Error('Quiz generation failed. Try with different content or a shorter lesson.');
   }
 }
 
