@@ -1,6 +1,6 @@
 // Speech-to-Text Service using OpenAI Whisper
 // COPPA-compliant: Audio is processed in-memory only, never persisted
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import { config } from '../../config/index.js';
 import { voiceConsentService } from '../auth/voiceConsentService.js';
 import { VoiceContextType } from '@prisma/client';
@@ -124,10 +124,9 @@ export const sttService = {
     try {
       const client = getOpenAIClient();
 
-      // Create a File-like object from the buffer
-      // OpenAI SDK expects a File or Blob with name property
-      const audioFile = new File(
-        [audioBuffer],
+      // Convert buffer to file using OpenAI's toFile helper (works in Node.js)
+      const audioFile = await toFile(
+        audioBuffer,
         `audio.${getExtensionFromMimeType(mimeType)}`,
         { type: mimeType }
       );
