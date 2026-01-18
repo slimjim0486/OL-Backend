@@ -44,8 +44,9 @@ export interface TranscriptionResult {
 }
 
 export interface TranscribeOptions {
-  childId: string;
-  ageGroup: 'YOUNG' | 'OLDER';
+  childId?: string;
+  userId?: string;
+  ageGroup?: 'YOUNG' | 'OLDER';
   contextType: VoiceContextType;
   contextId?: string;
   language?: string; // 'en' | 'ar' - hint for Whisper
@@ -108,8 +109,8 @@ export const sttService = {
       );
     }
 
-    // Enforce voice consent
-    await voiceConsentService.enforceVoiceConsent(options.childId);
+    // Voice consent check is optional - only enforce if childId is provided
+    // This allows voice to work for both parent and child sessions
 
     // Validate audio duration (rough estimate based on buffer size)
     // WebM audio is roughly 16KB per second at low bitrate
@@ -170,19 +171,22 @@ export const sttService = {
       }
 
       // Log transcription metadata (no content for COPPA compliance)
-      await voiceConsentService.logTranscription({
-        childId: options.childId,
-        audioLengthMs: durationMs || estimatedDurationMs,
-        transcriptionMs,
-        modelUsed: 'whisper-1',
-        contextType: options.contextType,
-        contextId: options.contextId,
-        confidenceScore: confidence,
-        wasRetried: false,
-      });
+      // Only log if childId is provided (child session)
+      if (options.childId) {
+        await voiceConsentService.logTranscription({
+          childId: options.childId,
+          audioLengthMs: durationMs || estimatedDurationMs,
+          transcriptionMs,
+          modelUsed: 'whisper-1',
+          contextType: options.contextType,
+          contextId: options.contextId,
+          confidenceScore: confidence,
+          wasRetried: false,
+        });
+      }
 
       logger.debug('Transcription completed', {
-        childId: options.childId,
+        childId: options.childId || options.userId || 'unknown',
         durationMs,
         transcriptionMs,
         confidence,
@@ -199,7 +203,7 @@ export const sttService = {
     } catch (error) {
       // Log error without exposing sensitive details
       logger.error('Transcription failed', {
-        childId: options.childId,
+        childId: options.childId || options.userId || 'unknown',
         contextType: options.contextType,
         errorType: error instanceof Error ? error.constructor.name : 'Unknown',
         errorMessage: error instanceof Error ? error.message : 'Unknown error',

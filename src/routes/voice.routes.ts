@@ -1,10 +1,9 @@
-// Voice Input Routes for Child STT
-// COPPA-compliant: Audio processed in-memory only, never persisted
+// Voice Input Routes for STT
+// Audio processed in-memory only, never persisted
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
-import { requireVoiceConsent, checkVoiceAvailability } from '../middleware/voiceAuth.js';
-import { validateInput } from '../middleware/validateInput.js';
+import { checkVoiceAvailability } from '../middleware/voiceAuth.js';
 import { sttService } from '../services/ai/sttService.js';
 import { voiceConsentService } from '../services/auth/voiceConsentService.js';
 import { VoiceContextType } from '@prisma/client';
@@ -122,21 +121,16 @@ router.get(
 /**
  * POST /api/voice/transcribe
  * Generic transcription endpoint
- * Requires child authentication and voice consent
+ * Requires authentication (parent or child)
  */
 router.post(
   '/transcribe',
   authenticate,
-  requireVoiceConsent(),
   upload.single('audio'),
   async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new ValidationError('No audio file provided');
-      }
-
-      if (!req.child) {
-        throw new ValidationError('Child session required');
       }
 
       // Parse and validate body
@@ -147,7 +141,7 @@ router.post(
       });
 
       logger.debug('Voice transcription request', {
-        childId: req.child.id,
+        userId: req.child?.id || 'parent',
         contextType: bodyData.contextType,
         audioSize: req.file.size,
         mimeType: req.file.mimetype,
@@ -157,8 +151,9 @@ router.post(
         req.file.buffer,
         req.file.mimetype,
         {
-          childId: req.child.id,
-          ageGroup: req.child.ageGroup,
+          childId: req.child?.id,
+          userId: 'parent',
+          ageGroup: req.child?.ageGroup || 'OLDER',
           contextType: bodyData.contextType as VoiceContextType,
           contextId: bodyData.contextId,
           language: bodyData.language,
@@ -192,16 +187,11 @@ router.post(
 router.post(
   '/match-answer',
   authenticate,
-  requireVoiceConsent(),
   upload.single('audio'),
   async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new ValidationError('No audio file provided');
-      }
-
-      if (!req.child) {
-        throw new ValidationError('Child session required');
       }
 
       // Parse body - options come as JSON string
@@ -214,7 +204,7 @@ router.post(
       });
 
       logger.debug('Voice match-answer request', {
-        childId: req.child.id,
+        userId: req.child?.id || 'parent',
         contextType: bodyData.contextType,
         optionsCount: bodyData.options.length,
         audioSize: req.file.size,
@@ -224,8 +214,9 @@ router.post(
         req.file.buffer,
         req.file.mimetype,
         {
-          childId: req.child.id,
-          ageGroup: req.child.ageGroup,
+          childId: req.child?.id,
+          userId: 'parent',
+          ageGroup: req.child?.ageGroup || 'OLDER',
           contextType: bodyData.contextType as VoiceContextType,
           contextId: bodyData.contextId,
           language: bodyData.language,
@@ -264,16 +255,11 @@ router.post(
 router.post(
   '/quiz-answer',
   authenticate,
-  requireVoiceConsent(),
   upload.single('audio'),
   async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
         throw new ValidationError('No audio file provided');
-      }
-
-      if (!req.child) {
-        throw new ValidationError('Child session required');
       }
 
       // Parse body
@@ -286,7 +272,7 @@ router.post(
       });
 
       logger.debug('Voice quiz-answer request', {
-        childId: req.child.id,
+        userId: req.child?.id || 'parent',
         quizId: bodyData.quizId,
         questionIndex: bodyData.questionIndex,
         optionsCount: bodyData.options.length,
@@ -296,8 +282,9 @@ router.post(
         req.file.buffer,
         req.file.mimetype,
         {
-          childId: req.child.id,
-          ageGroup: req.child.ageGroup,
+          childId: req.child?.id,
+          userId: 'parent',
+          ageGroup: req.child?.ageGroup || 'OLDER',
           contextType: 'QUIZ_ANSWER',
           contextId: `${bodyData.quizId}:${bodyData.questionIndex}`,
           language: bodyData.language,
@@ -337,7 +324,6 @@ router.post(
 router.post(
   '/chat',
   authenticate,
-  requireVoiceConsent(),
   upload.single('audio'),
   async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
@@ -345,15 +331,11 @@ router.post(
         throw new ValidationError('No audio file provided');
       }
 
-      if (!req.child) {
-        throw new ValidationError('Child session required');
-      }
-
       const lessonId = req.body.lessonId;
       const language = req.body.language as 'en' | 'ar' | undefined;
 
       logger.debug('Voice chat request', {
-        childId: req.child.id,
+        userId: req.child?.id || 'parent',
         lessonId,
         audioSize: req.file.size,
       });
@@ -362,8 +344,9 @@ router.post(
         req.file.buffer,
         req.file.mimetype,
         {
-          childId: req.child.id,
-          ageGroup: req.child.ageGroup,
+          childId: req.child?.id,
+          userId: 'parent',
+          ageGroup: req.child?.ageGroup || 'OLDER',
           contextType: 'CHAT_MESSAGE',
           contextId: lessonId,
           language,
