@@ -411,7 +411,7 @@ const generateLessonSchema = z.object({
   lessonType: z.enum(['guide', 'full']).optional().default('guide'), // 'guide' = teacher guide, 'full' = comprehensive lesson
   includeActivities: z.boolean().optional(),
   includeAssessment: z.boolean().optional(),
-  additionalContext: z.string().max(2000).optional(), // Extra notes from teacher
+  additionalContext: z.string().max(7000, 'Additional context must be 7000 characters or less').optional(),
 });
 
 // Schema for split generation with all components
@@ -425,7 +425,7 @@ const generateFullLessonSchema = z.object({
   lessonType: z.enum(['guide', 'full']).optional().default('full'),
   includeActivities: z.boolean().optional().default(true),
   includeAssessment: z.boolean().optional().default(true),
-  additionalContext: z.string().max(2000).optional(),
+  additionalContext: z.string().max(7000, 'Additional context must be 7000 characters or less').optional(),
   // Split generation options
   includeQuiz: z.boolean().optional().default(true),
   includeFlashcards: z.boolean().optional().default(true),
