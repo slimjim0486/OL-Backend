@@ -498,6 +498,235 @@ export const authService = {
   },
 
   /**
+   * Apple Sign-In - handles both new users and returning users
+   * For new users: creates account with Apple data, isNewUser=true
+   * For returning users: logs them in, isNewUser=false
+   */
+  async appleSignIn(
+    identityToken: string,
+    user?: { email?: string; firstName?: string; lastName?: string },
+    deviceInfo?: string,
+    ipAddress?: string
+  ): Promise<LoginResult & { isNewUser: boolean }> {
+    // Verify the Apple identity token
+    let appleId: string;
+    let email: string | undefined;
+
+    try {
+      // Decode the JWT to get the payload (Apple tokens are JWTs)
+      const tokenParts = identityToken.split('.');
+      if (tokenParts.length !== 3) {
+        throw new Error('Invalid token format');
+      }
+
+      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString('utf8'));
+
+      // Verify issuer and audience
+      if (payload.iss !== 'https://appleid.apple.com') {
+        throw new Error('Invalid token issuer');
+      }
+
+      // The 'sub' claim is the unique Apple user ID
+      appleId = payload.sub;
+      email = payload.email || user?.email;
+
+      // Check token expiration
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        throw new Error('Token expired');
+      }
+
+      logger.info('Apple ID token verified', {
+        appleId: appleId.substring(0, 10) + '...',
+        hasEmail: !!email,
+      });
+    } catch (error: any) {
+      logger.error('Apple ID token verification failed', {
+        error: error?.message || error,
+      });
+      throw new UnauthorizedError('Apple sign-in failed. Please try again.');
+    }
+
+    if (!appleId) {
+      throw new ValidationError('Apple account identifier not found');
+    }
+
+    // Check if user exists by appleId or email
+    let parent = await prisma.parent.findFirst({
+      where: {
+        OR: [
+          { appleId },
+          ...(email ? [{ email: email.toLowerCase() }] : []),
+        ],
+      },
+      include: {
+        children: {
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+            ageGroup: true,
+          },
+        },
+        consents: {
+          where: {
+            status: 'VERIFIED',
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } },
+            ],
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    let isNewUser = false;
+
+    if (!parent) {
+      // New user - create account
+      // Note: Apple only provides name on first sign-in, so we use it if available
+      if (!email) {
+        throw new ValidationError('Email is required for Apple Sign-In. Please ensure you share your email when signing in.');
+      }
+
+      parent = await prisma.parent.create({
+        data: {
+          email: email.toLowerCase(),
+          appleId,
+          authProvider: 'apple',
+          firstName: user?.firstName || null,
+          lastName: user?.lastName || null,
+          emailVerified: true, // Apple verifies emails
+          emailVerifiedAt: new Date(),
+        },
+        include: {
+          children: {
+            select: {
+              id: true,
+              displayName: true,
+              avatarUrl: true,
+              ageGroup: true,
+            },
+          },
+          consents: {
+            where: {
+              status: 'VERIFIED',
+              OR: [
+                { expiresAt: null },
+                { expiresAt: { gt: new Date() } },
+              ],
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      isNewUser = true;
+
+      // Send welcome email (async, don't await)
+      logger.info(`Sending welcome email for new Apple user: ${parent.email}`);
+      emailService.sendWelcomeEmail(
+        parent.email,
+        parent.firstName || 'there'
+      ).then(success => {
+        if (success) {
+          logger.info(`Welcome email sent successfully for Apple user: ${parent!.email}`);
+        } else {
+          logger.error(`Welcome email failed for Apple user: ${parent!.email}`);
+        }
+      }).catch(err => {
+        logger.error('Failed to send welcome email for Apple user', { error: err, parentId: parent!.id });
+      });
+
+      logger.info(`New Apple user created: ${parent.email}`);
+    } else {
+      // Existing user - check if we need to link Apple account
+      if (!parent.appleId) {
+        // User signed up with email or Google, now logging in with Apple
+        // Link the Apple account
+        parent = await prisma.parent.update({
+          where: { id: parent.id },
+          data: {
+            appleId,
+            // Don't change authProvider - keep original
+            // Mark email as verified if not already
+            emailVerified: true,
+            emailVerifiedAt: parent.emailVerifiedAt || new Date(),
+          },
+          include: {
+            children: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true,
+                ageGroup: true,
+              },
+            },
+            consents: {
+              where: {
+                status: 'VERIFIED',
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gt: new Date() } },
+                ],
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+          },
+        });
+
+        logger.info(`Linked Apple account to existing user: ${parent.email}`);
+      }
+    }
+
+    // Generate tokens
+    const { accessToken, refreshToken, refreshTokenId, refreshTokenHash } = tokenService.generateParentTokens(parent.id);
+
+    // Get the token family ID from the generated token
+    const tokenPayload = tokenService.verifyRefreshToken(refreshToken);
+    const tokenFamilyId = tokenPayload.fid || tokenService.generateTokenFamilyId();
+
+    // Create session
+    await sessionService.createSession({
+      userId: parent.id,
+      type: 'parent',
+      refreshTokenId,
+      refreshTokenHash,
+      tokenFamilyId,
+      deviceInfo,
+      ipAddress,
+    });
+
+    // Update last login
+    await prisma.parent.update({
+      where: { id: parent.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    // Determine consent status
+    const hasVerifiedConsent = parent.consents && parent.consents.length > 0;
+    const consentStatus = hasVerifiedConsent ? 'verified' : 'none';
+
+    return {
+      accessToken,
+      refreshToken,
+      parent: {
+        id: parent.id,
+        email: parent.email,
+        firstName: parent.firstName,
+        lastName: parent.lastName,
+        emailVerified: parent.emailVerified,
+        consentStatus,
+      },
+      children: parent.children,
+      isNewUser,
+    };
+  },
+
+  /**
    * Refresh access token
    * Implements token rotation with reuse detection
    */

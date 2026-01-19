@@ -146,6 +146,58 @@ router.post(
 );
 
 /**
+ * POST /api/auth/apple
+ * Apple Sign-In - handles both new users and returning users
+ * Returns isNewUser=true for first-time users (redirect to onboarding)
+ */
+router.post(
+  '/apple',
+  authRateLimit,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { identityToken, user } = req.body;
+
+      if (!identityToken) {
+        res.status(400).json({
+          success: false,
+          error: 'Apple identity token is required',
+        });
+        return;
+      }
+
+      const deviceInfo = req.headers['user-agent'];
+      const ipAddress = req.ip;
+
+      const result = await authService.appleSignIn(identityToken, user, deviceInfo, ipAddress);
+
+      // Add new Apple sign-in users to Brevo (fire-and-forget)
+      if (result.isNewUser) {
+        addContactToBrevo({
+          email: result.parent.email,
+          firstName: result.parent.firstName || undefined,
+          lastName: result.parent.lastName || undefined,
+          userType: 'PARENT',
+          subscriptionTier: 'FREE',
+        }).catch(() => {}); // Silently ignore errors
+      }
+
+      res.json({
+        success: true,
+        data: {
+          token: result.accessToken,
+          refreshToken: result.refreshToken,
+          parent: result.parent,
+          children: result.children,
+          isNewUser: result.isNewUser,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * POST /api/auth/refresh
  * Refresh access token
  */

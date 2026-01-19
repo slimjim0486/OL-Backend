@@ -26,7 +26,8 @@ model Parent {
 
   // OAuth providers
   googleId     String? @unique // Google OAuth sub (unique identifier)
-  authProvider String  @default("email") // "email" | "google"
+  appleId      String? @unique // Apple Sign-In user identifier
+  authProvider String  @default("email") // "email" | "google" | "apple"
 
   // Email verification
   emailVerified   Boolean   @default(false)
