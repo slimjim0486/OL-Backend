@@ -32,6 +32,11 @@ const googleSignInSchema = z.object({
   idToken: z.string().min(1, 'Google ID token is required'),
 });
 
+const googleCodeExchangeSchema = z.object({
+  code: z.string().min(1, 'Authorization code is required'),
+  redirectUri: z.string().url('Invalid redirect URI'),
+});
+
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
@@ -169,6 +174,57 @@ router.post(
 
       // Add new Google sign-in users to Brevo for email marketing (fire-and-forget)
       // Teachers go to the Subscribers-Teacher list (ID: 9)
+      if (result.isNewUser) {
+        addContactToBrevo({
+          email: result.teacher.email,
+          firstName: result.teacher.firstName || undefined,
+          lastName: result.teacher.lastName || undefined,
+          userType: 'TEACHER',
+          subscriptionTier: result.teacher.subscriptionTier,
+          listId: BREVO_LISTS.subscribersTeacher,
+        }).catch(() => {}); // Silently ignore errors - don't block sign-in
+      }
+
+      res.json({
+        success: true,
+        data: {
+          token: result.accessToken,
+          refreshToken: result.refreshToken,
+          teacher: result.teacher,
+          quota: {
+            monthlyLimit: result.quota.monthlyLimit.toString(),
+            used: result.quota.used.toString(),
+            remaining: result.quota.remaining.toString(),
+            resetDate: result.quota.resetDate,
+          },
+          isNewUser: result.isNewUser,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/auth/google/code
+ * Google Sign-In using authorization code (fallback for regions where GIS doesn't load)
+ * This is used when the Google Identity Services script fails to load and we fall back
+ * to the traditional OAuth redirect flow.
+ */
+router.post(
+  '/google/code',
+  authRateLimit,
+  validateInput(googleCodeExchangeSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { code, redirectUri } = req.body;
+      const deviceInfo = req.headers['user-agent'];
+      const ipAddress = req.ip;
+
+      const result = await teacherAuthService.googleSignInWithCode(code, redirectUri, deviceInfo, ipAddress);
+
+      // Add new Google sign-in users to Brevo for email marketing (fire-and-forget)
       if (result.isNewUser) {
         addContactToBrevo({
           email: result.teacher.email,

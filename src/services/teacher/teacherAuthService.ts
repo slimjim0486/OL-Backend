@@ -493,6 +493,49 @@ export const teacherAuthService = {
   },
 
   /**
+   * Google Sign-In with Authorization Code (fallback for regions where GIS doesn't load)
+   * Exchanges an authorization code for tokens, then uses the ID token for sign-in
+   */
+  async googleSignInWithCode(
+    code: string,
+    redirectUri: string,
+    deviceInfo?: string,
+    ipAddress?: string
+  ): Promise<TeacherLoginResult & { isNewUser: boolean }> {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      logger.error('Google OAuth credentials not configured for code exchange');
+      throw new Error('Google sign-in is not properly configured');
+    }
+
+    // Create OAuth2 client with credentials
+    const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
+
+    let tokens;
+    try {
+      logger.info('Exchanging Google authorization code for tokens', { redirectUri });
+      const { tokens: receivedTokens } = await oauth2Client.getToken(code);
+      tokens = receivedTokens;
+    } catch (error: any) {
+      logger.error('Failed to exchange Google authorization code', {
+        error: error?.message || error,
+        redirectUri,
+      });
+      throw new UnauthorizedError('Google sign-in failed. The authorization code may have expired. Please try again.');
+    }
+
+    if (!tokens.id_token) {
+      logger.error('No ID token received from Google token exchange');
+      throw new UnauthorizedError('Google sign-in failed. Please try again.');
+    }
+
+    // Use the existing googleSignIn method with the ID token
+    return this.googleSignIn(tokens.id_token, deviceInfo, ipAddress);
+  },
+
+  /**
    * Refresh access token
    */
   async refreshTokens(
