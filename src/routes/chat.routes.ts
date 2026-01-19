@@ -10,6 +10,7 @@ import { logger } from '../utils/logger.js';
 import { AgeGroup } from '@prisma/client';
 import { geminiService } from '../services/ai/geminiService.js';
 import { detectImageIntent } from '../services/ai/imageIntentDetector.js';
+import { greetingService, memoryService, OllieMemoryContext } from '../services/memory/index.js';
 
 const router = Router();
 
@@ -65,6 +66,15 @@ const translateSchema = z.object({
   targetLanguage: z.string().min(2, 'Target language is required'),
   childId: z.string().optional().nullable(),
   ageGroup: z.enum(['YOUNG', 'OLDER']).optional(),
+});
+
+const sessionStartSchema = z.object({
+  childId: z.string().optional().nullable(),
+  lessonContext: z.object({
+    lessonId: z.string().optional(),
+    topic: z.string().optional(),
+    subject: z.string().optional(),
+  }).optional().nullable(),
 });
 
 // ============================================
@@ -166,6 +176,76 @@ IMPORTANT: Always answer the actual question asked. Never redirect to unrelated 
           role: 'assistant',
         },
       });
+    }
+  }
+);
+
+/**
+ * POST /api/chat/session
+ * Start a chat session and get personalized greeting
+ * Returns Ollie's greeting and learning suggestions based on child's memory
+ */
+router.post(
+  '/session',
+  authenticate,
+  validateInput(sessionStartSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { lessonContext } = req.body;
+      let childId = req.body.childId;
+
+      // Get childId from authenticated child session
+      if (req.child) {
+        childId = req.child.id;
+      }
+
+      if (!childId) {
+        res.status(400).json({
+          success: false,
+          error: 'Child ID is required',
+        });
+        return;
+      }
+
+      logger.info('Session start request', {
+        childId,
+        hasLessonContext: !!lessonContext,
+      });
+
+      // Record session start with context
+      await memoryService.recordSessionStart(
+        childId,
+        lessonContext?.topic,
+        lessonContext?.subject,
+        lessonContext?.lessonId
+      );
+
+      // Generate personalized greeting
+      const { greeting, suggestions, memoryContext } =
+        await greetingService.generateSessionGreeting(childId);
+
+      logger.info('Session started with personalized greeting', {
+        childId,
+        streakCount: memoryContext.currentStreak,
+        totalLessons: memoryContext.totalLessonsCompleted,
+      });
+
+      res.json({
+        success: true,
+        data: {
+          greeting,
+          suggestions,
+          context: {
+            streakCount: memoryContext.currentStreak,
+            totalLessons: memoryContext.totalLessonsCompleted,
+            lastTopic: memoryContext.lastTopic,
+            isActiveToday: memoryContext.isActiveToday,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error('Session start error', { error });
+      next(error);
     }
   }
 );

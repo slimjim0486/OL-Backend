@@ -51,6 +51,7 @@ import voiceRoutes from './routes/voice.routes.js';
 // Services initialization
 import { initializeContentProcessor, shutdownContentProcessor } from './services/learning/contentProcessor.js';
 import { badgeService } from './services/gamification/badgeService.js';
+import { initializeMemoryAggregationJob, shutdownMemoryAggregationJob } from './jobs/index.js';
 
 // Validate environment
 try {
@@ -231,6 +232,14 @@ async function startServer(): Promise<void> {
       logger.warn('Badge initialization skipped');
     }
 
+    // Initialize memory aggregation job (Ollie's Memory)
+    try {
+      await initializeMemoryAggregationJob();
+      logger.info('Memory aggregation job initialized');
+    } catch (error) {
+      logger.warn('Memory aggregation job initialization skipped');
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
@@ -245,6 +254,7 @@ async function startServer(): Promise<void> {
       server.close(async () => {
         try {
           await shutdownContentProcessor();
+          await shutdownMemoryAggregationJob();
           await prisma.$disconnect();
           await redis.quit();
           logger.info('Server shut down successfully');

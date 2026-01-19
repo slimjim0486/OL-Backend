@@ -8,6 +8,7 @@ import {
   getGradeLevelConfig,
   getCurriculumConfig,
 } from '../../config/curricula.js';
+import { OllieMemoryContext, RecentStruggle, RecentWin } from '../memory/memoryTypes.js';
 
 export interface LessonContext {
   title: string;
@@ -22,6 +23,7 @@ export interface PromptContext {
   gradeLevel?: number | null;
   lessonContext?: LessonContext;
   outputLanguage?: 'ar' | 'en' | 'auto';
+  memoryContext?: OllieMemoryContext | null;
 }
 
 // Language output type for content generation
@@ -59,6 +61,11 @@ export class PromptBuilder {
       instructions.push(isArabic
         ? this.getLessonGuidanceArabic(context.lessonContext)
         : this.getLessonGuidance(context.lessonContext));
+    }
+
+    // Memory context (Ollie's personalization)
+    if (context.memoryContext) {
+      instructions.push(this.getMemoryContext(context.memoryContext));
     }
 
     // Add language instruction for Arabic output
@@ -238,6 +245,82 @@ When answering questions:
 ٢. استخدم أمثلة من محتوى الدرس عند الإمكان
 ٣. إذا كان السؤال غير ذي صلة، وجه بلطف للعودة إلى الدرس
 ٤. اقترح استكشاف مواضيع ذات صلة ضمن الدرس`;
+  }
+
+  /**
+   * Build memory context section for personalized responses
+   * This provides Ollie with context about the child's learning journey
+   */
+  private getMemoryContext(memory: OllieMemoryContext): string {
+    const sections: string[] = [];
+
+    // Start with identity and relationship context
+    sections.push(`PERSONALIZATION CONTEXT FOR ${memory.displayName}:`);
+
+    // Current session context
+    const sessionInfo: string[] = [];
+    if (memory.currentStreak > 0) {
+      sessionInfo.push(`${memory.currentStreak}-day learning streak`);
+    }
+    if (memory.totalLessonsCompleted > 0) {
+      sessionInfo.push(`${memory.totalLessonsCompleted} lessons completed`);
+    }
+    if (memory.lastTopic) {
+      sessionInfo.push(`Last studied: ${memory.lastTopic}`);
+    }
+    if (sessionInfo.length > 0) {
+      sections.push(`Session Context: ${sessionInfo.join(', ')}`);
+    }
+
+    // Strengths for positive reinforcement
+    if (memory.strongestSubjects.length > 0) {
+      sections.push(`Strong in: ${memory.strongestSubjects.join(', ')} - mention these achievements occasionally`);
+    }
+
+    // Growth areas for gentle support
+    if (memory.growthAreas.length > 0) {
+      sections.push(`Currently working on: ${memory.growthAreas.join(', ')} - be extra patient and encouraging with these topics`);
+    }
+
+    // Recent struggles for "struggle-to-success" callbacks
+    if (memory.recentStruggles.length > 0) {
+      const struggles = memory.recentStruggles.slice(0, 3);
+      const struggleNotes = struggles.map(s =>
+        `${s.topic} (${Math.round(s.correctRate * 100)}% accuracy)`
+      ).join(', ');
+      sections.push(`Areas needing encouragement: ${struggleNotes}`);
+      sections.push(`If they succeed on previously difficult topics, celebrate with a "struggle-to-success" callback - e.g., "Remember when ${struggles[0].topic} was tricky? Look at you now!"`);
+    }
+
+    // Recent wins for celebration references
+    if (memory.recentWins.length > 0) {
+      const recentWin = memory.recentWins[0];
+      sections.push(`Recent achievement to celebrate: ${recentWin.achievement} - ${recentWin.context}`);
+    }
+
+    // Persistence score guides encouragement style
+    if (memory.persistenceScore >= 0.7) {
+      sections.push(`High persistence learner - acknowledge their determination when they work through challenges`);
+    } else if (memory.persistenceScore <= 0.3) {
+      sections.push(`Be extra encouraging - this child may give up easily. Celebrate every small win!`);
+    }
+
+    // Upcoming milestones for motivation
+    if (memory.upcomingMilestones) {
+      const ms = memory.upcomingMilestones;
+      sections.push(`Close to milestone: ${ms.name} (${ms.current}/${ms.target}) - mention if they seem to need motivation`);
+    }
+
+    // Add personalization guidelines
+    sections.push(`
+PERSONALIZATION GUIDELINES:
+- Use ${memory.displayName}'s name occasionally (not every message)
+- Reference their learning history when relevant, but keep it vague ("You've been improving!" not "Your accuracy went from 62% to 78%")
+- Celebrate persistence and effort, not just correctness
+- If they struggle, remind them of past challenges they've overcome
+- Keep references positive and encouraging`);
+
+    return sections.join('\n');
   }
 
   /**
