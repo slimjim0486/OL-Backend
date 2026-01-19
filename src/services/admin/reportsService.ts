@@ -488,6 +488,9 @@ export const reportsService = {
       return {
         data: teachers.map(teacher => ({
           ...teacher,
+          // Convert BigInt to Number for JSON serialization
+          monthlyTokenQuota: Number(teacher.monthlyTokenQuota),
+          currentMonthUsage: Number(teacher.currentMonthUsage),
           contentCount: teacher._count.content,
           audioUpdatesCount: teacher._count.audioUpdates,
           subPlansCount: teacher._count.substitutePlans,
@@ -583,6 +586,9 @@ export const reportsService = {
 
       return {
         ...teacher,
+        // Convert BigInt to Number for JSON serialization
+        monthlyTokenQuota: Number(teacher.monthlyTokenQuota),
+        currentMonthUsage: Number(teacher.currentMonthUsage),
         contentCount: teacher._count.content,
         rubricsCount: teacher._count.rubrics,
         gradingJobsCount: teacher._count.gradingJobs,
