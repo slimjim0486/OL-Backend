@@ -1,7 +1,7 @@
 # Curriculum Mapping System - Master Document
 
-**Last Updated:** 2026-01-15
-**Status:** Phase 5 Complete (British NC, CBSE, US Common Core, IB PYP Done)
+**Last Updated:** 2026-01-20
+**Status:** Phase 6 Complete (British NC, CBSE, US Common Core + NGSS + C3, IB PYP Done)
 
 ---
 
@@ -13,11 +13,13 @@ The Curriculum Mapping System enables Orbit Learn to:
 3. Track child progress against curriculum requirements
 4. Enable curriculum switching with intelligent gap analysis (future)
 
-**Current State:** 2,868 curriculum standards seeded:
-- **British National Curriculum:** 997 standards (Years 1-9, Math/English/Science)
-- **CBSE (India):** 639 standards (Classes 1-8, Math/English/Science)
+**Current State:** 4,054 curriculum standards seeded:
+- **British National Curriculum:** 1,546 standards (Years 1-9, Math/English/Science/History/Geography)
+- **CBSE (India):** 776 standards (Classes 1-8, Math/English/Science)
 - **US Common Core:** 590 standards (Grades K-8, Math/ELA)
-- **IB PYP:** 642 standards (Ages 3-12, Math/English/Science) ✅ NEW
+- **US NGSS:** 135 standards (Grades K-8, Science) ✅ NEW
+- **US C3:** 206 standards (Grades K-8, Social Studies) ✅ NEW
+- **IB PYP:** 801 standards (Ages 3-12, Math/English/Science/Social Studies) ✅ EXPANDED
 
 **Full curriculum tracking is now live:**
 - AI-powered alignment runs on every lesson upload
@@ -79,7 +81,7 @@ Located in `backend/src/config/`:
 | `ibPYPScienceCurriculum.ts` | Science | 133 | 4 age bands (Ages 3-12) |
 | **Subtotal** | | **642** | |
 
-**Grand Total: 2,868 standards**
+**Grand Total: 4,054 standards**
 
 ### 3. Seed Scripts
 
@@ -871,16 +873,16 @@ npx tsx scripts/seedBritishScienceCurriculum.ts
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| Standards seeded | 2,868 | ✅ 2,868 (997 British + 639 CBSE + 590 US CC + 642 IB PYP) |
-| Subjects covered | 3 (Math, English, Science) | ✅ 3 |
-| Years/Classes/Grades covered | Ages 3-15 | ✅ British Y1-9, CBSE C1-8, US CC K-8, IB PYP Ages 3-12 |
+| Standards seeded | 4,054 | ✅ 4,054 (1,546 British + 776 CBSE + 590 US CC + 135 US NGSS + 206 US C3 + 801 IB PYP) |
+| Subjects covered | 4 (Math, English, Science, Social Studies) | ✅ 4 |
+| Years/Classes/Grades covered | Ages 3-15 | ✅ British Y1-9, CBSE C1-8, US K-8, IB PYP Ages 3-12 |
 | Auto-alignment accuracy | >85% | ✅ ~95% (tested) |
 | Alignment service live | Yes | ✅ Integrated into /api/lessons/analyze |
 | Alignment persistence | Yes | ✅ ContentStandardAlignment saved |
 | Progress tracking | Yes | ✅ ChildStandardProgress updated on quiz/flashcard |
 | XP integration | Yes | ✅ XP awarded for lesson/quiz/flashcard completion |
 | Parent curriculum visibility | Yes | ✅ Simple "Learning Journey" view |
-| Curricula supported | 4 | ✅ British NC + CBSE India + US Common Core + IB PYP |
+| Curricula supported | 6 jurisdictions | ✅ British NC + CBSE India + US (CC+NGSS+C3) + IB PYP |
 | Next expansion | CBSE Chapter Mapping | 🟡 Planned |
 
 ---
