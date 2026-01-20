@@ -24,8 +24,24 @@ export interface StandardWithContext {
 
 /**
  * Map CurriculumType enum to jurisdiction code in database
+ * For US curriculum, different subjects have different jurisdictions:
+ * - Math & English: US_COMMON_CORE
+ * - Science: US_NGSS
+ * - Social Studies: US_C3
  */
-function getJurisdictionCode(curriculumType: CurriculumType): string {
+function getJurisdictionCode(curriculumType: CurriculumType, subject?: Subject): string {
+  // Handle US curriculum with subject-specific jurisdictions
+  if (curriculumType === 'AMERICAN' && subject) {
+    if (subject === 'SCIENCE') {
+      return 'US_NGSS';
+    }
+    if (subject === 'SOCIAL_STUDIES') {
+      return 'US_C3';
+    }
+    // Math, English, and others use Common Core
+    return 'US_COMMON_CORE';
+  }
+
   const mapping: Record<CurriculumType, string> = {
     BRITISH: 'UK_NATIONAL_CURRICULUM',
     AMERICAN: 'US_COMMON_CORE',
@@ -43,8 +59,8 @@ function getJurisdictionCode(curriculumType: CurriculumType): string {
 function normalizeSubject(detectedSubject: string | undefined): Subject | null {
   if (!detectedSubject) return null;
 
-  const normalized = detectedSubject.toUpperCase();
-  const validSubjects: Subject[] = ['MATH', 'SCIENCE', 'ENGLISH', 'ARABIC', 'ISLAMIC_STUDIES', 'SOCIAL_STUDIES', 'ART', 'MUSIC', 'OTHER'];
+  const normalized = detectedSubject.toUpperCase().replace(/[^A-Z_]/g, '_');
+  const validSubjects: Subject[] = ['MATH', 'SCIENCE', 'ENGLISH', 'ARABIC', 'ISLAMIC_STUDIES', 'SOCIAL_STUDIES', 'ART', 'MUSIC', 'GEOGRAPHY', 'HISTORY', 'OTHER'];
 
   // Handle common variations
   const mapping: Record<string, Subject> = {
@@ -52,11 +68,20 @@ function normalizeSubject(detectedSubject: string | undefined): Subject | null {
     'MATHS': 'MATH',
     'MATHEMATICS': 'MATH',
     'SCIENCE': 'SCIENCE',
+    'BIOLOGY': 'SCIENCE',
+    'CHEMISTRY': 'SCIENCE',
+    'PHYSICS': 'SCIENCE',
     'ENGLISH': 'ENGLISH',
     'LANGUAGE_ARTS': 'ENGLISH',
     'ELA': 'ENGLISH',
     'READING': 'ENGLISH',
     'WRITING': 'ENGLISH',
+    'SOCIAL_STUDIES': 'SOCIAL_STUDIES',
+    'SOCIAL': 'SOCIAL_STUDIES',
+    'CIVICS': 'SOCIAL_STUDIES',
+    'ECONOMICS': 'SOCIAL_STUDIES',
+    'HISTORY': 'HISTORY',
+    'GEOGRAPHY': 'GEOGRAPHY',
   };
 
   return mapping[normalized] || (validSubjects.includes(normalized as Subject) ? normalized as Subject : null);
@@ -70,7 +95,7 @@ export async function getStandardsForGrade(
   subject: Subject,
   gradeLevel: number
 ): Promise<StandardWithContext[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
 
   logger.info('Querying standards for grade', {
     curriculumType,
@@ -122,7 +147,7 @@ export async function getStandardsWithAdjacentGrades(
   gradeLevel: number,
   includeAdjacentGrades: boolean = true
 ): Promise<StandardWithContext[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
 
   // Build grade levels to query
   const gradeLevels = includeAdjacentGrades
@@ -166,7 +191,7 @@ export async function getStandardsByStrand(
   gradeLevel: number,
   strand: string
 ): Promise<StandardWithContext[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
 
   const standards = await prisma.learningStandard.findMany({
     where: {
@@ -216,11 +241,26 @@ export async function getStandardByNotation(notation: string): Promise<StandardW
 
 /**
  * Get available subjects for a curriculum and grade
+ * For US curriculum, queries multiple jurisdictions (Common Core, NGSS, C3)
  */
 export async function getAvailableSubjects(
   curriculumType: CurriculumType,
   gradeLevel: number
 ): Promise<Subject[]> {
+  // For US curriculum, we need to check multiple jurisdictions
+  if (curriculumType === 'AMERICAN') {
+    const jurisdictionCodes = ['US_COMMON_CORE', 'US_NGSS', 'US_C3'];
+    const standardSets = await prisma.standardSet.findMany({
+      where: {
+        jurisdiction: { code: { in: jurisdictionCodes } },
+        gradeLevel: gradeLevel,
+      },
+      select: { subject: true },
+      distinct: ['subject'],
+    });
+    return standardSets.map(s => s.subject);
+  }
+
   const jurisdictionCode = getJurisdictionCode(curriculumType);
 
   const standardSets = await prisma.standardSet.findMany({
@@ -243,7 +283,7 @@ export async function getAvailableStrands(
   subject: Subject,
   gradeLevel: number
 ): Promise<string[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
 
   const standards = await prisma.learningStandard.findMany({
     where: {
@@ -276,7 +316,7 @@ export async function countStandards(
     where.standardSet = {};
 
     if (curriculumType) {
-      where.standardSet.jurisdiction = { code: getJurisdictionCode(curriculumType) };
+      where.standardSet.jurisdiction = { code: getJurisdictionCode(curriculumType, subject) };
     }
     if (subject) {
       where.standardSet.subject = subject;
@@ -493,7 +533,10 @@ export async function getStandardsForChild(childId: string) {
     return { standards: [], message: 'Child curriculum not configured' };
   }
 
-  const jurisdictionCode = getJurisdictionCode(child.curriculumType);
+  // For US curriculum, there are multiple jurisdictions
+  const jurisdictionCodes = child.curriculumType === 'AMERICAN'
+    ? ['US_COMMON_CORE', 'US_NGSS', 'US_C3']
+    : [getJurisdictionCode(child.curriculumType)];
 
   // Get all subjects available for this grade
   const subjects = await getAvailableSubjects(child.curriculumType, child.gradeLevel);
@@ -509,7 +552,7 @@ export async function getStandardsForChild(childId: string) {
   return {
     curriculumType: child.curriculumType,
     gradeLevel: child.gradeLevel,
-    jurisdictionCode,
+    jurisdictionCodes,
     subjects,
     standardsBySubject,
     totalStandards: Object.values(standardsBySubject).flat().length,
