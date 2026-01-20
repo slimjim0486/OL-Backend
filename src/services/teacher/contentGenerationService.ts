@@ -668,7 +668,7 @@ export const contentGenerationService = {
 
   /**
    * Generate flashcards from content
-   * Uses Gemini 3 Pro for higher-quality flashcard content
+   * Uses Gemini 3 Flash for fast generation - flashcards are simpler content
    * Supports religious/educational content (Islamic studies, Quran, etc.)
    */
   async generateFlashcards(
@@ -684,9 +684,9 @@ export const contentGenerationService = {
 
     const prompt = buildFlashcardsPrompt(input);
 
-    // Use Gemini 3 Pro for flashcard generation - better content quality
+    // Use Gemini 3 Flash for flashcard generation - flashcards are simpler content (term/definition pairs)
     const model = genAI.getGenerativeModel({
-      model: config.gemini.models.pro,
+      model: config.gemini.models.flash,
       generationConfig: {
         temperature: 0.5,
         maxOutputTokens: 3000,
@@ -720,7 +720,7 @@ export const contentGenerationService = {
         teacherId,
         operation: TokenOperation.FLASHCARD_GENERATION,
         tokensUsed,
-        modelUsed: config.gemini.models.pro,
+        modelUsed: config.gemini.models.flash,
         resourceType: 'flashcards',
         resourceId: contentId,
       });
@@ -731,7 +731,7 @@ export const contentGenerationService = {
           contentId,
           teacherId,
           tokensUsed,
-          config.gemini.models.pro,
+          config.gemini.models.flash,
           TokenOperation.FLASHCARD_GENERATION
         );
       }
