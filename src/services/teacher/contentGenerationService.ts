@@ -92,6 +92,100 @@ function checkGeminiResponse(result: any): GeminiResponseCheck {
 }
 
 // ============================================
+// FLASH-FIRST FALLBACK LOGIC
+// ============================================
+
+/**
+ * Thresholds for determining when Flash output is insufficient
+ * and a fallback to Pro is needed
+ */
+const FLASH_FALLBACK_THRESHOLDS = {
+  MIN_SECTIONS: 2,          // Minimum sections for a valid lesson
+  MIN_SECTION_LENGTH: 100,  // Minimum characters per section
+  MIN_OBJECTIVES: 2,        // Minimum learning objectives
+  MIN_VOCABULARY: 3,        // Minimum vocabulary terms
+  HIGH_GRADE_MIN: 9,        // Grade levels 9+ might benefit from Pro
+};
+
+type FlashFallbackReason =
+  | 'insufficient_sections'
+  | 'short_content'
+  | 'missing_objectives'
+  | 'missing_vocabulary'
+  | 'high_grade_level'
+  | 'flash_error'
+  | 'parse_error';
+
+interface FlashLessonValidation {
+  isValid: boolean;
+  reason?: FlashFallbackReason;
+  details?: string;
+}
+
+/**
+ * Validate Flash-generated lesson output quality
+ * Returns whether the output meets quality standards
+ */
+function validateFlashLessonOutput(
+  lesson: Omit<GeneratedLesson, 'tokensUsed'>,
+  gradeLevel?: string
+): FlashLessonValidation {
+  // Check if high grade level (9-12) - might benefit from Pro's better reasoning
+  if (gradeLevel) {
+    const gradeNum = parseInt(gradeLevel.replace(/[^0-9]/g, ''));
+    if (!isNaN(gradeNum) && gradeNum >= FLASH_FALLBACK_THRESHOLDS.HIGH_GRADE_MIN) {
+      return {
+        isValid: false,
+        reason: 'high_grade_level',
+        details: `Grade ${gradeNum} content may benefit from advanced model`,
+      };
+    }
+  }
+
+  // Check sections
+  if (!lesson.sections || lesson.sections.length < FLASH_FALLBACK_THRESHOLDS.MIN_SECTIONS) {
+    return {
+      isValid: false,
+      reason: 'insufficient_sections',
+      details: `Only ${lesson.sections?.length || 0} sections, need ${FLASH_FALLBACK_THRESHOLDS.MIN_SECTIONS}`,
+    };
+  }
+
+  // Check section content length
+  const shortSections = lesson.sections.filter(
+    s => !s.content || s.content.length < FLASH_FALLBACK_THRESHOLDS.MIN_SECTION_LENGTH
+  );
+  if (shortSections.length > lesson.sections.length / 2) {
+    return {
+      isValid: false,
+      reason: 'short_content',
+      details: `${shortSections.length}/${lesson.sections.length} sections have insufficient content`,
+    };
+  }
+
+  // Check objectives
+  if (!lesson.objectives || lesson.objectives.length < FLASH_FALLBACK_THRESHOLDS.MIN_OBJECTIVES) {
+    return {
+      isValid: false,
+      reason: 'missing_objectives',
+      details: `Only ${lesson.objectives?.length || 0} objectives, need ${FLASH_FALLBACK_THRESHOLDS.MIN_OBJECTIVES}`,
+    };
+  }
+
+  // Check vocabulary (for full lessons)
+  if (lesson.vocabulary && lesson.vocabulary.length < FLASH_FALLBACK_THRESHOLDS.MIN_VOCABULARY) {
+    // Only flag if vocabulary exists but is too sparse
+    return {
+      isValid: false,
+      reason: 'missing_vocabulary',
+      details: `Only ${lesson.vocabulary.length} vocabulary terms`,
+    };
+  }
+
+  return { isValid: true };
+}
+
+// ============================================
 // TYPES
 // ============================================
 
@@ -134,6 +228,10 @@ export interface GeneratedLesson {
   };
   teacherNotes?: string;
   tokensUsed: number;
+  // Model tracking for Flash-first optimization
+  modelUsed?: 'flash' | 'pro';
+  fallbackTriggered?: boolean;
+  fallbackReason?: string;
 }
 
 export interface GenerateQuizInput {
@@ -264,7 +362,7 @@ export interface GeneratedFullLesson {
 export const contentGenerationService = {
   /**
    * Generate a lesson plan from a topic
-   * Uses Gemini 3 Pro for richer, higher-quality content generation
+   * Uses Flash-first strategy with Pro fallback for optimal speed/quality balance
    * lessonType: 'guide' = teacher guide (~2-4K tokens), 'full' = comprehensive lesson (~8-12K tokens)
    *
    * SUPPORTS: Religious education (Islamic studies, Quran, Bible, etc.),
@@ -279,34 +377,137 @@ export const contentGenerationService = {
     const estimatedTokens = isFullLesson ? 10000 : 4000;
     await quotaService.enforceQuota(teacherId, TokenOperation.LESSON_GENERATION, estimatedTokens);
 
-    logger.info('Generating lesson', { teacherId, topic: input.topic, lessonType: input.lessonType || 'guide' });
+    logger.info('Generating lesson with Flash-first strategy', {
+      teacherId,
+      topic: input.topic,
+      lessonType: input.lessonType || 'guide',
+      gradeLevel: input.gradeLevel,
+    });
 
     const prompt = isFullLesson ? buildFullLessonPrompt(input) : buildLessonPrompt(input);
 
-    // Use Gemini 3 Pro for lesson generation - better reasoning and content quality
-    // Full lessons require much higher token limits for comprehensive content
-    // Use TEACHER_CONTENT_SAFETY_SETTINGS to allow religious/educational content
-    const model = genAI.getGenerativeModel({
-      model: config.gemini.models.pro,
-      generationConfig: {
-        temperature: isFullLesson ? 0.75 : 0.7, // Slightly higher creativity for full lessons
-        maxOutputTokens: isFullLesson ? 65536 : 16000, // Max tokens for full lessons to prevent truncation
-        responseMimeType: 'application/json',
-      },
-      safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    });
+    // Track which model was used and if fallback occurred
+    let modelUsed: 'flash' | 'pro' = 'flash';
+    let fallbackTriggered = false;
+    let fallbackReason: string | undefined;
 
-    const result = await model.generateContent(prompt);
+    // Helper to generate with a specific model
+    const generateWithModel = async (useModel: 'flash' | 'pro') => {
+      const modelId = useModel === 'flash' ? config.gemini.models.flash : config.gemini.models.pro;
+      const model = genAI.getGenerativeModel({
+        model: modelId,
+        generationConfig: {
+          temperature: isFullLesson ? 0.75 : 0.7,
+          maxOutputTokens: isFullLesson ? 65536 : 16000,
+          responseMimeType: 'application/json',
+        },
+        safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+      });
+      return model.generateContent(prompt);
+    };
 
-    // Check for blocked or empty responses
-    const responseCheck = checkGeminiResponse(result);
+    // Step 1: Try Flash first (faster, cheaper)
+    let result: Awaited<ReturnType<typeof generateWithModel>>;
+    let responseText: string;
+    let tokensUsed: number;
 
-    if (responseCheck.isBlocked) {
-      logger.warn('Gemini response was blocked', {
+    try {
+      result = await generateWithModel('flash');
+      const responseCheck = checkGeminiResponse(result);
+
+      if (responseCheck.isBlocked || responseCheck.isEmpty) {
+        // Flash failed - fall back to Pro
+        logger.info('Flash response blocked/empty, falling back to Pro', {
+          teacherId,
+          topic: input.topic,
+          blockReason: responseCheck.blockReason,
+        });
+        modelUsed = 'pro';
+        fallbackTriggered = true;
+        fallbackReason = 'flash_error';
+        result = await generateWithModel('pro');
+      } else {
+        // Flash succeeded - validate output quality
+        responseText = responseCheck.responseText;
+        tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+
+        try {
+          const flashLesson = JSON.parse(extractJSON(responseText)) as Omit<GeneratedLesson, 'tokensUsed'>;
+
+          // Validate Flash output quality
+          const validation = validateFlashLessonOutput(flashLesson, input.gradeLevel);
+
+          if (!validation.isValid) {
+            // Flash output quality insufficient - fall back to Pro
+            logger.info('Flash output quality insufficient, falling back to Pro', {
+              teacherId,
+              topic: input.topic,
+              reason: validation.reason,
+              details: validation.details,
+            });
+            modelUsed = 'pro';
+            fallbackTriggered = true;
+            fallbackReason = validation.reason;
+            result = await generateWithModel('pro');
+          } else {
+            // Flash output is good - use it
+            await quotaService.recordUsage({
+              teacherId,
+              operation: TokenOperation.LESSON_GENERATION,
+              tokensUsed,
+              modelUsed: config.gemini.models.flash,
+              resourceType: 'lesson',
+            });
+
+            logger.info('Lesson generated successfully with Flash', {
+              teacherId,
+              topic: input.topic,
+              tokensUsed,
+              sectionsCount: flashLesson.sections?.length,
+            });
+
+            return {
+              ...flashLesson,
+              tokensUsed,
+              modelUsed: 'flash' as const,
+              fallbackTriggered: false,
+            };
+          }
+        } catch (parseError) {
+          // Parse error with Flash - fall back to Pro
+          logger.info('Flash parse error, falling back to Pro', {
+            teacherId,
+            topic: input.topic,
+            error: parseError instanceof Error ? parseError.message : 'Unknown',
+          });
+          modelUsed = 'pro';
+          fallbackTriggered = true;
+          fallbackReason = 'parse_error';
+          result = await generateWithModel('pro');
+        }
+      }
+    } catch (flashError) {
+      // Flash request failed - fall back to Pro
+      logger.info('Flash request failed, falling back to Pro', {
         teacherId,
         topic: input.topic,
-        blockReason: responseCheck.blockReason,
-        finishReason: responseCheck.finishReason,
+        error: flashError instanceof Error ? flashError.message : 'Unknown',
+      });
+      modelUsed = 'pro';
+      fallbackTriggered = true;
+      fallbackReason = 'flash_error';
+      result = await generateWithModel('pro');
+    }
+
+    // Step 2: Process Pro result (either as fallback or initial choice)
+    const proResponseCheck = checkGeminiResponse(result);
+
+    if (proResponseCheck.isBlocked) {
+      logger.warn('Gemini Pro response was blocked', {
+        teacherId,
+        topic: input.topic,
+        blockReason: proResponseCheck.blockReason,
+        finishReason: proResponseCheck.finishReason,
       });
       throw new Error(
         'Unable to generate content for this topic. This may be a temporary issue - please try again. ' +
@@ -314,24 +515,24 @@ export const contentGenerationService = {
       );
     }
 
-    if (responseCheck.isEmpty) {
-      logger.warn('Gemini returned empty response', {
+    if (proResponseCheck.isEmpty) {
+      logger.warn('Gemini Pro returned empty response', {
         teacherId,
         topic: input.topic,
-        finishReason: responseCheck.finishReason,
+        finishReason: proResponseCheck.finishReason,
       });
       throw new Error(
         'No content was generated. Please try again or rephrase your topic.'
       );
     }
 
-    const responseText = responseCheck.responseText;
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+    responseText = proResponseCheck.responseText;
+    tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
 
     try {
       const lesson = JSON.parse(extractJSON(responseText)) as Omit<GeneratedLesson, 'tokensUsed'>;
 
-      // Record usage
+      // Record usage with Pro model
       await quotaService.recordUsage({
         teacherId,
         operation: TokenOperation.LESSON_GENERATION,
@@ -340,7 +541,23 @@ export const contentGenerationService = {
         resourceType: 'lesson',
       });
 
-      return { ...lesson, tokensUsed };
+      logger.info('Lesson generated successfully', {
+        teacherId,
+        topic: input.topic,
+        modelUsed,
+        fallbackTriggered,
+        fallbackReason,
+        tokensUsed,
+        sectionsCount: lesson.sections?.length,
+      });
+
+      return {
+        ...lesson,
+        tokensUsed,
+        modelUsed,
+        fallbackTriggered,
+        fallbackReason,
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const responseLength = responseText.length;
@@ -353,6 +570,8 @@ export const contentGenerationService = {
         isTruncated,
         lessonType: input.lessonType || 'guide',
         topic: input.topic,
+        modelUsed,
+        fallbackTriggered,
         // Log more of the response for debugging truncation issues
         responseStart: responseText.substring(0, 300),
         responseEnd: responseText.substring(Math.max(0, responseLength - 300)),
