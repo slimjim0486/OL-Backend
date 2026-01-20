@@ -1,5 +1,5 @@
 // Gemini AI Service for chat and content generation
-// Uses Gemini 3 Pro for advanced reasoning and Ollie AI tutor
+// Uses Gemini 3 Flash by default with Pro fallback for complex content
 import {
   genAI,
   CHILD_SAFETY_SETTINGS,
@@ -65,6 +65,34 @@ export interface ChatResponse {
   filterReason?: string;
 }
 
+// Model selection for Flash-first with Pro fallback strategy
+export type AnalysisModel = 'flash' | 'pro';
+export type FallbackReason =
+  | 'complex_content'      // High grade level or advanced subject
+  | 'high_grade'           // Grade 9-12 detected
+  | 'truncated_response'   // Flash response was incomplete
+  | 'low_confidence'       // Confidence score below threshold
+  | 'missing_fields'       // Critical fields missing from analysis
+  | 'large_document'       // Document exceeds size threshold
+  | 'flash_error'          // Flash API error (rate limit, safety, timeout)
+  | 'advanced_subject';    // AP courses, calculus, chemistry, physics
+
+// Thresholds for fallback decisions
+const FALLBACK_THRESHOLDS = {
+  MIN_CONFIDENCE: 0.6,              // Below this triggers fallback
+  MIN_CONTENT_BLOCKS: 3,            // Minimum blocks for valid analysis
+  MAX_FLASH_CONTENT_LENGTH: 80000,  // Characters - beyond this use Pro
+  MAX_FLASH_PDF_PAGES: 30,          // Pages - beyond this use Pro
+  HIGH_SCHOOL_GRADE_MIN: 9,         // Grade 9+ considered complex
+};
+
+// Subjects that benefit from Pro's deeper reasoning
+const COMPLEX_SUBJECTS = [
+  'AP_PHYSICS', 'AP_CHEMISTRY', 'AP_BIOLOGY', 'AP_CALCULUS',
+  'AP_STATISTICS', 'AP_COMPUTER_SCIENCE', 'CALCULUS', 'PHYSICS',
+  'ORGANIC_CHEMISTRY', 'ADVANCED_MATH', 'PRE_CALCULUS'
+];
+
 export interface LessonAnalysis {
   title: string;
   summary: string;
@@ -100,6 +128,10 @@ export interface LessonAnalysis {
   contentBlocks?: ContentBlock[];
   // Detected language of the content (for Arabic support)
   detectedLanguage?: 'ar' | 'en';
+  // Model tracking for Flash-first with Pro fallback
+  modelUsed?: AnalysisModel;
+  fallbackTriggered?: boolean;
+  fallbackReason?: FallbackReason;
 }
 
 export interface GeneratedFlashcard {
@@ -176,6 +208,104 @@ export interface ExerciseValidationResult {
 }
 
 export class GeminiService {
+  /**
+   * Check if content should skip Flash and go directly to Pro
+   * Based on content length, detected complexity indicators
+   */
+  private shouldUseProDirectly(
+    content: string,
+    context: { gradeLevel?: number | null; subject?: Subject | null }
+  ): { usePro: boolean; reason?: FallbackReason } {
+    // Large documents should use Pro directly
+    if (content.length > FALLBACK_THRESHOLDS.MAX_FLASH_CONTENT_LENGTH) {
+      logger.info('Using Pro directly: large document', { contentLength: content.length });
+      return { usePro: true, reason: 'large_document' };
+    }
+
+    // High school grades (9-12) benefit from Pro
+    if (context.gradeLevel && context.gradeLevel >= FALLBACK_THRESHOLDS.HIGH_SCHOOL_GRADE_MIN) {
+      logger.info('Using Pro directly: high grade level', { gradeLevel: context.gradeLevel });
+      return { usePro: true, reason: 'high_grade' };
+    }
+
+    // Check for complex subjects
+    const subjectStr = context.subject?.toString().toUpperCase() || '';
+    if (COMPLEX_SUBJECTS.some(s => subjectStr.includes(s))) {
+      logger.info('Using Pro directly: complex subject', { subject: context.subject });
+      return { usePro: true, reason: 'advanced_subject' };
+    }
+
+    // Check content for AP/advanced course indicators
+    const advancedIndicators = [
+      /\bAP\s+(Physics|Chemistry|Biology|Calculus|Statistics)/i,
+      /\bcalculus\b/i,
+      /\bderivative[s]?\b/i,
+      /\bintegral[s]?\b/i,
+      /\blimit[s]?\s+(?:as|of)\b/i,
+      /\borganic\s+chemistry\b/i,
+      /\bmolecular\s+orbital\b/i,
+      /\bquantum\b/i,
+      /\bthermodynamics\b/i,
+    ];
+
+    for (const pattern of advancedIndicators) {
+      if (pattern.test(content)) {
+        logger.info('Using Pro directly: advanced content detected', { pattern: pattern.source });
+        return { usePro: true, reason: 'complex_content' };
+      }
+    }
+
+    return { usePro: false };
+  }
+
+  /**
+   * Validate Flash analysis output quality
+   * Returns true if quality is acceptable, false if Pro fallback needed
+   */
+  private validateAnalysisQuality(
+    analysis: LessonAnalysis,
+    responseText: string
+  ): { isValid: boolean; reason?: FallbackReason } {
+    // Check for truncated response (incomplete JSON)
+    const trimmed = responseText.trim();
+    if (!trimmed.endsWith('}') && !trimmed.endsWith(']')) {
+      logger.warn('Flash analysis appears truncated');
+      return { isValid: false, reason: 'truncated_response' };
+    }
+
+    // Check confidence score
+    if (analysis.confidence < FALLBACK_THRESHOLDS.MIN_CONFIDENCE) {
+      logger.warn('Flash analysis has low confidence', { confidence: analysis.confidence });
+      return { isValid: false, reason: 'low_confidence' };
+    }
+
+    // Check for missing critical fields
+    if (!analysis.title || !analysis.summary) {
+      logger.warn('Flash analysis missing critical fields');
+      return { isValid: false, reason: 'missing_fields' };
+    }
+
+    // Check content blocks (if expected)
+    if (analysis.contentBlocks && analysis.contentBlocks.length < FALLBACK_THRESHOLDS.MIN_CONTENT_BLOCKS) {
+      logger.warn('Flash analysis has too few content blocks', {
+        blockCount: analysis.contentBlocks.length
+      });
+      return { isValid: false, reason: 'missing_fields' };
+    }
+
+    // Check for high grade level in detected content (may need Pro for better quality)
+    const gradeMatch = analysis.gradeLevel?.match(/(\d+)/);
+    if (gradeMatch) {
+      const grade = parseInt(gradeMatch[1], 10);
+      if (grade >= FALLBACK_THRESHOLDS.HIGH_SCHOOL_GRADE_MIN) {
+        logger.info('Flash detected high grade content, suggesting Pro for better quality', { grade });
+        return { isValid: false, reason: 'high_grade' };
+      }
+    }
+
+    return { isValid: true };
+  }
+
   /**
    * Extract JSON from a response that might contain markdown code blocks or extra text
    */
@@ -330,7 +460,10 @@ export class GeminiService {
 
   /**
    * Analyze content and extract structured lesson data
-   * Uses Gemini 3 Flash for metadata extraction (exercises, vocabulary, etc.)
+   *
+   * Model Selection:
+   * - Parent app (default): Uses Pro for reliable quality with variable uploads
+   * - Teacher portal (useFlashFirst=true): Uses Flash-first with Pro fallback for speed
    *
    * Note: Formatting is handled separately by the deterministic DocumentFormatter
    * service, which provides 100% reliable output without AI variability.
@@ -342,110 +475,143 @@ export class GeminiService {
       curriculumType?: CurriculumType | null;
       gradeLevel?: number | null;
       subject?: Subject | null;
+      /** Teacher portal optimization: use Flash first with Pro fallback */
+      useFlashFirst?: boolean;
     }
   ): Promise<LessonAnalysis> {
     const analysisPrompt = promptBuilder.buildContentAnalysisPrompt(content, context);
 
+    // Determine model strategy based on caller context
+    let useModel: AnalysisModel;
+    let fallbackTriggered = false;
+    let fallbackReason: FallbackReason | undefined;
+
+    if (context.useFlashFirst) {
+      // Teacher portal: Flash-first with Pro fallback
+      const proCheck = this.shouldUseProDirectly(content, context);
+      useModel = proCheck.usePro ? 'pro' : 'flash';
+      fallbackReason = proCheck.reason;
+    } else {
+      // Parent app: Always use Pro for quality
+      useModel = 'pro';
+    }
+
     logger.info(`Starting content analysis`, {
       contentLength: content.length,
       ageGroup: context.ageGroup,
-      model: config.gemini.models.pro,
+      useFlashFirst: context.useFlashFirst || false,
+      initialModel: useModel,
+      proDirectReason: fallbackReason,
     });
 
-    // Use Gemini 3 Pro for content analysis - better reasoning for:
-    // - Complex content structure detection (tables, sections, hierarchies)
-    // - Accurate contentBlocks extraction for beautiful PDF formatting
-    // - Higher quality metadata extraction (exercises, vocabulary)
-    // Set maxOutputTokens high to prevent truncation on large documents
-    const analysisModel = genAI.getGenerativeModel({
-      model: config.gemini.models.pro, // gemini-3-pro-preview
-      safetySettings: CHILD_SAFETY_SETTINGS,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 32768, // Pro max is 32K
-        responseMimeType: 'application/json',
-      },
-    });
-
-    // Helper function to attempt analysis with retry
-    const attemptAnalysis = async (retryCount = 0): Promise<Awaited<ReturnType<typeof analysisModel.generateContent>>> => {
-      try {
-        const result = await analysisModel.generateContent(analysisPrompt);
-        const responseText = result.response.text();
-
-        // Check if response appears truncated (incomplete JSON)
-        const trimmed = responseText.trim();
-        if (!trimmed.endsWith('}') && !trimmed.endsWith(']')) {
-          logger.warn('Analysis response appears truncated', {
-            responseLength: responseText.length,
-            lastChars: responseText.substring(responseText.length - 100),
-            finishReason: result.response.candidates?.[0]?.finishReason,
-          });
-
-          if (retryCount < 2) {
-            logger.info(`Retrying analysis (attempt ${retryCount + 2})...`);
-            // Wait a bit before retry
-            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-            return attemptAnalysis(retryCount + 1);
+    // Helper function to run analysis with a specific model
+    const runAnalysis = async (model: AnalysisModel): Promise<{ analysis: LessonAnalysis; responseText: string }> => {
+      const modelConfig = model === 'flash'
+        ? {
+            model: config.gemini.models.flash,
+            maxOutputTokens: 65536, // Flash max
           }
-        }
+        : {
+            model: config.gemini.models.pro,
+            maxOutputTokens: 32768, // Pro max
+          };
 
-        return result;
-      } catch (error) {
-        if (retryCount < 2) {
-          logger.warn(`Analysis failed, retrying (attempt ${retryCount + 2})...`, {
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-          return attemptAnalysis(retryCount + 1);
-        }
-        throw error;
-      }
+      const analysisModel = genAI.getGenerativeModel({
+        model: modelConfig.model,
+        safetySettings: CHILD_SAFETY_SETTINGS,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: modelConfig.maxOutputTokens,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      logger.info(`Running analysis with ${model}`, { model: modelConfig.model });
+
+      const result = await analysisModel.generateContent(analysisPrompt);
+      const responseText = result.response.text();
+
+      logger.info(`${model} analysis completed`, {
+        responseLength: responseText.length,
+        tokensUsed: result.response.usageMetadata?.totalTokenCount,
+      });
+
+      const jsonText = this.extractJSON(responseText);
+      const analysis = JSON.parse(jsonText) as LessonAnalysis;
+
+      return { analysis, responseText };
     };
 
-    // Run analysis (formatting is now handled by deterministic DocumentFormatter)
-    const analysisResult = await attemptAnalysis();
+    let analysis: LessonAnalysis;
 
-    // Process analysis result
-    const analysisResponseText = analysisResult.response.text();
+    // Try Flash first (only for teacher portal with useFlashFirst=true)
+    if (context.useFlashFirst && useModel === 'flash') {
+      try {
+        const flashResult = await runAnalysis('flash');
+        analysis = flashResult.analysis;
 
-    logger.info(`Gemini 3 Flash analysis completed`, {
-      responseLength: analysisResponseText.length,
-      tokensUsed: analysisResult.response.usageMetadata?.totalTokenCount,
+        // Validate Flash output quality
+        const qualityCheck = this.validateAnalysisQuality(analysis, flashResult.responseText);
+
+        if (!qualityCheck.isValid) {
+          logger.info('Flash output quality insufficient, falling back to Pro', {
+            reason: qualityCheck.reason,
+          });
+
+          // Fallback to Pro
+          useModel = 'pro';
+          fallbackTriggered = true;
+          fallbackReason = qualityCheck.reason;
+
+          const proResult = await runAnalysis('pro');
+          analysis = proResult.analysis;
+        }
+      } catch (flashError) {
+        logger.warn('Flash analysis failed, falling back to Pro', {
+          error: flashError instanceof Error ? flashError.message : 'Unknown error',
+        });
+
+        // Fallback to Pro on Flash error
+        useModel = 'pro';
+        fallbackTriggered = true;
+        fallbackReason = 'flash_error';
+
+        try {
+          const proResult = await runAnalysis('pro');
+          analysis = proResult.analysis;
+        } catch (proError) {
+          logger.error('Pro analysis also failed', {
+            error: proError instanceof Error ? proError.message : 'Unknown error',
+          });
+          throw new Error('Failed to analyze content with both Flash and Pro models');
+        }
+      }
+    } else {
+      // Use Pro directly
+      try {
+        const proResult = await runAnalysis('pro');
+        analysis = proResult.analysis;
+      } catch (error) {
+        logger.error('Pro analysis failed', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw new Error('Failed to analyze content');
+      }
+    }
+
+    logger.info('Content analysis parsed successfully', {
+      hasExercises: !!analysis.exercises,
+      exerciseCount: analysis.exercises?.length || 0,
+      vocabularyCount: analysis.vocabulary?.length || 0,
+      modelUsed: useModel,
+      fallbackTriggered,
+      fallbackReason,
     });
 
-    let analysis: LessonAnalysis;
-    try {
-      const jsonText = this.extractJSON(analysisResponseText);
-      analysis = JSON.parse(jsonText);
-
-      logger.info('Content analysis parsed successfully', {
-        hasExercises: !!analysis.exercises,
-        exerciseCount: analysis.exercises?.length || 0,
-        vocabularyCount: analysis.vocabulary?.length || 0,
-      });
-    } catch (error) {
-      // Check if the response appears truncated
-      const trimmed = analysisResponseText.trim();
-      const isTruncated = !trimmed.endsWith('}') && !trimmed.endsWith(']');
-      const finishReason = analysisResult.response.candidates?.[0]?.finishReason;
-
-      logger.error('Failed to parse content analysis response', {
-        responseLength: analysisResponseText.length,
-        responseText: analysisResponseText.substring(0, 1000),
-        lastChars: analysisResponseText.substring(analysisResponseText.length - 200),
-        isTruncated,
-        finishReason,
-        tokensUsed: analysisResult.response.usageMetadata?.totalTokenCount,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-
-      // Provide more specific error message
-      if (isTruncated || finishReason === 'MAX_TOKENS') {
-        throw new Error('Failed to analyze content: Response was truncated. The lesson content may be too complex.');
-      }
-      throw new Error('Failed to analyze content');
-    }
+    // Add model tracking to the analysis result
+    analysis.modelUsed = useModel;
+    analysis.fallbackTriggered = fallbackTriggered;
+    analysis.fallbackReason = fallbackReason;
 
     // Note: formattedContent is NOT set here - it will be set by the
     // deterministic DocumentFormatter in contentProcessor.ts for 100% reliability
@@ -465,6 +631,10 @@ export class GeminiService {
    * This method sends the PDF directly to Gemini (not extracted text), allowing
    * the model to SEE the visual layout: tables, headers, bullet points, etc.
    *
+   * Model Selection:
+   * - Parent app (default): Uses Pro for reliable quality with variable uploads
+   * - Teacher portal (useFlashFirst=true): Uses Flash-first with Pro fallback for speed
+   *
    * Uses structured output with JSON schema to guarantee contentBlocks format.
    */
   async analyzePDFWithVision(
@@ -475,6 +645,8 @@ export class GeminiService {
       gradeLevel?: number | null;
       subject?: Subject | null;
       outputLanguage?: 'ar' | 'en' | 'auto';
+      /** Teacher portal optimization: use Flash first with Pro fallback */
+      useFlashFirst?: boolean;
     }
   ): Promise<LessonAnalysis> {
     const isYoung = context.ageGroup === 'YOUNG';
@@ -743,20 +915,53 @@ QUALITY CHECKLIST
 
 Transform ALL content from the PDF - do not skip any information. Make learning FUN!`;
 
-    // Use Gemini 3 Pro with native PDF vision
-    const model = genAI.getGenerativeModel({
-      model: config.gemini.models.pro,
-      safetySettings: CHILD_SAFETY_SETTINGS,
-      generationConfig: {
-        temperature: 0.2, // Low for accurate structure extraction
-        maxOutputTokens: 65536,
-        responseMimeType: 'application/json',
-        responseSchema: contentBlocksSchema as any,
-      },
+    // Determine model strategy based on caller context
+    const estimatedPages = Math.ceil(pdfBuffer.length / (1024 * 1024) * 30);
+    let useModel: AnalysisModel;
+    let fallbackTriggered = false;
+    let fallbackReason: FallbackReason | undefined;
+
+    if (context.useFlashFirst) {
+      // Teacher portal: Flash-first with Pro fallback
+      const shouldUseProDirectly =
+        estimatedPages > FALLBACK_THRESHOLDS.MAX_FLASH_PDF_PAGES ||
+        (context.gradeLevel && context.gradeLevel >= FALLBACK_THRESHOLDS.HIGH_SCHOOL_GRADE_MIN);
+
+      useModel = shouldUseProDirectly ? 'pro' : 'flash';
+      fallbackReason = shouldUseProDirectly
+        ? (estimatedPages > FALLBACK_THRESHOLDS.MAX_FLASH_PDF_PAGES ? 'large_document' : 'high_grade')
+        : undefined;
+    } else {
+      // Parent app: Always use Pro for quality with variable uploads
+      useModel = 'pro';
+    }
+
+    logger.info('PDF vision analysis starting', {
+      pdfSize: pdfBuffer.length,
+      estimatedPages,
+      useFlashFirst: context.useFlashFirst || false,
+      initialModel: useModel,
+      proDirectReason: fallbackReason,
     });
 
-    try {
-      const result = await model.generateContent([
+    // Helper function to run PDF analysis with a specific model
+    const runPDFAnalysis = async (model: AnalysisModel): Promise<LessonAnalysis> => {
+      const modelName = model === 'flash' ? config.gemini.models.flash : config.gemini.models.pro;
+
+      const analysisModel = genAI.getGenerativeModel({
+        model: modelName,
+        safetySettings: CHILD_SAFETY_SETTINGS,
+        generationConfig: {
+          temperature: 0.2, // Low for accurate structure extraction
+          maxOutputTokens: model === 'flash' ? 65536 : 32768,
+          responseMimeType: 'application/json',
+          responseSchema: contentBlocksSchema as any,
+        },
+      });
+
+      logger.info(`Running PDF vision analysis with ${model}`, { model: modelName });
+
+      const result = await analysisModel.generateContent([
         { text: prompt },
         {
           inlineData: {
@@ -768,34 +973,106 @@ Transform ALL content from the PDF - do not skip any information. Make learning 
 
       const responseText = result.response.text();
 
-      logger.info('PDF vision analysis completed', {
+      logger.info(`${model} PDF vision analysis completed`, {
         responseLength: responseText.length,
         tokensUsed: result.response.usageMetadata?.totalTokenCount,
       });
 
-      const analysis = JSON.parse(responseText) as LessonAnalysis;
+      return JSON.parse(responseText) as LessonAnalysis;
+    };
 
-      // Log what we got
-      logger.info('PDF vision extracted content blocks', {
-        blockCount: analysis.contentBlocks?.length || 0,
-        blockTypes: analysis.contentBlocks?.map(b => b.type).slice(0, 15),
-        hasTable: analysis.contentBlocks?.some(b => b.type === 'table'),
-        hasBulletList: analysis.contentBlocks?.some(b => b.type === 'bulletList'),
-      });
+    let analysis: LessonAnalysis;
 
-      // Validate content is child-appropriate
-      const safetyCheck = await safetyFilters.validateContent(analysis, context.ageGroup);
-      if (!safetyCheck.passed) {
-        throw new Error('Content contains inappropriate material');
+    // Try Flash first (only for teacher portal with useFlashFirst=true)
+    if (context.useFlashFirst && useModel === 'flash') {
+      try {
+        analysis = await runPDFAnalysis('flash');
+
+        // Validate Flash output quality for PDF
+        const hasContentBlocks = analysis.contentBlocks && analysis.contentBlocks.length >= FALLBACK_THRESHOLDS.MIN_CONTENT_BLOCKS;
+        const hasBasicFields = analysis.title && analysis.summary;
+        const confidenceOk = (analysis.confidence || 0.7) >= FALLBACK_THRESHOLDS.MIN_CONFIDENCE;
+
+        // Check if detected grade level is high school
+        const gradeMatch = analysis.gradeLevel?.match(/(\d+)/);
+        const detectedHighGrade = gradeMatch && parseInt(gradeMatch[1], 10) >= FALLBACK_THRESHOLDS.HIGH_SCHOOL_GRADE_MIN;
+
+        if (!hasContentBlocks || !hasBasicFields || !confidenceOk || detectedHighGrade) {
+          const reason: FallbackReason = !hasContentBlocks || !hasBasicFields
+            ? 'missing_fields'
+            : detectedHighGrade
+              ? 'high_grade'
+              : 'low_confidence';
+
+          logger.info('Flash PDF output quality insufficient, falling back to Pro', {
+            hasContentBlocks,
+            hasBasicFields,
+            confidenceOk,
+            detectedHighGrade,
+            reason,
+          });
+
+          // Fallback to Pro
+          useModel = 'pro';
+          fallbackTriggered = true;
+          fallbackReason = reason;
+
+          analysis = await runPDFAnalysis('pro');
+        }
+      } catch (flashError) {
+        logger.warn('Flash PDF analysis failed, falling back to Pro', {
+          error: flashError instanceof Error ? flashError.message : 'Unknown error',
+        });
+
+        // Fallback to Pro on Flash error
+        useModel = 'pro';
+        fallbackTriggered = true;
+        fallbackReason = 'flash_error';
+
+        try {
+          analysis = await runPDFAnalysis('pro');
+        } catch (proError) {
+          logger.error('Pro PDF analysis also failed', {
+            error: proError instanceof Error ? proError.message : 'Unknown error',
+          });
+          throw new Error('Failed to analyze PDF with both Flash and Pro models');
+        }
       }
-
-      return analysis;
-    } catch (error) {
-      logger.error('PDF vision analysis failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      throw new Error('Failed to analyze PDF with vision');
+    } else {
+      // Use Pro directly
+      try {
+        analysis = await runPDFAnalysis('pro');
+      } catch (error) {
+        logger.error('Pro PDF analysis failed', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw new Error('Failed to analyze PDF with vision');
+      }
     }
+
+    // Log what we got
+    logger.info('PDF vision extracted content blocks', {
+      blockCount: analysis.contentBlocks?.length || 0,
+      blockTypes: analysis.contentBlocks?.map(b => b.type).slice(0, 15),
+      hasTable: analysis.contentBlocks?.some(b => b.type === 'table'),
+      hasBulletList: analysis.contentBlocks?.some(b => b.type === 'bulletList'),
+      modelUsed: useModel,
+      fallbackTriggered,
+      fallbackReason,
+    });
+
+    // Add model tracking to the analysis result
+    analysis.modelUsed = useModel;
+    analysis.fallbackTriggered = fallbackTriggered;
+    analysis.fallbackReason = fallbackReason;
+
+    // Validate content is child-appropriate
+    const safetyCheck = await safetyFilters.validateContent(analysis, context.ageGroup);
+    if (!safetyCheck.passed) {
+      throw new Error('Content contains inappropriate material');
+    }
+
+    return analysis;
   }
 
   /**
