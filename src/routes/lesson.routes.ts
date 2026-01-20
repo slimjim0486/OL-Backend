@@ -17,6 +17,7 @@ import { AgeGroup, Subject, SourceType, CurriculumType, LessonAudioStatus } from
 import { lessonSummaryService } from '../services/learning/lessonSummaryService.js';
 import { getSampleLessonsByAgeGroup, getSampleLessonById, SampleLesson } from '../data/sampleLessons.js';
 import { alignmentService, AlignmentResult, progressService } from '../services/curriculum/index.js';
+import { memoryService, encouragementService } from '../services/memory/index.js';
 
 const router = Router();
 
@@ -944,6 +945,46 @@ router.post(
         });
       }
 
+      // ============================================
+      // OLLIE'S MEMORY - Record lesson completion and get encouragement
+      // ============================================
+      let encouragement: string | null = null;
+      try {
+        const topic = lesson.title || 'this lesson';
+        const subject = lesson.subject || 'OTHER';
+
+        // Record lesson completion in memory
+        await memoryService.recordLessonCompletion(
+          childId,
+          lessonId,
+          topic,
+          subject
+        );
+
+        // Generate personalized encouragement for completing the lesson
+        const encouragementResult = await encouragementService.getLessonCompleteEncouragement(
+          childId,
+          lessonId,
+          topic,
+          subject
+        );
+        encouragement = encouragementResult.message;
+
+        logger.info('Ollie memory updated for lesson completion', {
+          childId,
+          lessonId,
+          topic,
+          encouragementType: encouragementResult.type,
+        });
+      } catch (memoryError) {
+        // Don't fail the request if memory tracking fails
+        logger.error('Ollie memory tracking failed on lesson complete', {
+          error: memoryError instanceof Error ? memoryError.message : 'Unknown error',
+          childId,
+          lessonId,
+        });
+      }
+
       res.json({
         success: true,
         data: {
@@ -957,6 +998,8 @@ router.post(
                 newBadges: xpResult.newBadges,
               }
             : null,
+          // Ollie's personalized encouragement
+          encouragement,
         },
       });
     } catch (error) {

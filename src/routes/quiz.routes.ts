@@ -10,6 +10,7 @@ import { logger } from '../utils/logger.js';
 import { AgeGroup, CurriculumType } from '@prisma/client';
 import { xpEngine, XP_VALUES } from '../services/gamification/xpEngine.js';
 import { progressService } from '../services/curriculum/progressService.js';
+import { memoryService, encouragementService } from '../services/memory/index.js';
 
 const router = Router();
 
@@ -262,6 +263,61 @@ router.post(
         logger.error('UserProgress update failed', { error: statsError });
       }
 
+      // ============================================
+      // OLLIE'S MEMORY - Track answers and get encouragement
+      // ============================================
+      let encouragement: string | null = null;
+      try {
+        // Get lesson info for topic/subject context
+        const lesson = await prisma.lesson.findUnique({
+          where: { id: lessonId },
+          select: { title: true, subject: true },
+        });
+        const topic = lesson?.title || quizTitle || 'this quiz';
+        const subject = lesson?.subject || undefined;
+
+        // Record each answer in session memory for pattern tracking
+        for (const answer of answers) {
+          await memoryService.recordAnswerInSession(
+            childId,
+            answer.isCorrect,
+            topic
+          );
+        }
+
+        // Get previous quiz score for comparison (for "better than last time!" feedback)
+        const previousAttempt = await prisma.quizAttempt.findFirst({
+          where: {
+            quiz: { lessonId },
+            id: { not: attempt.id },
+          },
+          orderBy: { id: 'desc' },
+          select: { score: true },
+        });
+
+        // Generate personalized encouragement based on performance and memory
+        const encouragementResult = await encouragementService.getQuizEncouragement(
+          childId,
+          score,
+          previousAttempt?.score,
+          topic
+        );
+        encouragement = encouragementResult.message;
+
+        logger.info('Ollie memory updated for quiz', {
+          childId,
+          score,
+          previousScore: previousAttempt?.score,
+          encouragementType: encouragementResult.type,
+        });
+      } catch (memoryError) {
+        // Don't fail the request if memory tracking fails
+        logger.error('Ollie memory tracking failed', {
+          error: memoryError instanceof Error ? memoryError.message : 'Unknown error',
+          childId,
+        });
+      }
+
       res.json({
         success: true,
         data: {
@@ -279,6 +335,8 @@ router.post(
                 newBadges: xpResult.newBadges,
               }
             : null,
+          // Ollie's personalized encouragement
+          encouragement,
         },
       });
     } catch (error) {
