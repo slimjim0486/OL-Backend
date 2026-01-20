@@ -528,7 +528,7 @@ router.get(
 
 /**
  * GET /api/admin/analytics/teachers
- * Get teacher portal metrics
+ * Get teacher portal metrics (basic)
  */
 router.get(
   '/teachers',
@@ -547,6 +547,229 @@ router.get(
           teacherMRR: teacherRevenue.mrr,
           byTier: teacherRevenue.byTier,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/overview
+ * Get comprehensive teacher overview metrics
+ */
+router.get(
+  '/teacher/overview',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const [overview, revenue] = await Promise.all([
+        analyticsService.getTeacherOverview(),
+        revenueService.getTeacherRevenue(),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          ...overview,
+          revenue: {
+            mrr: revenue.mrr,
+            arr: Math.round(revenue.mrr * 12 * 100) / 100,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/active-users
+ * Get teacher DAU time series
+ */
+router.get(
+  '/teacher/active-users',
+  validateInput(timeRangeSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const dauSeries = await analyticsService.getTeacherDAUTimeSeries(days);
+
+      res.json({
+        success: true,
+        data: {
+          dauSeries,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/retention-curves
+ * Get teacher retention curves
+ */
+router.get(
+  '/teacher/retention-curves',
+  validateInput(timeRangeSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const curves = await analyticsService.getTeacherRetentionCurves(days);
+
+      res.json({
+        success: true,
+        data: curves,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/at-risk-users
+ * Get list of teachers inactive for a specified number of days
+ */
+router.get(
+  '/teacher/at-risk-users',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const inactiveDays = parseInt(req.query.inactiveDays as string) || 7;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const users = await cohortService.getTeacherAtRiskUsers(inactiveDays, limit);
+
+      res.json({
+        success: true,
+        data: users,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/cohorts
+ * Get teacher cohort retention matrix
+ */
+router.get(
+  '/teacher/cohorts',
+  validateInput(monthsSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const months = parseInt(req.query.months as string) || 12;
+      const matrix = await cohortService.getTeacherCohortRetentionMatrix(months);
+
+      res.json({
+        success: true,
+        data: matrix,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/funnel
+ * Get teacher conversion funnel
+ */
+router.get(
+  '/teacher/funnel',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const funnel = await cohortService.getTeacherConversionFunnel();
+
+      res.json({
+        success: true,
+        data: funnel,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/token-usage-series
+ * Get teacher token usage time series
+ */
+router.get(
+  '/teacher/token-usage-series',
+  validateInput(timeRangeSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const series = await analyticsService.getTeacherTokenUsageSeries(days);
+
+      res.json({
+        success: true,
+        data: series,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/activity-breakdown
+ * Get teacher activity breakdown by operation type
+ */
+router.get(
+  '/teacher/activity-breakdown',
+  validateInput(timeRangeSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const breakdown = await analyticsService.getTeacherActivityBreakdown(days);
+
+      res.json({
+        success: true,
+        data: breakdown,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/feature-adoption
+ * Get teacher feature adoption rates
+ */
+router.get(
+  '/teacher/feature-adoption',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const adoption = await analyticsService.getTeacherFeatureAdoption();
+
+      res.json({
+        success: true,
+        data: adoption,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/segments
+ * Get teacher segment breakdown (by tier, subject, grade range)
+ */
+router.get(
+  '/teacher/segments',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const segments = await analyticsService.getTeacherSegments();
+
+      res.json({
+        success: true,
+        data: segments,
       });
     } catch (error) {
       next(error);

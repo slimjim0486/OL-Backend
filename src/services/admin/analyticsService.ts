@@ -900,4 +900,676 @@ export const analyticsService = {
 
     return result;
   },
+
+  // ============================================
+  // TEACHER ANALYTICS
+  // ============================================
+
+  /**
+   * Get Teacher Daily Active Users for a specific date (based on lastLoginAt)
+   */
+  async getTeacherDAU(date: Date = new Date()): Promise<number> {
+    const startOfDay = getStartOfDay(date);
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+
+    const cacheKey = `analytics:teacher:dau:${formatDate(startOfDay)}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return parseInt(cached, 10);
+    }
+
+    const count = await prisma.teacher.count({
+      where: {
+        lastLoginAt: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
+    });
+
+    const isToday = formatDate(startOfDay) === formatDate(new Date());
+    await redis.setex(cacheKey, isToday ? CACHE_TTL.OVERVIEW : 3600, count.toString());
+
+    return count;
+  },
+
+  /**
+   * Get Teacher Weekly Active Users (last 7 days)
+   */
+  async getTeacherWAU(date: Date = new Date()): Promise<number> {
+    const startOfDay = getStartOfDay(date);
+    const weekAgo = new Date(startOfDay);
+    weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+
+    const cacheKey = `analytics:teacher:wau:${formatDate(startOfDay)}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return parseInt(cached, 10);
+    }
+
+    const count = await prisma.teacher.count({
+      where: {
+        lastLoginAt: {
+          gte: weekAgo,
+          lte: new Date(),
+        },
+      },
+    });
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, count.toString());
+
+    return count;
+  },
+
+  /**
+   * Get Teacher Monthly Active Users (last 30 days)
+   */
+  async getTeacherMAU(date: Date = new Date()): Promise<number> {
+    const startOfDay = getStartOfDay(date);
+    const monthAgo = new Date(startOfDay);
+    monthAgo.setUTCDate(monthAgo.getUTCDate() - 30);
+
+    const cacheKey = `analytics:teacher:mau:${formatDate(startOfDay)}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return parseInt(cached, 10);
+    }
+
+    const count = await prisma.teacher.count({
+      where: {
+        lastLoginAt: {
+          gte: monthAgo,
+          lte: new Date(),
+        },
+      },
+    });
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, count.toString());
+
+    return count;
+  },
+
+  /**
+   * Get teacher DAU time series
+   */
+  async getTeacherDAUTimeSeries(days: number = 30): Promise<DAUDataPoint[]> {
+    const cacheKey = `analytics:teacher:dau:series:${days}d`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const result: DAUDataPoint[] = [];
+    const today = getStartOfDay();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setUTCDate(date.getUTCDate() - i);
+
+      const dau = await this.getTeacherDAU(date);
+      result.push({
+        date: formatDate(date),
+        count: dau,
+      });
+    }
+
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get comprehensive teacher overview metrics
+   */
+  async getTeacherOverview(): Promise<{
+    totalTeachers: number;
+    dau: number;
+    wau: number;
+    mau: number;
+    dauWauRatio: number;
+    dauMauRatio: number;
+    payingTeachers: number;
+    freeTeachers: number;
+    conversionRate: number;
+    newTeachersToday: number;
+    newTeachersThisWeek: number;
+    newTeachersThisMonth: number;
+    tierBreakdown: { tier: string; count: number }[];
+  }> {
+    const cacheKey = 'analytics:teacher:overview';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = getStartOfDay();
+    const tomorrow = new Date(today);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const weekAgo = new Date(today);
+    weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+    const monthAgo = new Date(today);
+    monthAgo.setUTCDate(monthAgo.getUTCDate() - 30);
+
+    const [
+      totalTeachers,
+      dau,
+      wau,
+      mau,
+      payingTeachers,
+      tierBreakdown,
+      newTeachersToday,
+      newTeachersThisWeek,
+      newTeachersThisMonth,
+    ] = await Promise.all([
+      prisma.teacher.count(),
+      this.getTeacherDAU(),
+      this.getTeacherWAU(),
+      this.getTeacherMAU(),
+      prisma.teacher.count({
+        where: {
+          subscriptionTier: { not: 'FREE' },
+          subscriptionStatus: 'ACTIVE',
+        },
+      }),
+      prisma.teacher.groupBy({
+        by: ['subscriptionTier'],
+        _count: { id: true },
+      }),
+      prisma.teacher.count({
+        where: {
+          createdAt: { gte: today, lt: tomorrow },
+        },
+      }),
+      prisma.teacher.count({
+        where: {
+          createdAt: { gte: weekAgo },
+        },
+      }),
+      prisma.teacher.count({
+        where: {
+          createdAt: { gte: monthAgo },
+        },
+      }),
+    ]);
+
+    const result = {
+      totalTeachers,
+      dau,
+      wau,
+      mau,
+      dauWauRatio: wau > 0 ? Math.round((dau / wau) * 100) / 100 : 0,
+      dauMauRatio: mau > 0 ? Math.round((dau / mau) * 100) / 100 : 0,
+      payingTeachers,
+      freeTeachers: totalTeachers - payingTeachers,
+      conversionRate: totalTeachers > 0
+        ? Math.round((payingTeachers / totalTeachers) * 10000) / 100
+        : 0,
+      newTeachersToday,
+      newTeachersThisWeek,
+      newTeachersThisMonth,
+      tierBreakdown: tierBreakdown.map(t => ({
+        tier: t.subscriptionTier,
+        count: t._count.id,
+      })),
+    };
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get teacher retention curves (day-by-day retention based on logins)
+   */
+  async getTeacherRetentionCurves(days: number = 30): Promise<{
+    overall: { day: number; rate: number }[];
+    byTier: { tier: string; data: { day: number; rate: number }[] }[];
+  }> {
+    const cacheKey = `analytics:teacher:retention-curves:${days}d`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = getStartOfDay();
+    const periodStart = new Date(today);
+    periodStart.setUTCDate(periodStart.getUTCDate() - days);
+
+    // Get all teachers who signed up in the period
+    const teachers = await prisma.teacher.findMany({
+      where: {
+        createdAt: {
+          gte: periodStart,
+          lte: today,
+        },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        subscriptionTier: true,
+        tokenUsageLogs: {
+          select: {
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (teachers.length === 0) {
+      const emptyResult = { overall: [], byTier: [] };
+      await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(emptyResult));
+      return emptyResult;
+    }
+
+    // Build activity map: teacherId -> set of active days since signup
+    const teacherActivityMap = new Map<string, Set<number>>();
+
+    teachers.forEach(t => {
+      const activityDays = new Set<number>();
+      t.tokenUsageLogs.forEach(log => {
+        const daysSinceSignup = Math.floor(
+          (log.createdAt.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (daysSinceSignup >= 0 && daysSinceSignup <= 30) {
+          activityDays.add(daysSinceSignup);
+        }
+      });
+      teacherActivityMap.set(t.id, activityDays);
+    });
+
+    // Calculate overall retention curve
+    const overall: { day: number; rate: number }[] = [];
+    for (let d = 0; d <= 30; d++) {
+      const eligibleTeachers = teachers.filter(t => {
+        const daysSinceSignup = Math.floor((today.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        return daysSinceSignup >= d;
+      });
+
+      if (eligibleTeachers.length === 0) {
+        overall.push({ day: d, rate: 0 });
+        continue;
+      }
+
+      const retainedCount = eligibleTeachers.filter(t =>
+        teacherActivityMap.get(t.id)?.has(d)
+      ).length;
+
+      const rate = Math.round((retainedCount / eligibleTeachers.length) * 10000) / 100;
+      overall.push({ day: d, rate });
+    }
+
+    // Calculate retention by subscription tier
+    const tiers = [...new Set(teachers.map(t => t.subscriptionTier))];
+    const byTier: { tier: string; data: { day: number; rate: number }[] }[] = [];
+
+    for (const tier of tiers) {
+      const tierTeachers = teachers.filter(t => t.subscriptionTier === tier);
+      const data: { day: number; rate: number }[] = [];
+
+      for (let d = 0; d <= 30; d++) {
+        const eligibleTeachers = tierTeachers.filter(t => {
+          const daysSinceSignup = Math.floor((today.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+          return daysSinceSignup >= d;
+        });
+
+        if (eligibleTeachers.length === 0) {
+          data.push({ day: d, rate: 0 });
+          continue;
+        }
+
+        const retainedCount = eligibleTeachers.filter(t =>
+          teacherActivityMap.get(t.id)?.has(d)
+        ).length;
+
+        const rate = Math.round((retainedCount / eligibleTeachers.length) * 10000) / 100;
+        data.push({ day: d, rate });
+      }
+
+      byTier.push({ tier, data });
+    }
+
+    const result = { overall, byTier };
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get teacher token usage time series (proxy for session duration/engagement)
+   */
+  async getTeacherTokenUsageSeries(days: number = 30): Promise<{
+    date: string;
+    totalTokens: number;
+    activeTeachers: number;
+    avgTokensPerTeacher: number;
+  }[]> {
+    const cacheKey = `analytics:teacher:token-usage:${days}d`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const result: {
+      date: string;
+      totalTokens: number;
+      activeTeachers: number;
+      avgTokensPerTeacher: number;
+    }[] = [];
+    const today = getStartOfDay();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setUTCDate(date.getUTCDate() - i);
+      const nextDay = new Date(date);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+      const usageLogs = await prisma.tokenUsageLog.findMany({
+        where: {
+          createdAt: {
+            gte: date,
+            lt: nextDay,
+          },
+        },
+        select: {
+          tokensUsed: true,
+          teacherId: true,
+        },
+      });
+
+      const totalTokens = usageLogs.reduce((sum, log) => sum + log.tokensUsed, 0);
+      const uniqueTeachers = new Set(usageLogs.map(log => log.teacherId)).size;
+      const avgTokensPerTeacher = uniqueTeachers > 0 ? Math.round(totalTokens / uniqueTeachers) : 0;
+
+      result.push({
+        date: formatDate(date),
+        totalTokens,
+        activeTeachers: uniqueTeachers,
+        avgTokensPerTeacher,
+      });
+    }
+
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get teacher activity breakdown by operation type
+   */
+  async getTeacherActivityBreakdown(days: number = 30): Promise<{
+    activity: string;
+    tokens: number;
+    count: number;
+    percentage: number;
+  }[]> {
+    const cacheKey = `analytics:teacher:activity-breakdown:${days}d`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = getStartOfDay();
+    const startDate = new Date(today);
+    startDate.setUTCDate(startDate.getUTCDate() - days);
+
+    const usageByOperation = await prisma.tokenUsageLog.groupBy({
+      by: ['operation'],
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: new Date(),
+        },
+      },
+      _sum: {
+        tokensUsed: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const totalTokens = usageByOperation.reduce((sum, op) => sum + (op._sum.tokensUsed || 0), 0);
+
+    const result = usageByOperation
+      .map(op => ({
+        activity: formatOperationName(op.operation),
+        tokens: op._sum.tokensUsed || 0,
+        count: op._count.id,
+        percentage: totalTokens > 0
+          ? Math.round(((op._sum.tokensUsed || 0) / totalTokens) * 10000) / 100
+          : 0,
+      }))
+      .sort((a, b) => b.tokens - a.tokens);
+
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get teacher feature adoption rates
+   */
+  async getTeacherFeatureAdoption(): Promise<{
+    feature: string;
+    adoptionRate: number;
+    usersCount: number;
+    trend7d: number;
+  }[]> {
+    const cacheKey = 'analytics:teacher:feature-adoption';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = getStartOfDay();
+    const weekAgo = new Date(today);
+    weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+    const twoWeeksAgo = new Date(today);
+    twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 14);
+
+    const totalTeachers = await prisma.teacher.count();
+
+    if (totalTeachers === 0) {
+      return [];
+    }
+
+    const features = [
+      {
+        name: 'Content Creation',
+        currentQuery: prisma.teacher.count({
+          where: {
+            content: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.teacher.count({
+          where: {
+            content: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'Audio Updates',
+        currentQuery: prisma.teacher.count({
+          where: {
+            audioUpdates: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.teacher.count({
+          where: {
+            audioUpdates: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'Sub Plans',
+        currentQuery: prisma.teacher.count({
+          where: {
+            substitutePlans: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.teacher.count({
+          where: {
+            substitutePlans: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'IEP Goals',
+        currentQuery: prisma.teacher.count({
+          where: {
+            iepGoalSessions: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.teacher.count({
+          where: {
+            iepGoalSessions: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'Grading',
+        currentQuery: prisma.teacher.count({
+          where: {
+            gradingJobs: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.teacher.count({
+          where: {
+            gradingJobs: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'Rubrics',
+        currentQuery: prisma.teacher.count({
+          where: {
+            rubrics: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.teacher.count({
+          where: {
+            rubrics: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+    ];
+
+    const result: { feature: string; adoptionRate: number; usersCount: number; trend7d: number }[] = [];
+
+    for (const feature of features) {
+      try {
+        const [currentCount, previousCount] = await Promise.all([
+          feature.currentQuery,
+          feature.previousQuery,
+        ]);
+
+        const adoptionRate = Math.round((currentCount / totalTeachers) * 10000) / 100;
+        const trend7d = previousCount > 0
+          ? Math.round(((currentCount - previousCount) / previousCount) * 10000) / 100
+          : currentCount > 0 ? 100 : 0;
+
+        result.push({
+          feature: feature.name,
+          adoptionRate,
+          usersCount: currentCount,
+          trend7d,
+        });
+      } catch (error) {
+        logger.warn(`Teacher feature adoption query failed for ${feature.name}:`, error);
+      }
+    }
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get teacher segment breakdown (by tier, subject, grade range)
+   */
+  async getTeacherSegments(): Promise<{
+    byTier: { tier: string; count: number; percentage: number }[];
+    bySubject: { subject: string; count: number; percentage: number }[];
+    byGradeRange: { gradeRange: string; count: number; percentage: number }[];
+  }> {
+    const cacheKey = 'analytics:teacher:segments';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const [byTier, bySubject, byGradeRange] = await Promise.all([
+      prisma.teacher.groupBy({
+        by: ['subscriptionTier'],
+        _count: true,
+      }),
+      prisma.teacher.groupBy({
+        by: ['primarySubject'],
+        _count: true,
+      }),
+      prisma.teacher.groupBy({
+        by: ['gradeRange'],
+        _count: true,
+      }),
+    ]);
+
+    const totalTeachers = byTier.reduce((sum, t) => sum + t._count, 0);
+
+    const result = {
+      byTier: byTier.map(t => ({
+        tier: t.subscriptionTier,
+        count: t._count,
+        percentage: totalTeachers > 0 ? Math.round((t._count / totalTeachers) * 10000) / 100 : 0,
+      })),
+      bySubject: bySubject
+        .filter(s => s.primarySubject)
+        .map(s => ({
+          subject: s.primarySubject || 'Unknown',
+          count: s._count,
+          percentage: totalTeachers > 0 ? Math.round((s._count / totalTeachers) * 10000) / 100 : 0,
+        }))
+        .sort((a, b) => b.count - a.count),
+      byGradeRange: byGradeRange
+        .filter(g => g.gradeRange)
+        .map(g => ({
+          gradeRange: g.gradeRange || 'Unknown',
+          count: g._count,
+          percentage: totalTeachers > 0 ? Math.round((g._count / totalTeachers) * 10000) / 100 : 0,
+        }))
+        .sort((a, b) => b.count - a.count),
+    };
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
+
+    return result;
+  },
 };
+
+/**
+ * Format token operation name for display
+ */
+function formatOperationName(operation: string): string {
+  const operationNames: Record<string, string> = {
+    'CONTENT_ANALYSIS': 'Content Analysis',
+    'LESSON_GENERATION': 'Lesson Generation',
+    'QUIZ_GENERATION': 'Quiz Generation',
+    'FLASHCARD_GENERATION': 'Flashcard Generation',
+    'GRADING_SINGLE': 'Single Grading',
+    'GRADING_BATCH': 'Batch Grading',
+    'FEEDBACK_GENERATION': 'Feedback Generation',
+    'INFOGRAPHIC_GENERATION': 'Infographic Generation',
+    'OTHER': 'Other',
+  };
+  return operationNames[operation] || operation;
+}

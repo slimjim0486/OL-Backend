@@ -609,4 +609,297 @@ export const cohortService = {
 
     return result;
   },
+
+  // ============================================
+  // TEACHER ANALYTICS
+  // ============================================
+
+  /**
+   * Get at-risk teachers (inactive for specified days)
+   */
+  async getTeacherAtRiskUsers(inactiveDays: number = 7, limit: number = 50): Promise<{
+    id: string;
+    email: string;
+    name: string;
+    lastLoginAt: string | null;
+    daysSinceActive: number;
+    subscriptionTier: string;
+    contentCreated: number;
+  }[]> {
+    const cacheKey = `analytics:teacher:at-risk:${inactiveDays}d:${limit}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = new Date();
+    const cutoffDate = new Date(today);
+    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - inactiveDays);
+
+    // Find teachers with no recent login
+    const teachers = await prisma.teacher.findMany({
+      where: {
+        OR: [
+          { lastLoginAt: null },
+          { lastLoginAt: { lt: cutoffDate } },
+        ],
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        lastLoginAt: true,
+        subscriptionTier: true,
+        _count: {
+          select: {
+            content: true,
+          },
+        },
+      },
+      orderBy: {
+        lastLoginAt: 'asc',
+      },
+      take: limit,
+    });
+
+    const result = teachers.map(teacher => {
+      const daysSinceActive = teacher.lastLoginAt
+        ? Math.floor((today.getTime() - teacher.lastLoginAt.getTime()) / (1000 * 60 * 60 * 24))
+        : -1;
+
+      return {
+        id: teacher.id,
+        email: teacher.email,
+        name: [teacher.firstName, teacher.lastName].filter(Boolean).join(' ') || 'Unknown',
+        lastLoginAt: teacher.lastLoginAt?.toISOString() || null,
+        daysSinceActive: daysSinceActive === -1 ? 999 : daysSinceActive,
+        subscriptionTier: teacher.subscriptionTier,
+        contentCreated: teacher._count.content,
+      };
+    });
+
+    await redis.setex(cacheKey, CACHE_TTL.FUNNEL, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get teacher cohort retention matrix
+   */
+  async getTeacherCohortRetentionMatrix(months: number = 12): Promise<CohortRetentionMatrix> {
+    const cacheKey = `analytics:teacher:cohorts:matrix:${months}m`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = new Date();
+    const currentMonth = getStartOfMonth(today);
+    const cohorts: CohortRetentionRow[] = [];
+    const headers = Array.from({ length: months }, (_, i) => `M${i}`);
+
+    for (let i = months - 1; i >= 0; i--) {
+      const cohortStart = new Date(currentMonth);
+      cohortStart.setUTCMonth(cohortStart.getUTCMonth() - i);
+      const cohortEnd = new Date(cohortStart);
+      cohortEnd.setUTCMonth(cohortEnd.getUTCMonth() + 1);
+
+      // Get teachers who signed up in this cohort month
+      const cohortTeachers = await prisma.teacher.findMany({
+        where: {
+          createdAt: {
+            gte: cohortStart,
+            lt: cohortEnd,
+          },
+        },
+        select: {
+          id: true,
+          createdAt: true,
+        },
+      });
+
+      const cohortSize = cohortTeachers.length;
+
+      if (cohortSize === 0) {
+        cohorts.push({
+          cohortMonth: formatMonth(cohortStart),
+          cohortDisplayName: getMonthDisplayName(cohortStart),
+          cohortSize: 0,
+          retention: Array(months).fill(null),
+        });
+        continue;
+      }
+
+      const teacherIds = cohortTeachers.map(t => t.id);
+      const retention: (number | null)[] = [];
+
+      // Calculate retention for each subsequent month based on token usage
+      for (let m = 0; m < months; m++) {
+        const targetMonth = new Date(cohortStart);
+        targetMonth.setUTCMonth(targetMonth.getUTCMonth() + m);
+        const targetMonthEnd = new Date(targetMonth);
+        targetMonthEnd.setUTCMonth(targetMonthEnd.getUTCMonth() + 1);
+
+        if (targetMonth > currentMonth) {
+          retention.push(null);
+          continue;
+        }
+
+        // Count teachers from this cohort who had token usage in the target month
+        const activeInMonth = await prisma.tokenUsageLog.groupBy({
+          by: ['teacherId'],
+          where: {
+            teacherId: {
+              in: teacherIds,
+            },
+            createdAt: {
+              gte: targetMonth,
+              lt: targetMonthEnd,
+            },
+          },
+        });
+
+        const activeCount = activeInMonth.length;
+        const retentionRate = Math.round((activeCount / cohortSize) * 10000) / 100;
+        retention.push(retentionRate);
+      }
+
+      cohorts.push({
+        cohortMonth: formatMonth(cohortStart),
+        cohortDisplayName: getMonthDisplayName(cohortStart),
+        cohortSize,
+        retention,
+      });
+    }
+
+    const result: CohortRetentionMatrix = {
+      months,
+      cohorts,
+      headers,
+    };
+
+    await redis.setex(cacheKey, CACHE_TTL.COHORT_MATRIX, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get teacher conversion funnel
+   * Shows: Signup -> Active (any usage) -> Trial -> Paid -> Retained 3mo
+   */
+  async getTeacherConversionFunnel(): Promise<ConversionFunnel> {
+    const cacheKey = 'analytics:teacher:funnel';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = new Date();
+    const threeMonthsAgo = new Date(today);
+    threeMonthsAgo.setUTCMonth(threeMonthsAgo.getUTCMonth() - 3);
+
+    const [
+      totalSignups,
+      activeTeachers,
+      trialTeachers,
+      paidTeachers,
+      retainedPaidTeachers,
+    ] = await Promise.all([
+      // Stage 1: Total signups
+      prisma.teacher.count(),
+
+      // Stage 2: Active teachers (have any token usage)
+      prisma.teacher.count({
+        where: {
+          tokenUsageLogs: {
+            some: {},
+          },
+        },
+      }),
+
+      // Stage 3: Teachers who started a trial or are/were paid
+      prisma.teacher.count({
+        where: {
+          OR: [
+            { subscriptionTier: { not: 'FREE' } },
+            { trialEndsAt: { not: null } },
+          ],
+        },
+      }),
+
+      // Stage 4: Paid teachers (currently on paid plan)
+      prisma.teacher.count({
+        where: {
+          subscriptionTier: { not: 'FREE' },
+          subscriptionStatus: 'ACTIVE',
+        },
+      }),
+
+      // Stage 5: Retained paid teachers (paid and active in last 3 months)
+      prisma.teacher.count({
+        where: {
+          subscriptionTier: { not: 'FREE' },
+          subscriptionStatus: 'ACTIVE',
+          tokenUsageLogs: {
+            some: {
+              createdAt: {
+                gte: threeMonthsAgo,
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const stages: FunnelStage[] = [
+      {
+        stage: 'signup',
+        label: 'Signed Up',
+        count: totalSignups,
+        percentage: 100,
+        conversionFromPrevious: null,
+      },
+      {
+        stage: 'active',
+        label: 'Active (any usage)',
+        count: activeTeachers,
+        percentage: totalSignups > 0 ? Math.round((activeTeachers / totalSignups) * 10000) / 100 : 0,
+        conversionFromPrevious: totalSignups > 0 ? Math.round((activeTeachers / totalSignups) * 10000) / 100 : 0,
+      },
+      {
+        stage: 'trial',
+        label: 'Started Trial',
+        count: trialTeachers,
+        percentage: totalSignups > 0 ? Math.round((trialTeachers / totalSignups) * 10000) / 100 : 0,
+        conversionFromPrevious: activeTeachers > 0 ? Math.round((trialTeachers / activeTeachers) * 10000) / 100 : 0,
+      },
+      {
+        stage: 'paid',
+        label: 'Paid Subscriber',
+        count: paidTeachers,
+        percentage: totalSignups > 0 ? Math.round((paidTeachers / totalSignups) * 10000) / 100 : 0,
+        conversionFromPrevious: trialTeachers > 0 ? Math.round((paidTeachers / trialTeachers) * 10000) / 100 : 0,
+      },
+      {
+        stage: 'retained',
+        label: 'Retained 3+ Months',
+        count: retainedPaidTeachers,
+        percentage: totalSignups > 0 ? Math.round((retainedPaidTeachers / totalSignups) * 10000) / 100 : 0,
+        conversionFromPrevious: paidTeachers > 0 ? Math.round((retainedPaidTeachers / paidTeachers) * 10000) / 100 : 0,
+      },
+    ];
+
+    const result: ConversionFunnel = {
+      stages,
+      timeframe: 'all-time',
+    };
+
+    await redis.setex(cacheKey, CACHE_TTL.FUNNEL, JSON.stringify(result));
+
+    return result;
+  },
 };
