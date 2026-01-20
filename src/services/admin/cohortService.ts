@@ -430,4 +430,183 @@ export const cohortService = {
       logger.info(`Invalidated ${allKeys.length} cohort/funnel cache keys`);
     }
   },
+
+  /**
+   * Get at-risk users (inactive for specified days)
+   */
+  async getAtRiskUsers(inactiveDays: number = 7, limit: number = 50): Promise<{
+    id: string;
+    name: string;
+    parentEmail: string;
+    lastActiveAt: string | null;
+    daysSinceActive: number;
+    lessonsCompleted: number;
+    curriculumType: string;
+  }[]> {
+    const cacheKey = `analytics:at-risk:${inactiveDays}d:${limit}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = new Date();
+    const cutoffDate = new Date(today);
+    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - inactiveDays);
+
+    // Find children with no recent activity
+    const children = await prisma.child.findMany({
+      where: {
+        OR: [
+          { lastActiveAt: null },
+          { lastActiveAt: { lt: cutoffDate } },
+        ],
+      },
+      include: {
+        parent: {
+          select: {
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            lessons: true,
+          },
+        },
+      },
+      orderBy: {
+        lastActiveAt: 'asc',
+      },
+      take: limit,
+    });
+
+    const result = children.map(child => {
+      const daysSinceActive = child.lastActiveAt
+        ? Math.floor((today.getTime() - child.lastActiveAt.getTime()) / (1000 * 60 * 60 * 24))
+        : -1; // -1 indicates never active
+
+      return {
+        id: child.id,
+        name: child.displayName,
+        parentEmail: child.parent.email,
+        lastActiveAt: child.lastActiveAt?.toISOString() || null,
+        daysSinceActive: daysSinceActive === -1 ? 999 : daysSinceActive,
+        lessonsCompleted: child._count.lessons,
+        curriculumType: child.curriculumType || 'UNSPECIFIED',
+      };
+    });
+
+    await redis.setex(cacheKey, CACHE_TTL.FUNNEL, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get cross-segment analysis (curriculum + country)
+   */
+  async getCrossSegmentAnalysis(): Promise<{
+    segments: {
+      curriculum: string;
+      country: string;
+      childrenCount: number;
+      activeCount: number;
+      avgLessons: number;
+    }[];
+    totals: {
+      byCurriculum: { curriculum: string; count: number }[];
+      byCountry: { country: string; count: number }[];
+    };
+  }> {
+    const cacheKey = 'analytics:cross-segments';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    // Get children with parent country
+    const children = await prisma.child.findMany({
+      select: {
+        id: true,
+        curriculumType: true,
+        lastActiveAt: true,
+        parent: {
+          select: {
+            country: true,
+          },
+        },
+        _count: {
+          select: {
+            lessons: true,
+          },
+        },
+      },
+    });
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+
+    // Build cross-segment map
+    const segmentMap = new Map<string, {
+      curriculum: string;
+      country: string;
+      children: number;
+      active: number;
+      totalLessons: number;
+    }>();
+
+    const curriculumCounts = new Map<string, number>();
+    const countryCounts = new Map<string, number>();
+
+    children.forEach(child => {
+      const curriculum = child.curriculumType || 'UNSPECIFIED';
+      const country = child.parent.country || 'Unknown';
+      const key = `${curriculum}|${country}`;
+      const isActive = child.lastActiveAt && child.lastActiveAt >= thirtyDaysAgo;
+
+      if (!segmentMap.has(key)) {
+        segmentMap.set(key, {
+          curriculum,
+          country,
+          children: 0,
+          active: 0,
+          totalLessons: 0,
+        });
+      }
+
+      const segment = segmentMap.get(key)!;
+      segment.children++;
+      if (isActive) segment.active++;
+      segment.totalLessons += child._count.lessons;
+
+      // Update totals
+      curriculumCounts.set(curriculum, (curriculumCounts.get(curriculum) || 0) + 1);
+      countryCounts.set(country, (countryCounts.get(country) || 0) + 1);
+    });
+
+    const segments = Array.from(segmentMap.values())
+      .map(s => ({
+        curriculum: s.curriculum,
+        country: s.country,
+        childrenCount: s.children,
+        activeCount: s.active,
+        avgLessons: s.children > 0 ? Math.round((s.totalLessons / s.children) * 10) / 10 : 0,
+      }))
+      .sort((a, b) => b.childrenCount - a.childrenCount)
+      .slice(0, 20); // Top 20 segments
+
+    const totals = {
+      byCurriculum: Array.from(curriculumCounts.entries())
+        .map(([curriculum, count]) => ({ curriculum, count }))
+        .sort((a, b) => b.count - a.count),
+      byCountry: Array.from(countryCounts.entries())
+        .map(([country, count]) => ({ country, count }))
+        .sort((a, b) => b.count - a.count),
+    };
+
+    const result = { segments, totals };
+    await redis.setex(cacheKey, CACHE_TTL.FUNNEL, JSON.stringify(result));
+
+    return result;
+  },
 };

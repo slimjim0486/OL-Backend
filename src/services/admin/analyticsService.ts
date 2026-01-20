@@ -493,4 +493,411 @@ export const analyticsService = {
       logger.info(`Invalidated ${keys.length} analytics cache keys`);
     }
   },
+
+  /**
+   * Get day-by-day retention curves (overall + by curriculum)
+   */
+  async getRetentionCurves(days: number = 30): Promise<{
+    overall: { day: number; rate: number }[];
+    byCurriculum: { curriculum: string; data: { day: number; rate: number }[] }[];
+  }> {
+    const cacheKey = `analytics:retention-curves:${days}d`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = getStartOfDay();
+    const periodStart = new Date(today);
+    periodStart.setUTCDate(periodStart.getUTCDate() - days);
+
+    // Get all children who signed up in the period
+    const children = await prisma.child.findMany({
+      where: {
+        createdAt: {
+          gte: periodStart,
+          lte: today,
+        },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        curriculumType: true,
+      },
+    });
+
+    if (children.length === 0) {
+      const emptyResult = { overall: [], byCurriculum: [] };
+      await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(emptyResult));
+      return emptyResult;
+    }
+
+    const childIds = children.map(c => c.id);
+
+    // Get all activity sessions for these children
+    const sessions = await prisma.activitySession.findMany({
+      where: {
+        childId: { in: childIds },
+        createdAt: {
+          gte: periodStart,
+        },
+      },
+      select: {
+        childId: true,
+        createdDate: true,
+      },
+    });
+
+    // Build a map of childId -> set of days active (relative to signup)
+    const childActivityMap = new Map<string, Set<number>>();
+    const childCreatedMap = new Map<string, Date>();
+    const childCurriculumMap = new Map<string, string>();
+
+    children.forEach(c => {
+      childCreatedMap.set(c.id, c.createdAt);
+      childCurriculumMap.set(c.id, c.curriculumType || 'UNSPECIFIED');
+      childActivityMap.set(c.id, new Set());
+    });
+
+    sessions.forEach(s => {
+      const created = childCreatedMap.get(s.childId);
+      if (created && s.createdDate) {
+        const daysSinceSignup = Math.floor((s.createdDate.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceSignup >= 0 && daysSinceSignup < 31) {
+          childActivityMap.get(s.childId)?.add(daysSinceSignup);
+        }
+      }
+    });
+
+    // Calculate overall retention curve
+    const overall: { day: number; rate: number }[] = [];
+    for (let d = 0; d <= 30; d++) {
+      const eligibleChildren = children.filter(c => {
+        const daysSinceSignup = Math.floor((today.getTime() - c.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        return daysSinceSignup >= d;
+      });
+
+      if (eligibleChildren.length === 0) {
+        overall.push({ day: d, rate: 0 });
+        continue;
+      }
+
+      const retainedCount = eligibleChildren.filter(c =>
+        childActivityMap.get(c.id)?.has(d)
+      ).length;
+
+      const rate = Math.round((retainedCount / eligibleChildren.length) * 10000) / 100;
+      overall.push({ day: d, rate });
+    }
+
+    // Calculate retention by curriculum
+    const curriculumTypes = [...new Set(children.map(c => c.curriculumType || 'UNSPECIFIED'))];
+    const byCurriculum: { curriculum: string; data: { day: number; rate: number }[] }[] = [];
+
+    for (const curriculum of curriculumTypes) {
+      const curriculumChildren = children.filter(c => (c.curriculumType || 'UNSPECIFIED') === curriculum);
+      const data: { day: number; rate: number }[] = [];
+
+      for (let d = 0; d <= 30; d++) {
+        const eligibleChildren = curriculumChildren.filter(c => {
+          const daysSinceSignup = Math.floor((today.getTime() - c.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+          return daysSinceSignup >= d;
+        });
+
+        if (eligibleChildren.length === 0) {
+          data.push({ day: d, rate: 0 });
+          continue;
+        }
+
+        const retainedCount = eligibleChildren.filter(c =>
+          childActivityMap.get(c.id)?.has(d)
+        ).length;
+
+        const rate = Math.round((retainedCount / eligibleChildren.length) * 10000) / 100;
+        data.push({ day: d, rate });
+      }
+
+      byCurriculum.push({ curriculum, data });
+    }
+
+    const result = { overall, byCurriculum };
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get session duration time series
+   */
+  async getSessionDurationSeries(days: number = 30): Promise<{
+    date: string;
+    avgDuration: number;
+    totalSessions: number;
+  }[]> {
+    const cacheKey = `analytics:session-duration:${days}d`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const result: { date: string; avgDuration: number; totalSessions: number }[] = [];
+    const today = getStartOfDay();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setUTCDate(date.getUTCDate() - i);
+
+      const sessions = await prisma.activitySession.findMany({
+        where: {
+          createdDate: date,
+        },
+        select: {
+          durationMinutes: true,
+        },
+      });
+
+      const totalDuration = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+      const avgDuration = sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0;
+
+      result.push({
+        date: formatDate(date),
+        avgDuration,
+        totalSessions: sessions.length,
+      });
+    }
+
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get activity breakdown by category
+   */
+  async getActivityBreakdown(days: number = 30): Promise<{
+    activity: string;
+    minutes: number;
+    percentage: number;
+  }[]> {
+    const cacheKey = `analytics:activity-breakdown:${days}d`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = getStartOfDay();
+    const startDate = new Date(today);
+    startDate.setUTCDate(startDate.getUTCDate() - days);
+
+    // Get activity sessions with activities JSON
+    const sessions = await prisma.activitySession.findMany({
+      where: {
+        createdDate: {
+          gte: startDate,
+          lte: today,
+        },
+      },
+      select: {
+        activities: true,
+        durationMinutes: true,
+      },
+    });
+
+    // Aggregate by activity type
+    const activityTotals: Record<string, number> = {
+      'Chat': 0,
+      'Lessons': 0,
+      'Quizzes': 0,
+      'Flashcards': 0,
+      'Other': 0,
+    };
+
+    let totalMinutes = 0;
+
+    sessions.forEach(session => {
+      const activities = session.activities as Record<string, number> | null;
+      if (activities && typeof activities === 'object') {
+        Object.entries(activities).forEach(([key, minutes]) => {
+          const normalizedKey = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+          if (activityTotals.hasOwnProperty(normalizedKey)) {
+            activityTotals[normalizedKey] += minutes;
+          } else {
+            activityTotals['Other'] += minutes;
+          }
+          totalMinutes += minutes;
+        });
+      } else {
+        // If no activities breakdown, count as "Other"
+        activityTotals['Other'] += session.durationMinutes;
+        totalMinutes += session.durationMinutes;
+      }
+    });
+
+    // Convert to result format with percentages
+    const result = Object.entries(activityTotals)
+      .filter(([_, minutes]) => minutes > 0)
+      .map(([activity, minutes]) => ({
+        activity,
+        minutes,
+        percentage: totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 10000) / 100 : 0,
+      }))
+      .sort((a, b) => b.minutes - a.minutes);
+
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get feature adoption rates
+   */
+  async getFeatureAdoption(): Promise<{
+    feature: string;
+    adoptionRate: number;
+    usersCount: number;
+    trend7d: number;
+  }[]> {
+    const cacheKey = 'analytics:feature-adoption';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const today = getStartOfDay();
+    const weekAgo = new Date(today);
+    weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+    const twoWeeksAgo = new Date(today);
+    twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 14);
+
+    const totalChildren = await prisma.child.count();
+
+    if (totalChildren === 0) {
+      return [];
+    }
+
+    // Define features and how to measure them
+    const features = [
+      {
+        name: 'Lessons',
+        currentQuery: prisma.child.count({
+          where: {
+            lessons: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.child.count({
+          where: {
+            lessons: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'Flashcards',
+        currentQuery: prisma.child.count({
+          where: {
+            flashcardDecks: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.child.count({
+          where: {
+            flashcardDecks: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'Chat',
+        currentQuery: prisma.child.count({
+          where: {
+            chatMessages: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.child.count({
+          where: {
+            chatMessages: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+      {
+        name: 'Activity Sessions',
+        currentQuery: prisma.child.count({
+          where: {
+            activitySessions: { some: { createdAt: { gte: weekAgo } } },
+          },
+        }),
+        previousQuery: prisma.child.count({
+          where: {
+            activitySessions: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
+          },
+        }),
+      },
+    ];
+
+    const result: { feature: string; adoptionRate: number; usersCount: number; trend7d: number }[] = [];
+
+    for (const feature of features) {
+      try {
+        const [currentCount, previousCount] = await Promise.all([
+          feature.currentQuery,
+          feature.previousQuery,
+        ]);
+
+        const adoptionRate = Math.round((currentCount / totalChildren) * 10000) / 100;
+        const trend7d = previousCount > 0
+          ? Math.round(((currentCount - previousCount) / previousCount) * 10000) / 100
+          : currentCount > 0 ? 100 : 0;
+
+        result.push({
+          feature: feature.name,
+          adoptionRate,
+          usersCount: currentCount,
+          trend7d,
+        });
+      } catch (error) {
+        // If relation doesn't exist, skip this feature
+        logger.warn(`Feature adoption query failed for ${feature.name}:`, error);
+      }
+    }
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get geographic breakdown by country
+   */
+  async getGeographicBreakdown(): Promise<{
+    country: string;
+    count: number;
+    percentage: number;
+  }[]> {
+    const cacheKey = 'analytics:geographic';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const byCountry = await prisma.parent.groupBy({
+      by: ['country'],
+      _count: true,
+    });
+
+    const totalParents = byCountry.reduce((sum, c) => sum + c._count, 0);
+
+    const result = byCountry
+      .map(c => ({
+        country: c.country || 'Unknown',
+        count: c._count,
+        percentage: totalParents > 0 ? Math.round((c._count / totalParents) * 10000) / 100 : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    await redis.setex(cacheKey, CACHE_TTL.DAU_SERIES, JSON.stringify(result));
+
+    return result;
+  },
 };

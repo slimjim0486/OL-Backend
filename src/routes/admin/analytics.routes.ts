@@ -363,6 +363,166 @@ router.get(
 );
 
 // ============================================
+// ENHANCED RETENTION ROUTES
+// ============================================
+
+/**
+ * GET /api/admin/analytics/retention-curves
+ * Get day-by-day retention curves (overall + by curriculum)
+ */
+router.get(
+  '/retention-curves',
+  validateInput(timeRangeSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const curves = await analyticsService.getRetentionCurves(days);
+
+      res.json({
+        success: true,
+        data: curves,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/at-risk-users
+ * Get list of users inactive for a specified number of days
+ */
+router.get(
+  '/at-risk-users',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const inactiveDays = parseInt(req.query.inactiveDays as string) || 7;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const users = await cohortService.getAtRiskUsers(inactiveDays, limit);
+
+      res.json({
+        success: true,
+        data: users,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
+// ENHANCED ENGAGEMENT ROUTES
+// ============================================
+
+/**
+ * GET /api/admin/analytics/session-duration-series
+ * Get average session duration time series
+ */
+router.get(
+  '/session-duration-series',
+  validateInput(timeRangeSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const series = await analyticsService.getSessionDurationSeries(days);
+
+      res.json({
+        success: true,
+        data: series,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/activity-breakdown
+ * Get activity time breakdown by category
+ */
+router.get(
+  '/activity-breakdown',
+  validateInput(timeRangeSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const breakdown = await analyticsService.getActivityBreakdown(days);
+
+      res.json({
+        success: true,
+        data: breakdown,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/feature-adoption
+ * Get feature adoption rates
+ */
+router.get(
+  '/feature-adoption',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const adoption = await analyticsService.getFeatureAdoption();
+
+      res.json({
+        success: true,
+        data: adoption,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
+// ENHANCED SEGMENT ROUTES
+// ============================================
+
+/**
+ * GET /api/admin/analytics/geographic
+ * Get geographic distribution by country
+ */
+router.get(
+  '/geographic',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const geographic = await analyticsService.getGeographicBreakdown();
+
+      res.json({
+        success: true,
+        data: geographic,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/cross-segments
+ * Get cross-segment analysis (curriculum + region)
+ */
+router.get(
+  '/cross-segments',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const crossSegments = await cohortService.getCrossSegmentAnalysis();
+
+      res.json({
+        success: true,
+        data: crossSegments,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
 // TEACHER METRICS ROUTES
 // ============================================
 
