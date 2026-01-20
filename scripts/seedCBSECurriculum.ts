@@ -2,9 +2,10 @@
  * Seed Script: CBSE (Central Board of Secondary Education) Curriculum Standards
  *
  * Populates the database with CBSE standards for Classes 1-8
- * - Mathematics: ~244 standards
- * - Science: ~198 standards
- * - English: ~197 standards
+ * - Mathematics: ~244 standards (Classes 1-8)
+ * - Science: ~198 standards (Classes 1-8)
+ * - English: ~197 standards (Classes 1-8)
+ * - Social Science: ~156 standards (Classes 3-8)
  *
  * These are skill-based learning objectives aligned with CBSE/NCERT curriculum.
  * NOTE: Chapter-level mapping to NEP 2020 textbooks (2024-25) is pending.
@@ -12,9 +13,10 @@
  * Run with: npx tsx scripts/seedCBSECurriculum.ts
  *
  * Options:
- *   --math-only     Seed only Mathematics standards
- *   --science-only  Seed only Science standards
- *   --english-only  Seed only English standards
+ *   --math-only            Seed only Mathematics standards
+ *   --science-only         Seed only Science standards
+ *   --english-only         Seed only English standards
+ *   --social-science-only  Seed only Social Science standards
  */
 
 import { PrismaClient, Subject } from '@prisma/client';
@@ -33,17 +35,23 @@ import {
   getTotalCBSEEnglishStandardsCount,
   CBSEEnglishStandard
 } from '../src/config/cbseEnglishCurriculum';
+import {
+  cbseSocialScienceCurriculum,
+  getTotalCBSESocialScienceStandardsCount,
+  CBSESocialScienceStandard
+} from '../src/config/cbseSocialScienceCurriculum';
 
 const prisma = new PrismaClient();
 
 // Type for any CBSE standard
-type AnyCBSEStandard = CBSEMathStandard | CBSEScienceStandard | CBSEEnglishStandard;
+type AnyCBSEStandard = CBSEMathStandard | CBSEScienceStandard | CBSEEnglishStandard | CBSESocialScienceStandard;
 
 // Subject to Prisma Subject enum mapping
 const SUBJECT_MAP: Record<string, Subject> = {
   MATH: 'MATH',
   SCIENCE: 'SCIENCE',
-  ENGLISH: 'ENGLISH'
+  ENGLISH: 'ENGLISH',
+  SOCIAL_SCIENCE: 'SOCIAL_STUDIES'
 };
 
 // Helper: Get conceptual area from strand
@@ -91,7 +99,22 @@ function getConceptualArea(strand: string, subject: string): string {
     'Grammar': 'Language Conventions',
     'Vocabulary': 'Vocabulary',
     'Listening and Speaking': 'Oral Language',
-    'Literature': 'Literary Analysis'
+    'Literature': 'Literary Analysis',
+
+    // Social Science strands
+    'Family and Community': 'Social Studies',
+    'Family and Society': 'Social Studies',
+    'Environment and Resources': 'Environmental Studies',
+    'Shelter and Housing': 'Social Studies',
+    'Travel and Communication': 'Social Studies',
+    'Maps and Directions': 'Geography',
+    'Maps and Geography': 'Geography',
+    'History and Heritage': 'History',
+    'History': 'History',
+    'Geography': 'Geography',
+    'Geography and Maps': 'Geography',
+    'Civics': 'Civics',
+    'Economics': 'Economics'
   };
   return mapping[strand] || strand;
 }
@@ -155,6 +178,25 @@ function getAncestorDescriptions(strand: string, subject: string): string[] {
     return ['English'];
   }
 
+  if (subject === 'SOCIAL_SCIENCE') {
+    if (strand.includes('History') || strand.includes('Heritage')) {
+      return ['Social Science', 'History'];
+    } else if (strand.includes('Geography') || strand.includes('Maps')) {
+      return ['Social Science', 'Geography'];
+    } else if (strand.includes('Civics') || strand.includes('Society')) {
+      return ['Social Science', 'Civics'];
+    } else if (strand.includes('Economics')) {
+      return ['Social Science', 'Economics'];
+    } else if (strand.includes('Family') || strand.includes('Community')) {
+      return ['Social Science', 'Social Studies'];
+    } else if (strand.includes('Environment')) {
+      return ['Social Science', 'Environmental Studies'];
+    } else if (strand.includes('Travel') || strand.includes('Shelter')) {
+      return ['Social Science', 'Social Studies'];
+    }
+    return ['Social Science'];
+  }
+
   return [subject];
 }
 
@@ -174,11 +216,12 @@ interface SeedOptions {
   mathOnly?: boolean;
   scienceOnly?: boolean;
   englishOnly?: boolean;
+  socialScienceOnly?: boolean;
 }
 
 async function seedCBSECurriculum(options: SeedOptions = {}) {
-  const { mathOnly, scienceOnly, englishOnly } = options;
-  const seedAll = !mathOnly && !scienceOnly && !englishOnly;
+  const { mathOnly, scienceOnly, englishOnly, socialScienceOnly } = options;
+  const seedAll = !mathOnly && !scienceOnly && !englishOnly && !socialScienceOnly;
 
   console.log('\n========================================');
   console.log('  CBSE (India) Curriculum Seeder');
@@ -196,10 +239,13 @@ async function seedCBSECurriculum(options: SeedOptions = {}) {
   if (seedAll || englishOnly) {
     console.log(`  English: ${getTotalCBSEEnglishStandardsCount()} standards`);
   }
+  if (seedAll || socialScienceOnly) {
+    console.log(`  Social Science: ${getTotalCBSESocialScienceStandardsCount()} standards`);
+  }
 
   try {
     // Step 1: Create or update the Jurisdiction
-    console.log('\n[1/4] Creating jurisdiction...');
+    console.log('\n[1/5] Creating jurisdiction...');
     const jurisdiction = await prisma.curriculumJurisdiction.upsert({
       where: { code: 'INDIAN_CBSE' },
       update: {
@@ -225,7 +271,7 @@ async function seedCBSECurriculum(options: SeedOptions = {}) {
 
     // Step 2: Seed Mathematics
     if (seedAll || mathOnly) {
-      console.log('\n[2/4] Seeding Mathematics standards...');
+      console.log('\n[2/5] Seeding Mathematics standards...');
       const mathResult = await seedSubject(
         jurisdiction.id,
         cbseMathCurriculum,
@@ -237,7 +283,7 @@ async function seedCBSECurriculum(options: SeedOptions = {}) {
 
     // Step 3: Seed Science
     if (seedAll || scienceOnly) {
-      console.log('\n[3/4] Seeding Science standards...');
+      console.log('\n[3/5] Seeding Science standards...');
       const scienceResult = await seedSubject(
         jurisdiction.id,
         cbseScienceCurriculum,
@@ -249,7 +295,7 @@ async function seedCBSECurriculum(options: SeedOptions = {}) {
 
     // Step 4: Seed English
     if (seedAll || englishOnly) {
-      console.log('\n[4/4] Seeding English standards...');
+      console.log('\n[4/5] Seeding English standards...');
       const englishResult = await seedSubject(
         jurisdiction.id,
         cbseEnglishCurriculum,
@@ -257,6 +303,18 @@ async function seedCBSECurriculum(options: SeedOptions = {}) {
       );
       totalCreated += englishResult.created;
       totalUpdated += englishResult.updated;
+    }
+
+    // Step 5: Seed Social Science
+    if (seedAll || socialScienceOnly) {
+      console.log('\n[5/5] Seeding Social Science standards...');
+      const socialScienceResult = await seedSubject(
+        jurisdiction.id,
+        cbseSocialScienceCurriculum,
+        'SOCIAL_SCIENCE'
+      );
+      totalCreated += socialScienceResult.created;
+      totalUpdated += socialScienceResult.updated;
     }
 
     // Summary
@@ -326,7 +384,8 @@ async function seedSubject(
   const standardSets: Map<number, string> = new Map();
 
   for (const classData of curriculum.classes) {
-    const setCode = `IN.CBSE.C${classData.class}.${subject === 'MATH' ? 'MA' : subject === 'SCIENCE' ? 'SC' : 'EN'}`;
+    const subjectCode = subject === 'MATH' ? 'MA' : subject === 'SCIENCE' ? 'SC' : subject === 'ENGLISH' ? 'EN' : 'SS';
+    const setCode = `IN.CBSE.C${classData.class}.${subjectCode}`;
     const standardSet = await prisma.standardSet.upsert({
       where: {
         jurisdictionId_code: {
@@ -432,7 +491,8 @@ const args = process.argv.slice(2);
 const options: SeedOptions = {
   mathOnly: args.includes('--math-only'),
   scienceOnly: args.includes('--science-only'),
-  englishOnly: args.includes('--english-only')
+  englishOnly: args.includes('--english-only'),
+  socialScienceOnly: args.includes('--social-science-only')
 };
 
 // Run the seeder
