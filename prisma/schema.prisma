@@ -869,6 +869,7 @@ model Teacher {
   audioUpdates    TeacherAudioUpdate[]
   substitutePlans SubstitutePlan[]
   iepGoalSessions IEPGoalSession[]
+  exports         TeacherExport[]
 
   // Referral & Sharing
   referralCode      ReferralCode?
@@ -978,6 +979,9 @@ model TeacherContent {
   // AI metadata
   tokensUsed  Int     @default(0)
   aiModelUsed String?
+
+  // Relationships
+  exports TeacherExport[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -2378,4 +2382,65 @@ enum ParentSummaryStatus {
   READY     // Ready to send
   SENT      // Email sent
   VIEWED    // Parent viewed in app
+}
+
+// ============================================
+// TEACHER PORTAL - FILE EXPORTS
+// ============================================
+
+// Status of an export job
+enum ExportStatus {
+  QUEUED     // Waiting in queue
+  PROCESSING // Being generated
+  COMPLETED  // Ready for download
+  FAILED     // Generation failed
+  EXPIRED    // File has been deleted (after retention period)
+}
+
+// Type of export format
+enum ExportFormat {
+  PDF
+  PPTX
+}
+
+// Teacher export records - tracks all exports for the Downloads section
+model TeacherExport {
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Source content
+  contentId    String
+  content      TeacherContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentTitle String         // Snapshot of title at export time
+
+  // Export details
+  format     ExportFormat
+  filename   String        // Original filename (e.g., "Fractions Lesson - Orbit Learn.pptx")
+  fileSize   Int?          // Size in bytes
+
+  // R2 Storage
+  r2Key      String?       // R2 object key
+  r2Url      String?       // Public CDN URL for download
+
+  // External references (for PPTX)
+  presentationId String?   // Presenton presentation ID
+  editUrl        String?   // Presenton edit URL (if user wants to edit)
+
+  // Job tracking
+  status       ExportStatus @default(QUEUED)
+  errorMessage String?      // Error details if failed
+
+  // Email notification
+  emailSent    Boolean   @default(false)
+  emailSentAt  DateTime?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  completedAt DateTime? // When export finished
+  expiresAt   DateTime? // When file will be auto-deleted (optional retention policy)
+
+  @@index([teacherId, createdAt])
+  @@index([teacherId, status])
+  @@index([status, createdAt]) // For cleanup jobs
 }

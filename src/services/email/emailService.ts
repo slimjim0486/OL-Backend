@@ -1311,6 +1311,92 @@ Manage your billing at: ${config.frontendUrl}/teacher/billing
 - The Orbit Learn Team
     `,
   }),
+
+  /**
+   * Export ready notification email
+   */
+  exportReady: (
+    teacherName: string,
+    contentTitle: string,
+    formatName: string,
+    downloadUrl: string,
+    fileSize: string
+  ) => ({
+    subject: `Your ${formatName} is Ready! - ${contentTitle}`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export Ready</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #10B981 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
+          Your ${formatName} is Ready!
+        </h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Hi ${teacherName}! 👋
+        </p>
+
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Great news! Your <strong>${formatName}</strong> export is ready for download.
+        </p>
+
+        <!-- File Info Box -->
+        <div style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); border-radius: 16px; padding: 24px; margin: 28px 0; text-align: center; border: 2px solid #34D399;">
+          <div style="font-size: 48px; margin-bottom: 8px;">${formatName === 'PowerPoint' ? '📊' : '📄'}</div>
+          <h3 style="color: #047857; margin: 0 0 8px 0; font-size: 18px;">${contentTitle}</h3>
+          <p style="color: #059669; margin: 0; font-size: 14px;">
+            ${formatName} • ${fileSize}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${downloadUrl}" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 50px; font-weight: bold; font-size: 17px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
+            Download ${formatName} ⬇️
+          </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; text-align: center;">
+          You can also find this file in your <a href="${config.frontendUrl}/teacher/downloads" style="color: #7C3AED;">Downloads</a> section.
+        </p>
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `
+Your ${formatName} is Ready!
+
+Hi ${teacherName},
+
+Great news! Your ${formatName} export is ready for download.
+
+File: ${contentTitle}
+Format: ${formatName}
+Size: ${fileSize}
+
+Download your file: ${downloadUrl}
+
+You can also find this file in your Downloads section at: ${config.frontendUrl}/teacher/downloads
+
+- The Orbit Learn Team
+    `,
+  }),
 };
 
 export const emailService = {
@@ -1932,6 +2018,52 @@ Details:
       return true;
     } catch (error) {
       logger.error('Error sending suggestion email', { error, portal });
+      return false;
+    }
+  },
+
+  /**
+   * Send export ready email to teacher
+   */
+  async sendExportReadyEmail(
+    email: string,
+    teacherName: string,
+    contentTitle: string,
+    formatName: string,
+    downloadUrl: string,
+    fileSize: string
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped export ready email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.exportReady(
+        teacherName,
+        contentTitle,
+        formatName,
+        downloadUrl,
+        fileSize
+      );
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send export ready email', { error, email });
+        return false;
+      }
+
+      logger.info(`Export ready email sent to ${email}`);
+      return true;
+    } catch (error) {
+      logger.error('Error sending export ready email', { error, email });
       return false;
     }
   },

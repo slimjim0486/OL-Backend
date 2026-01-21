@@ -13,6 +13,23 @@ import * as googleDriveService from '../../services/teacher/googleDriveService.j
 
 const router = Router();
 
+// In-memory tracking of ongoing exports to prevent duplicate processing
+// Key format: `${teacherId}:${contentId}:${exportType}`
+// Auto-cleanup after 5 minutes to handle abandoned requests
+const ongoingExports = new Map<string, { startedAt: Date }>();
+const EXPORT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+// Cleanup stale export entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of ongoingExports.entries()) {
+    if (now - value.startedAt.getTime() > EXPORT_TIMEOUT_MS) {
+      ongoingExports.delete(key);
+      console.log(`Cleaned up stale export entry: ${key}`);
+    }
+  }
+}, 60 * 1000); // Check every minute
+
 // All routes require teacher authentication
 // authenticateTeacher verifies JWT and populates req.teacher
 // requireTeacher ensures req.teacher exists
@@ -42,13 +59,27 @@ const batchExportSchema = z.object({
  * GET /api/teacher/export/:contentId
  */
 router.get('/:contentId', async (req: Request, res: Response) => {
+  const { contentId } = req.params;
+  const teacherId = req.teacher!.id;
+  const exportFormat = (req.query.format as string) || 'pdf';
+  const exportKey = `${teacherId}:${contentId}:${exportFormat}`;
+
   try {
-    const { contentId } = req.params;
-    const teacherId = req.teacher!.id;
+    // Check for duplicate export request
+    if (ongoingExports.has(exportKey)) {
+      console.log(`Duplicate ${exportFormat.toUpperCase()} export request blocked: ${exportKey}`);
+      return res.status(409).json({
+        success: false,
+        error: 'Export already in progress. Please wait for the current export to complete.',
+      });
+    }
+
+    // Mark export as in progress
+    ongoingExports.set(exportKey, { startedAt: new Date() });
 
     // Parse query params
     const options: ExportOptions = {
-      format: (req.query.format as 'pdf' | 'html') || 'pdf',
+      format: exportFormat as 'pdf' | 'html',
       includeAnswers: req.query.includeAnswers !== 'false',
       includeTeacherNotes: req.query.includeTeacherNotes !== 'false',
       paperSize: (req.query.paperSize as 'letter' | 'a4') || 'letter',
@@ -85,6 +116,9 @@ router.get('/:contentId', async (req: Request, res: Response) => {
       success: false,
       error: 'Export failed. Try again or choose a different format (PDF, DOCX, or PPTX).',
     });
+  } finally {
+    // Always clean up the export tracking
+    ongoingExports.delete(exportKey);
   }
 });
 
@@ -93,9 +127,23 @@ router.get('/:contentId', async (req: Request, res: Response) => {
  * GET /api/teacher/export/:contentId/pptx
  */
 router.get('/:contentId/pptx', async (req: Request, res: Response) => {
+  const { contentId } = req.params;
+  const teacherId = req.teacher!.id;
+  const exportKey = `${teacherId}:${contentId}:pptx`;
+
   try {
-    const { contentId } = req.params;
-    const teacherId = req.teacher!.id;
+    // Check for duplicate export request
+    if (ongoingExports.has(exportKey)) {
+      console.log(`Duplicate PPTX export request blocked: ${exportKey}`);
+      return res.status(409).json({
+        success: false,
+        error: 'Export already in progress. Please wait for the current export to complete.',
+      });
+    }
+
+    // Mark export as in progress
+    ongoingExports.set(exportKey, { startedAt: new Date() });
+    console.log(`Starting PPTX export: ${exportKey}`);
 
     // Parse query params for PPTX options
     // Map frontend theme options to Presenton themes
@@ -152,6 +200,10 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
       success: false,
       error: 'PowerPoint export failed. Try PDF export instead, or wait a moment and retry.',
     });
+  } finally {
+    // Always clean up the export tracking
+    ongoingExports.delete(exportKey);
+    console.log(`Completed PPTX export: ${exportKey}`);
   }
 });
 
@@ -511,6 +563,414 @@ router.delete('/drive/files/:fileId', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to delete file',
+    });
+  }
+});
+
+// ============================================
+// ASYNC EXPORT & DOWNLOADS ROUTES
+// ============================================
+
+import { queueExportJob, ExportJobData } from '../../jobs/index.js';
+import { ExportFormat, ExportStatus } from '@prisma/client';
+
+/**
+ * Queue async PPTX export (with email notification)
+ * POST /api/teacher/export/:contentId/pptx-async
+ */
+router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
+  try {
+    const { contentId } = req.params;
+    const teacher = req.teacher!;
+
+    // Parse options
+    const themeMap: Record<string, PresentonExportOptions['theme']> = {
+      'professional': 'professional-blue',
+      'colorful': 'mint-blue',
+    };
+    const frontendTheme = (req.body.theme as string) || 'professional';
+
+    const options: PresentonExportOptions = {
+      theme: themeMap[frontendTheme] || 'professional-blue',
+      slideStyle: (req.body.slideStyle as 'focused' | 'dense') || 'focused',
+      includeAnswers: req.body.includeAnswers !== false,
+      includeTeacherNotes: req.body.includeTeacherNotes !== false,
+      includeInfographic: req.body.includeInfographic !== false,
+      language: (req.body.language as string) || 'English',
+    };
+
+    // Verify content exists and belongs to teacher
+    const content = await prisma.teacherContent.findFirst({
+      where: {
+        id: contentId,
+        teacherId: teacher.id,
+      },
+    });
+
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        error: 'Content not found',
+      });
+    }
+
+    // Only lessons can be exported to PPTX
+    if (content.contentType !== 'LESSON') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only lessons can be exported to PowerPoint',
+      });
+    }
+
+    // Check for existing in-progress export
+    const existingExport = await prisma.teacherExport.findFirst({
+      where: {
+        teacherId: teacher.id,
+        contentId,
+        format: ExportFormat.PPTX,
+        status: { in: [ExportStatus.QUEUED, ExportStatus.PROCESSING] },
+      },
+    });
+
+    if (existingExport) {
+      return res.status(409).json({
+        success: false,
+        error: 'Export already in progress for this content',
+        data: {
+          exportId: existingExport.id,
+          status: existingExport.status,
+        },
+      });
+    }
+
+    // Get teacher's full name for email
+    const teacherRecord = await prisma.teacher.findUnique({
+      where: { id: teacher.id },
+      select: { firstName: true },
+    });
+
+    // Create export record
+    const exportRecord = await prisma.teacherExport.create({
+      data: {
+        teacherId: teacher.id,
+        contentId,
+        contentTitle: content.title,
+        format: ExportFormat.PPTX,
+        filename: `${content.title} - Orbit Learn.pptx`,
+        status: ExportStatus.QUEUED,
+      },
+    });
+
+    // Queue the export job
+    const jobData: ExportJobData = {
+      exportId: exportRecord.id,
+      teacherId: teacher.id,
+      teacherEmail: teacher.email,
+      teacherName: teacherRecord?.firstName || 'Teacher',
+      contentId,
+      contentTitle: content.title,
+      format: ExportFormat.PPTX,
+      options,
+    };
+
+    await queueExportJob(jobData);
+
+    return res.status(202).json({
+      success: true,
+      message: 'Export queued. You will receive an email when your PowerPoint is ready.',
+      data: {
+        exportId: exportRecord.id,
+        status: ExportStatus.QUEUED,
+      },
+    });
+  } catch (error) {
+    console.error('Async PPTX export error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to queue export. Please try again.',
+    });
+  }
+});
+
+/**
+ * Queue async PDF export (with email notification)
+ * POST /api/teacher/export/:contentId/pdf-async
+ */
+router.post('/:contentId/pdf-async', async (req: Request, res: Response) => {
+  try {
+    const { contentId } = req.params;
+    const teacher = req.teacher!;
+
+    const options: ExportOptions = {
+      format: 'pdf',
+      includeAnswers: req.body.includeAnswers !== false,
+      includeTeacherNotes: req.body.includeTeacherNotes !== false,
+      paperSize: req.body.paperSize || 'letter',
+      colorScheme: req.body.colorScheme || 'color',
+    };
+
+    // Verify content exists and belongs to teacher
+    const content = await prisma.teacherContent.findFirst({
+      where: {
+        id: contentId,
+        teacherId: teacher.id,
+      },
+    });
+
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        error: 'Content not found',
+      });
+    }
+
+    // Check for existing in-progress export
+    const existingExport = await prisma.teacherExport.findFirst({
+      where: {
+        teacherId: teacher.id,
+        contentId,
+        format: ExportFormat.PDF,
+        status: { in: [ExportStatus.QUEUED, ExportStatus.PROCESSING] },
+      },
+    });
+
+    if (existingExport) {
+      return res.status(409).json({
+        success: false,
+        error: 'Export already in progress for this content',
+        data: {
+          exportId: existingExport.id,
+          status: existingExport.status,
+        },
+      });
+    }
+
+    // Get teacher's full name for email
+    const teacherRecord = await prisma.teacher.findUnique({
+      where: { id: teacher.id },
+      select: { firstName: true },
+    });
+
+    // Create export record
+    const exportRecord = await prisma.teacherExport.create({
+      data: {
+        teacherId: teacher.id,
+        contentId,
+        contentTitle: content.title,
+        format: ExportFormat.PDF,
+        filename: `${content.title} - Orbit Learn.pdf`,
+        status: ExportStatus.QUEUED,
+      },
+    });
+
+    // Queue the export job
+    const jobData: ExportJobData = {
+      exportId: exportRecord.id,
+      teacherId: teacher.id,
+      teacherEmail: teacher.email,
+      teacherName: teacherRecord?.firstName || 'Teacher',
+      contentId,
+      contentTitle: content.title,
+      format: ExportFormat.PDF,
+      options,
+    };
+
+    await queueExportJob(jobData);
+
+    return res.status(202).json({
+      success: true,
+      message: 'Export queued. You will receive an email when your PDF is ready.',
+      data: {
+        exportId: exportRecord.id,
+        status: ExportStatus.QUEUED,
+      },
+    });
+  } catch (error) {
+    console.error('Async PDF export error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to queue export. Please try again.',
+    });
+  }
+});
+
+/**
+ * List all exports for the teacher (Downloads page)
+ * GET /api/teacher/export/downloads
+ */
+router.get('/downloads', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const offset = (page - 1) * limit;
+
+    const [exports, total] = await Promise.all([
+      prisma.teacherExport.findMany({
+        where: { teacherId },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+        include: {
+          content: {
+            select: {
+              id: true,
+              title: true,
+              contentType: true,
+              subject: true,
+            },
+          },
+        },
+      }),
+      prisma.teacherExport.count({ where: { teacherId } }),
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        exports: exports.map(exp => ({
+          id: exp.id,
+          contentId: exp.contentId,
+          contentTitle: exp.contentTitle,
+          contentType: exp.content?.contentType,
+          subject: exp.content?.subject,
+          format: exp.format,
+          filename: exp.filename,
+          fileSize: exp.fileSize,
+          downloadUrl: exp.r2Url,
+          editUrl: exp.editUrl,
+          status: exp.status,
+          errorMessage: exp.errorMessage,
+          createdAt: exp.createdAt,
+          completedAt: exp.completedAt,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('List downloads error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to list downloads',
+    });
+  }
+});
+
+/**
+ * Get single export details
+ * GET /api/teacher/export/downloads/:exportId
+ */
+router.get('/downloads/:exportId', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const { exportId } = req.params;
+
+    const exportRecord = await prisma.teacherExport.findFirst({
+      where: {
+        id: exportId,
+        teacherId,
+      },
+      include: {
+        content: {
+          select: {
+            id: true,
+            title: true,
+            contentType: true,
+            subject: true,
+          },
+        },
+      },
+    });
+
+    if (!exportRecord) {
+      return res.status(404).json({
+        success: false,
+        error: 'Export not found',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: exportRecord.id,
+        contentId: exportRecord.contentId,
+        contentTitle: exportRecord.contentTitle,
+        contentType: exportRecord.content?.contentType,
+        subject: exportRecord.content?.subject,
+        format: exportRecord.format,
+        filename: exportRecord.filename,
+        fileSize: exportRecord.fileSize,
+        downloadUrl: exportRecord.r2Url,
+        editUrl: exportRecord.editUrl,
+        status: exportRecord.status,
+        errorMessage: exportRecord.errorMessage,
+        emailSent: exportRecord.emailSent,
+        createdAt: exportRecord.createdAt,
+        completedAt: exportRecord.completedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Get export error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get export details',
+    });
+  }
+});
+
+/**
+ * Delete an export
+ * DELETE /api/teacher/export/downloads/:exportId
+ */
+router.delete('/downloads/:exportId', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const { exportId } = req.params;
+
+    const exportRecord = await prisma.teacherExport.findFirst({
+      where: {
+        id: exportId,
+        teacherId,
+      },
+    });
+
+    if (!exportRecord) {
+      return res.status(404).json({
+        success: false,
+        error: 'Export not found',
+      });
+    }
+
+    // Delete from R2 if exists
+    if (exportRecord.r2Key) {
+      try {
+        const { deleteFile } = await import('../../services/storage/storageService.js');
+        await deleteFile('aiContent', exportRecord.r2Key);
+      } catch (deleteError) {
+        console.error('Failed to delete file from R2:', deleteError);
+        // Continue with database deletion even if R2 deletion fails
+      }
+    }
+
+    // Delete from database
+    await prisma.teacherExport.delete({
+      where: { id: exportId },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Export deleted',
+    });
+  } catch (error) {
+    console.error('Delete export error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete export',
     });
   }
 });
