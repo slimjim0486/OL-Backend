@@ -216,8 +216,8 @@ export const templateService = {
         contentType: input.contentType,
         subject: input.subject,
         gradeLevel: input.gradeLevel,
-        structure: input.structure as Parameters<typeof prisma.contentTemplate.create>[0]['data']['structure'],
-        defaultSettings: input.defaultSettings as Parameters<typeof prisma.contentTemplate.create>[0]['data']['defaultSettings'],
+        structure: JSON.parse(JSON.stringify(input.structure)),
+        defaultSettings: input.defaultSettings ? JSON.parse(JSON.stringify(input.defaultSettings)) : undefined,
       },
     });
 
@@ -337,10 +337,10 @@ export const templateService = {
     if (input.subject !== undefined) updateData.subject = input.subject;
     if (input.gradeLevel !== undefined) updateData.gradeLevel = input.gradeLevel;
     if (input.structure !== undefined) {
-      updateData.structure = input.structure as Parameters<typeof prisma.contentTemplate.update>[0]['data']['structure'];
+      updateData.structure = JSON.parse(JSON.stringify(input.structure));
     }
     if (input.defaultSettings !== undefined) {
-      updateData.defaultSettings = input.defaultSettings as Parameters<typeof prisma.contentTemplate.update>[0]['data']['defaultSettings'];
+      updateData.defaultSettings = input.defaultSettings ? JSON.parse(JSON.stringify(input.defaultSettings)) : null;
     }
 
     const template = await prisma.contentTemplate.update({
@@ -398,8 +398,8 @@ export const templateService = {
         contentType: original.contentType,
         subject: original.subject,
         gradeLevel: original.gradeLevel,
-        structure: original.structure ?? undefined,
-        defaultSettings: original.defaultSettings ?? undefined,
+        structure: original.structure ? JSON.parse(JSON.stringify(original.structure)) : undefined,
+        defaultSettings: original.defaultSettings ? JSON.parse(JSON.stringify(original.defaultSettings)) : undefined,
       },
     });
 
@@ -466,18 +466,17 @@ export const templateService = {
         if (quizContent?.questions && Array.isArray(quizContent.questions)) {
           const questions = quizContent.questions as Array<Record<string, unknown>>;
           // Group by question type
-          const typeGroups = questions.reduce((acc, q) => {
+          const typeGroups: Record<string, number> = {};
+          for (const q of questions) {
             const type = (q.type as string) || 'multiple_choice';
-            if (!acc[type]) acc[type] = 0;
-            acc[type]++;
-            return acc;
-          }, {} as Record<string, number>);
+            typeGroups[type] = (typeGroups[type] || 0) + 1;
+          }
 
           structure.sections = Object.entries(typeGroups).map(([type, count]) => ({
             type,
             title: type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
             prompt: `Generate ${count} ${type.replace(/_/g, ' ')} questions`,
-            count,
+            count: count as number,
           }));
           structure.questionTypes = Object.keys(typeGroups);
           structure.questionCount = questions.length;
