@@ -51,6 +51,194 @@ const batchExportSchema = z.object({
 });
 
 // ============================================
+// DOWNLOADS ROUTES (must come before /:contentId)
+// ============================================
+
+import { queueExportJob, ExportJobData } from '../../jobs/index.js';
+import { ExportFormat, ExportStatus } from '@prisma/client';
+
+/**
+ * List all exports for the teacher (Downloads page)
+ * GET /api/teacher/export/downloads
+ */
+router.get('/downloads', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const offset = (page - 1) * limit;
+
+    const [exports, total] = await Promise.all([
+      prisma.teacherExport.findMany({
+        where: { teacherId },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+        include: {
+          content: {
+            select: {
+              id: true,
+              title: true,
+              contentType: true,
+              subject: true,
+            },
+          },
+        },
+      }),
+      prisma.teacherExport.count({ where: { teacherId } }),
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        exports: exports.map(exp => ({
+          id: exp.id,
+          contentId: exp.contentId,
+          contentTitle: exp.contentTitle,
+          contentType: exp.content?.contentType,
+          subject: exp.content?.subject,
+          format: exp.format,
+          filename: exp.filename,
+          fileSize: exp.fileSize,
+          downloadUrl: exp.r2Url,
+          editUrl: exp.editUrl,
+          status: exp.status,
+          errorMessage: exp.errorMessage,
+          createdAt: exp.createdAt,
+          completedAt: exp.completedAt,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('List downloads error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to list downloads',
+    });
+  }
+});
+
+/**
+ * Get single export details
+ * GET /api/teacher/export/downloads/:exportId
+ */
+router.get('/downloads/:exportId', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const { exportId } = req.params;
+
+    const exportRecord = await prisma.teacherExport.findFirst({
+      where: {
+        id: exportId,
+        teacherId,
+      },
+      include: {
+        content: {
+          select: {
+            id: true,
+            title: true,
+            contentType: true,
+            subject: true,
+          },
+        },
+      },
+    });
+
+    if (!exportRecord) {
+      return res.status(404).json({
+        success: false,
+        error: 'Export not found',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: exportRecord.id,
+        contentId: exportRecord.contentId,
+        contentTitle: exportRecord.contentTitle,
+        contentType: exportRecord.content?.contentType,
+        subject: exportRecord.content?.subject,
+        format: exportRecord.format,
+        filename: exportRecord.filename,
+        fileSize: exportRecord.fileSize,
+        downloadUrl: exportRecord.r2Url,
+        editUrl: exportRecord.editUrl,
+        status: exportRecord.status,
+        errorMessage: exportRecord.errorMessage,
+        emailSent: exportRecord.emailSent,
+        createdAt: exportRecord.createdAt,
+        completedAt: exportRecord.completedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Get export error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get export details',
+    });
+  }
+});
+
+/**
+ * Delete an export
+ * DELETE /api/teacher/export/downloads/:exportId
+ */
+router.delete('/downloads/:exportId', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const { exportId } = req.params;
+
+    const exportRecord = await prisma.teacherExport.findFirst({
+      where: {
+        id: exportId,
+        teacherId,
+      },
+    });
+
+    if (!exportRecord) {
+      return res.status(404).json({
+        success: false,
+        error: 'Export not found',
+      });
+    }
+
+    // Delete from R2 if exists
+    if (exportRecord.r2Key) {
+      try {
+        const { deleteFile } = await import('../../services/storage/storageService.js');
+        await deleteFile('aiContent', exportRecord.r2Key);
+      } catch (deleteError) {
+        console.error('Failed to delete file from R2:', deleteError);
+        // Continue with database deletion even if R2 deletion fails
+      }
+    }
+
+    // Delete from database
+    await prisma.teacherExport.delete({
+      where: { id: exportId },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Export deleted',
+    });
+  } catch (error) {
+    console.error('Delete export error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete export',
+    });
+  }
+});
+
+// ============================================
 // PDF EXPORT ROUTES
 // ============================================
 
@@ -568,11 +756,8 @@ router.delete('/drive/files/:fileId', async (req: Request, res: Response) => {
 });
 
 // ============================================
-// ASYNC EXPORT & DOWNLOADS ROUTES
+// ASYNC EXPORT ROUTES
 // ============================================
-
-import { queueExportJob, ExportJobData } from '../../jobs/index.js';
-import { ExportFormat, ExportStatus } from '@prisma/client';
 
 /**
  * Queue async PPTX export (with email notification)
@@ -790,187 +975,6 @@ router.post('/:contentId/pdf-async', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to queue export. Please try again.',
-    });
-  }
-});
-
-/**
- * List all exports for the teacher (Downloads page)
- * GET /api/teacher/export/downloads
- */
-router.get('/downloads', async (req: Request, res: Response) => {
-  try {
-    const teacherId = req.teacher!.id;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
-    const offset = (page - 1) * limit;
-
-    const [exports, total] = await Promise.all([
-      prisma.teacherExport.findMany({
-        where: { teacherId },
-        orderBy: { createdAt: 'desc' },
-        skip: offset,
-        take: limit,
-        include: {
-          content: {
-            select: {
-              id: true,
-              title: true,
-              contentType: true,
-              subject: true,
-            },
-          },
-        },
-      }),
-      prisma.teacherExport.count({ where: { teacherId } }),
-    ]);
-
-    return res.json({
-      success: true,
-      data: {
-        exports: exports.map(exp => ({
-          id: exp.id,
-          contentId: exp.contentId,
-          contentTitle: exp.contentTitle,
-          contentType: exp.content?.contentType,
-          subject: exp.content?.subject,
-          format: exp.format,
-          filename: exp.filename,
-          fileSize: exp.fileSize,
-          downloadUrl: exp.r2Url,
-          editUrl: exp.editUrl,
-          status: exp.status,
-          errorMessage: exp.errorMessage,
-          createdAt: exp.createdAt,
-          completedAt: exp.completedAt,
-        })),
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-      },
-    });
-  } catch (error) {
-    console.error('List downloads error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to list downloads',
-    });
-  }
-});
-
-/**
- * Get single export details
- * GET /api/teacher/export/downloads/:exportId
- */
-router.get('/downloads/:exportId', async (req: Request, res: Response) => {
-  try {
-    const teacherId = req.teacher!.id;
-    const { exportId } = req.params;
-
-    const exportRecord = await prisma.teacherExport.findFirst({
-      where: {
-        id: exportId,
-        teacherId,
-      },
-      include: {
-        content: {
-          select: {
-            id: true,
-            title: true,
-            contentType: true,
-            subject: true,
-          },
-        },
-      },
-    });
-
-    if (!exportRecord) {
-      return res.status(404).json({
-        success: false,
-        error: 'Export not found',
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        id: exportRecord.id,
-        contentId: exportRecord.contentId,
-        contentTitle: exportRecord.contentTitle,
-        contentType: exportRecord.content?.contentType,
-        subject: exportRecord.content?.subject,
-        format: exportRecord.format,
-        filename: exportRecord.filename,
-        fileSize: exportRecord.fileSize,
-        downloadUrl: exportRecord.r2Url,
-        editUrl: exportRecord.editUrl,
-        status: exportRecord.status,
-        errorMessage: exportRecord.errorMessage,
-        emailSent: exportRecord.emailSent,
-        createdAt: exportRecord.createdAt,
-        completedAt: exportRecord.completedAt,
-      },
-    });
-  } catch (error) {
-    console.error('Get export error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to get export details',
-    });
-  }
-});
-
-/**
- * Delete an export
- * DELETE /api/teacher/export/downloads/:exportId
- */
-router.delete('/downloads/:exportId', async (req: Request, res: Response) => {
-  try {
-    const teacherId = req.teacher!.id;
-    const { exportId } = req.params;
-
-    const exportRecord = await prisma.teacherExport.findFirst({
-      where: {
-        id: exportId,
-        teacherId,
-      },
-    });
-
-    if (!exportRecord) {
-      return res.status(404).json({
-        success: false,
-        error: 'Export not found',
-      });
-    }
-
-    // Delete from R2 if exists
-    if (exportRecord.r2Key) {
-      try {
-        const { deleteFile } = await import('../../services/storage/storageService.js');
-        await deleteFile('aiContent', exportRecord.r2Key);
-      } catch (deleteError) {
-        console.error('Failed to delete file from R2:', deleteError);
-        // Continue with database deletion even if R2 deletion fails
-      }
-    }
-
-    // Delete from database
-    await prisma.teacherExport.delete({
-      where: { id: exportId },
-    });
-
-    return res.json({
-      success: true,
-      message: 'Export deleted',
-    });
-  } catch (error) {
-    console.error('Delete export error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to delete export',
     });
   }
 });
