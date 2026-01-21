@@ -401,18 +401,7 @@ export const contentGenerationService = {
       gradeLevel: input.gradeLevel,
     });
 
-    // DEBUG: Log template data in generateLesson
-    console.log('[TEMPLATE DEBUG] generateLesson - Input received:', JSON.stringify({
-      topic: input.topic,
-      lessonType: input.lessonType,
-      hasTemplateStructure: !!input.templateStructure,
-      templateStructureSections: input.templateStructure?.sections?.map((s) => s.title) || null,
-    }, null, 2));
-
     const prompt = isFullLesson ? buildFullLessonPrompt(input) : buildLessonPrompt(input);
-
-    // DEBUG: Log the first 2000 chars of the prompt to see template injection
-    console.log('[TEMPLATE DEBUG] Generated prompt (first 2000 chars):', prompt.substring(0, 2000));
 
     // Track which model was used and if fallback occurred
     let modelUsed: 'flash' | 'pro' = 'flash';
@@ -568,13 +557,6 @@ export const contentGenerationService = {
         modelUsed: config.gemini.models.pro,
         resourceType: 'lesson',
       });
-
-      // DEBUG: Log the generated section titles
-      console.log('[TEMPLATE DEBUG] Generated lesson sections:', JSON.stringify({
-        title: lesson.title,
-        sectionTitles: lesson.sections?.map((s) => s.title) || [],
-        expectedFromTemplate: input.templateStructure?.sections?.map((s) => s.title) || 'No template',
-      }, null, 2));
 
       logger.info('Lesson generated successfully', {
         teacherId,
@@ -1097,14 +1079,6 @@ Do NOT include any inappropriate or scary imagery. Keep it child-friendly and ed
       // Step 1: Generate the core lesson
       sendProgress('generating_lesson', 'Creating your lesson content...', 10);
 
-      // DEBUG: Log template data received
-      console.log('[TEMPLATE DEBUG] generateFullLessonWithProgress - Input:', JSON.stringify({
-        topic: input.topic,
-        templateId: input.templateId,
-        hasTemplateStructure: !!input.templateStructure,
-        templateStructureSections: input.templateStructure?.sections?.map((s) => s.title) || null,
-      }, null, 2));
-
       const lessonInput: GenerateLessonInput = {
         topic: input.topic,
         subject: input.subject,
@@ -1120,12 +1094,6 @@ Do NOT include any inappropriate or scary imagery. Keep it child-friendly and ed
         templateStructure: input.templateStructure,
         templateId: input.templateId,
       };
-
-      console.log('[TEMPLATE DEBUG] lessonInput for generateLesson:', JSON.stringify({
-        topic: lessonInput.topic,
-        hasTemplateStructure: !!lessonInput.templateStructure,
-        templateStructureSections: lessonInput.templateStructure?.sections?.map((s) => s.title) || null,
-      }, null, 2));
 
       const lessonResult = await this.generateLesson(teacherId, lessonInput);
       totalTokensUsed += lessonResult.tokensUsed;
