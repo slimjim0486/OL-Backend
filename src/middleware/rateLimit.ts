@@ -5,7 +5,7 @@ import { RateLimitError } from './errorHandler.js';
 // Standard rate limit for most endpoints
 export const standardRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 500, // 500 requests per window (increased from 100)
   message: { success: false, error: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -17,7 +17,7 @@ export const standardRateLimit = rateLimit({
 // Strict rate limit for auth endpoints
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window
+  max: 30, // 30 attempts per window (increased from 10)
   message: { success: false, error: 'Too many authentication attempts' },
   standardHeaders: true,
   legacyHeaders: false,
