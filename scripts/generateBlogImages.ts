@@ -27,6 +27,36 @@ const OUTPUT_DIR = path.join(__dirname, '../../frontend/public/images/blog');
 // Blog post image prompts with alt text references
 const BLOG_IMAGE_PROMPTS = [
   {
+    name: 'curriculum-choice-guide',
+    altText: 'Expat parent reviewing school brochures and comparing curriculum options for their child in Dubai',
+    prompt: `Create a warm, emotionally resonant illustration of an expat parent navigating the overwhelming decision of choosing a school curriculum for their child.
+
+SCENE COMPOSITION: A parent (could be any ethnicity - representing Dubai's diverse expat community) sits at a table late at night or early morning, surrounded by school brochures, papers, and a laptop. They look thoughtful but slightly overwhelmed - not defeated, but clearly wrestling with an important decision. The scene captures the universal parenting moment of wanting the absolute best for your child.
+
+THE PARENT: A woman or man in their 30s-40s, dressed casually (perhaps still in work clothes with sleeves rolled up, or comfortable home clothes). Their expression shows deep thought and care - perhaps chin resting on hand, or fingers rubbing temple. They're illuminated by laptop glow and perhaps a warm lamp. They look tired but determined.
+
+THE EVIDENCE OF RESEARCH: The table tells the story of extensive research:
+- Multiple colorful school brochures (suggesting British, American, IB, Indian schools)
+- A laptop showing comparison spreadsheet or school websites
+- Sticky notes with pros/cons
+- Perhaps a cold cup of coffee or tea
+- A phone showing WhatsApp (the lifeline of expat parent advice)
+- Maybe a small photo of their child visible, reminding us why this matters
+
+DUBAI CONTEXT: Subtle elements suggesting the Gulf setting:
+- Perhaps a window showing a cityscape with distinctive architecture in the background
+- The diversity of school brochures representing the unique abundance of choices in Dubai
+- Modern, comfortable home environment
+
+EMOTIONAL UNDERTONE: The image should evoke empathy - every parent who has agonized over educational decisions will recognize this moment. But there should also be hope - this parent cares deeply, and that care is what really matters.
+
+LIGHTING: Warm lamp light mixed with cool laptop glow creates an intimate late-night atmosphere. The lighting should feel like 2 AM - that quiet time when parents do their most important thinking.
+
+COLOR PALETTE: Warm browns and oranges from lamp light, cool blues from the laptop screen, with pops of color from school brochures. The overall mood should feel warm and relatable, not cold or clinical.
+
+STYLE: Warm, editorial illustration style with emotional depth - like a touching scene from a film about parenthood. The image should make parents feel seen and understood. Professional quality suitable for a blog about the curriculum choice journey.`,
+  },
+  {
     name: 'summer-learning-loss',
     altText: 'Child reading book outdoors in summer sunshine while enjoying vacation',
     prompt: `Create a warm, inviting illustration of a child enjoying reading outdoors during summer vacation.

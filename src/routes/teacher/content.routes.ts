@@ -401,6 +401,23 @@ router.patch(
 // AI GENERATION SCHEMAS
 // ============================================
 
+// Template structure schema for reusable content structures
+const templateStructureSchema = z.object({
+  sections: z.array(z.object({
+    type: z.string(),
+    title: z.string(),
+    prompt: z.string(),
+    duration: z.string().optional(),
+    count: z.number().optional(),
+    optional: z.boolean().optional(),
+  })),
+  activityTypes: z.array(z.string()).optional(),
+  assessmentStyle: z.string().optional(),
+  questionTypes: z.array(z.string()).optional(),
+  questionCount: z.number().optional(),
+  flashcardCount: z.number().optional(),
+}).optional();
+
 const generateLessonSchema = z.object({
   topic: z.string().min(1, 'Topic is required').max(500),
   subject: z.nativeEnum(Subject).optional(),
@@ -412,6 +429,9 @@ const generateLessonSchema = z.object({
   includeActivities: z.boolean().optional(),
   includeAssessment: z.boolean().optional(),
   additionalContext: z.string().max(7000, 'Additional context must be 7000 characters or less').optional(),
+  // Template support
+  templateStructure: templateStructureSchema,
+  templateId: z.string().uuid().optional(),
 });
 
 // Schema for split generation with all components
@@ -433,6 +453,9 @@ const generateFullLessonSchema = z.object({
   quizQuestionCount: z.number().min(5).max(20).optional().default(10),
   flashcardCount: z.number().min(5).max(30).optional().default(15),
   infographicStyle: z.enum(['educational', 'colorful', 'minimalist', 'professional']).optional(),
+  // Template support
+  templateStructure: templateStructureSchema,
+  templateId: z.string().uuid().optional(),
 });
 
 const generateQuizSchema = z.object({
