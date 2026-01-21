@@ -681,6 +681,14 @@ router.post(
   validateInput(generateLessonSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // DEBUG: Log template data received
+      console.log('[TEMPLATE DEBUG] /generate/lesson - Request body:', JSON.stringify({
+        topic: req.body.topic,
+        templateId: req.body.templateId,
+        hasTemplateStructure: !!req.body.templateStructure,
+        templateStructureSections: req.body.templateStructure?.sections?.map((s: any) => s.title) || null,
+      }, null, 2));
+
       const result = await contentGenerationService.generateLesson(
         req.teacher!.id,
         req.body
@@ -711,6 +719,15 @@ router.post(
   requireTeacher,
   validateInput(generateFullLessonSchema),
   async (req: Request, res: Response, next: NextFunction) => {
+    // DEBUG: Log template data received
+    console.log('[TEMPLATE DEBUG] /generate/full-lesson - Request body:', JSON.stringify({
+      topic: req.body.topic,
+      templateId: req.body.templateId,
+      hasTemplateStructure: !!req.body.templateStructure,
+      templateStructureSections: req.body.templateStructure?.sections?.map((s: any) => s.title) || null,
+      fullTemplateStructure: req.body.templateStructure || null,
+    }, null, 2));
+
     // Set up SSE headers for streaming progress
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
