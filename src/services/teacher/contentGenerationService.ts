@@ -1487,15 +1487,18 @@ ${input.includeActivities ? '- Include detailed hands-on activities with step-by
 ${input.includeAssessment ? '- Include comprehensive assessment questions with answer key' : ''}
 ${input.additionalContext ? `\nADDITIONAL TEACHER NOTES:\n${input.additionalContext}` : ''}
 ${input.templateStructure ? `
-**IMPORTANT - USE THIS TEMPLATE STRUCTURE:**
-The teacher has selected a template with specific sections. Your lesson MUST follow this exact structure:
+**CRITICAL - YOU MUST USE THIS EXACT TEMPLATE STRUCTURE:**
+The teacher has selected a specific template. Your lesson sections MUST match these titles EXACTLY:
 
 ${input.templateStructure.sections.map((s, i) => `${i + 1}. **${s.title}** (${s.type})
    - ${s.prompt}${s.duration ? `\n   - Duration: ${s.duration}` : ''}${s.count ? `\n   - Include ${s.count} items/examples` : ''}`).join('\n\n')}
 
 ${input.templateStructure.activityTypes?.length ? `Include these activity types: ${input.templateStructure.activityTypes.join(', ')}` : ''}
 ${input.templateStructure.assessmentStyle ? `Assessment style: ${input.templateStructure.assessmentStyle}` : ''}
-` : ''}
+
+DO NOT create different section titles. Use the exact titles from the template above.
+For each template section, create rich, detailed content (200-400 words per section).
+` : `
 Create a COMPREHENSIVE lesson that includes:
 
 1. **DETAILED INTRODUCTION** (1-2 paragraphs)
@@ -1546,6 +1549,7 @@ Create a COMPREHENSIVE lesson that includes:
    - Common misconceptions to address
    - Differentiation strategies
    - Additional resources
+`}
 
 Return JSON with this structure:
 {
