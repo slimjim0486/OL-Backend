@@ -200,6 +200,23 @@ export interface GenerateLessonInput {
   includeActivities?: boolean;
   includeAssessment?: boolean;
   additionalContext?: string; // Extra notes from teacher
+  // Template support
+  templateStructure?: {
+    sections: Array<{
+      type: string;
+      title: string;
+      prompt: string;
+      duration?: string;
+      count?: number;
+      optional?: boolean;
+    }>;
+    activityTypes?: string[];
+    assessmentStyle?: string;
+    questionTypes?: string[];
+    questionCount?: number;
+    flashcardCount?: number;
+  };
+  templateId?: string;
 }
 
 export interface GeneratedLesson {
@@ -1384,7 +1401,16 @@ ${input.objectives ? `- Specific Objectives: ${input.objectives.join(', ')}` : '
 ${input.includeActivities ? '- Include hands-on activities' : ''}
 ${input.includeAssessment ? '- Include assessment questions' : ''}
 ${input.additionalContext ? `\nADDITIONAL TEACHER NOTES:\n${input.additionalContext}` : ''}
+${input.templateStructure ? `
+**IMPORTANT - USE THIS TEMPLATE STRUCTURE:**
+The teacher has selected a template with specific sections. Your lesson MUST follow this exact structure:
 
+${input.templateStructure.sections.map((s, i) => `${i + 1}. **${s.title}** (${s.type})
+   - ${s.prompt}${s.duration ? `\n   - Duration: ${s.duration}` : ''}${s.count ? `\n   - Include ${s.count} items/examples` : ''}`).join('\n\n')}
+
+${input.templateStructure.activityTypes?.length ? `Include these activity types: ${input.templateStructure.activityTypes.join(', ')}` : ''}
+${input.templateStructure.assessmentStyle ? `Assessment style: ${input.templateStructure.assessmentStyle}` : ''}
+` : `
 Create a structured lesson plan with:
 1. Clear learning objectives
 2. Engaging introduction
@@ -1392,7 +1418,7 @@ Create a structured lesson plan with:
 4. Activities or practice opportunities
 5. Key vocabulary with definitions
 6. Assessment questions (if requested)
-7. Teacher notes for implementation
+7. Teacher notes for implementation`}
 
 Return JSON with this structure:
 {
@@ -1460,7 +1486,16 @@ ${input.objectives ? `- Specific Objectives: ${input.objectives.join(', ')}` : '
 ${input.includeActivities ? '- Include detailed hands-on activities with step-by-step instructions' : ''}
 ${input.includeAssessment ? '- Include comprehensive assessment questions with answer key' : ''}
 ${input.additionalContext ? `\nADDITIONAL TEACHER NOTES:\n${input.additionalContext}` : ''}
+${input.templateStructure ? `
+**IMPORTANT - USE THIS TEMPLATE STRUCTURE:**
+The teacher has selected a template with specific sections. Your lesson MUST follow this exact structure:
 
+${input.templateStructure.sections.map((s, i) => `${i + 1}. **${s.title}** (${s.type})
+   - ${s.prompt}${s.duration ? `\n   - Duration: ${s.duration}` : ''}${s.count ? `\n   - Include ${s.count} items/examples` : ''}`).join('\n\n')}
+
+${input.templateStructure.activityTypes?.length ? `Include these activity types: ${input.templateStructure.activityTypes.join(', ')}` : ''}
+${input.templateStructure.assessmentStyle ? `Assessment style: ${input.templateStructure.assessmentStyle}` : ''}
+` : ''}
 Create a COMPREHENSIVE lesson that includes:
 
 1. **DETAILED INTRODUCTION** (1-2 paragraphs)
