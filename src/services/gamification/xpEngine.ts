@@ -3,6 +3,8 @@ import { prisma } from '../../config/database.js';
 import { XPReason, UserProgress } from '@prisma/client';
 import { badgeService } from './badgeService.js';
 import { streakService } from './streakService.js';
+import { parentNotificationService } from '../parent/notificationService.js';
+import { logger } from '../../utils/logger.js';
 
 // XP values for different actions
 export const XP_VALUES = {
@@ -153,6 +155,11 @@ export const xpEngine = {
       leveledUp,
     });
 
+    // Send parent notifications (fire-and-forget, don't block)
+    this.sendParentNotifications(childId, leveledUp, level, newBadges).catch((err) => {
+      logger.error('Failed to send parent notifications', { error: err, childId });
+    });
+
     return {
       xpAwarded: finalAmount,
       newLevel: leveledUp ? level : undefined,
@@ -161,6 +168,59 @@ export const xpEngine = {
       currentXP: xpIntoLevel,
       totalXP: newTotalXP,
     };
+  },
+
+  /**
+   * Send notifications to parent for level ups and badge awards
+   * This is fire-and-forget to not block the XP award response
+   */
+  async sendParentNotifications(
+    childId: string,
+    leveledUp: boolean,
+    newLevel: number,
+    newBadges: Array<{ code: string; name: string; xpReward: number }>
+  ): Promise<void> {
+    try {
+      // Get child and parent info
+      const child = await prisma.child.findUnique({
+        where: { id: childId },
+        select: {
+          id: true,
+          displayName: true,
+          parentId: true,
+        },
+      });
+
+      if (!child) {
+        return;
+      }
+
+      // Notify on level up
+      if (leveledUp) {
+        await parentNotificationService.notifyLevelUp(
+          child.parentId,
+          child.id,
+          child.displayName,
+          newLevel
+        );
+      }
+
+      // Notify on each new badge (typically just one at a time)
+      for (const badge of newBadges) {
+        await parentNotificationService.notifyBadgeEarned(
+          child.parentId,
+          child.id,
+          child.displayName,
+          badge.name
+        );
+      }
+    } catch (error) {
+      // Log but don't throw - notifications are non-critical
+      logger.error('Error sending parent notifications', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        childId,
+      });
+    }
   },
 
   /**

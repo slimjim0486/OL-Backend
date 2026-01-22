@@ -51,10 +51,13 @@ model Parent {
   trialEndsAt           DateTime? // Trial period end date
 
   // Relationships
-  children           Child[]
-  noteComments       NoteComment[]
-  privacyPreferences ParentPrivacyPreferences?
-  lessonUsage        ParentLessonUsage[]
+  children                Child[]
+  noteComments            NoteComment[]
+  privacyPreferences      ParentPrivacyPreferences?
+  notificationPreferences ParentNotificationPreference?
+  pushTokens              ParentPushToken[]
+  notificationLogs        ParentNotificationLog[]
+  lessonUsage             ParentLessonUsage[]
 
   // Referral & Sharing
   referralCode       ReferralCode?
@@ -94,6 +97,84 @@ model ParentPrivacyPreferences {
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ParentNotificationPreference {
+  id       String @id @default(uuid())
+  parentId String @unique
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  // Notification channels
+  pushEnabled  Boolean @default(true)
+  emailEnabled Boolean @default(false)
+
+  // Notification types
+  achievementAlerts Boolean @default(true) // First badge, level up
+  streakAlerts      Boolean @default(true) // Streak milestones
+  lessonAlerts      Boolean @default(true) // Lesson completed
+  weeklyDigest      Boolean @default(true) // Weekly summary email
+
+  // Quiet hours (stored as hour in 24h format, in parent's timezone)
+  quietHoursEnabled Boolean @default(false)
+  quietHoursStart   Int?    // e.g., 22 for 10 PM
+  quietHoursEnd     Int?    // e.g., 7 for 7 AM
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ParentPushToken {
+  id       String @id @default(uuid())
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  // FCM token for push notifications
+  token      String   @unique
+  deviceType String   // "ios" | "android" | "web"
+  deviceName String?  // Optional device identifier
+
+  // Token validity tracking
+  isActive  Boolean  @default(true)
+  lastUsed  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([token])
+}
+
+model ParentNotificationLog {
+  id       String @id @default(uuid())
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  childId  String // Which child triggered the notification
+
+  // Notification details
+  type    NotificationType
+  title   String
+  body    String
+  data    Json? // Additional data payload
+
+  // Delivery tracking
+  channel   String    // "push" | "email"
+  sentAt    DateTime  @default(now())
+  readAt    DateTime?
+  clickedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([parentId])
+  @@index([childId])
+  @@index([type])
+  @@index([sentAt])
+}
+
+enum NotificationType {
+  BADGE_EARNED
+  LEVEL_UP
+  STREAK_MILESTONE
+  LESSON_COMPLETED
+  WEEKLY_DIGEST
 }
 
 model Child {

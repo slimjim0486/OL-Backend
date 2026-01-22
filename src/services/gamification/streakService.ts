@@ -1,6 +1,11 @@
 // Streak tracking service
 import { prisma } from '../../config/database.js';
 import { Streak } from '@prisma/client';
+import { parentNotificationService } from '../parent/notificationService.js';
+import { logger } from '../../utils/logger.js';
+
+// Streak milestones that trigger parent notifications
+const STREAK_MILESTONES = [3, 7, 14, 21, 30, 60, 90, 100, 180, 365];
 
 export const streakService = {
   /**
@@ -74,7 +79,7 @@ export const streakService = {
       const newCurrent = existing.current + 1;
       const newLongest = Math.max(existing.longest, newCurrent);
 
-      return prisma.streak.update({
+      const updatedStreak = await prisma.streak.update({
         where: { childId },
         data: {
           current: newCurrent,
@@ -82,6 +87,15 @@ export const streakService = {
           lastActivityDate: today,
         },
       });
+
+      // Check for streak milestone and notify parent (fire-and-forget)
+      if (STREAK_MILESTONES.includes(newCurrent)) {
+        this.notifyParentOfStreakMilestone(childId, newCurrent).catch((err) => {
+          logger.error('Failed to send streak milestone notification', { error: err, childId });
+        });
+      }
+
+      return updatedStreak;
     }
 
     // Streak broken - check for freeze
@@ -240,5 +254,39 @@ export const streakService = {
       current: s.current,
       longest: s.longest,
     }));
+  },
+
+  /**
+   * Send parent notification for streak milestone
+   * Fire-and-forget, non-blocking
+   */
+  async notifyParentOfStreakMilestone(childId: string, streakDays: number): Promise<void> {
+    try {
+      const child = await prisma.child.findUnique({
+        where: { id: childId },
+        select: {
+          id: true,
+          displayName: true,
+          parentId: true,
+        },
+      });
+
+      if (!child) {
+        return;
+      }
+
+      await parentNotificationService.notifyStreakMilestone(
+        child.parentId,
+        child.id,
+        child.displayName,
+        streakDays
+      );
+    } catch (error) {
+      logger.error('Error sending streak milestone notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        childId,
+        streakDays,
+      });
+    }
   },
 };
