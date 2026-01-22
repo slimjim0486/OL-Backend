@@ -8,7 +8,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { TeacherContent, Subject, ContentType } from '@prisma/client';
+import { TeacherContent, Subject, TeacherContentType } from '@prisma/client';
 import { SAMPLE_TEACHER_CONTENT, getSampleById, getAllSampleSummaries, getAudioSample, SampleTeacherContent } from '../../data/sampleTeacherContent.js';
 import { exportContent, ExportOptions } from '../../services/teacher/exportService.js';
 import { generateLessonPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
@@ -30,18 +30,21 @@ function sampleToTeacherContent(sample: SampleTeacherContent): TeacherContent {
     description: sample.description,
     subject: sample.subject as Subject,
     gradeLevel: sample.gradeLevel,
-    curriculum: sample.curriculum || 'american',
-    contentType: 'LESSON' as ContentType,
+    contentType: 'LESSON' as TeacherContentType,
     sourceType: 'TEXT',
-    sourceContent: null,
+    originalFileUrl: null,
+    originalFileName: null,
+    extractedText: null,
     lessonContent: sample.lessonContent as unknown as Record<string, unknown>,
     quizContent: sample.quizContent as unknown as Record<string, unknown>,
     flashcardContent: sample.flashcardContent as unknown as Record<string, unknown>,
-    studyGuideContent: null,
     infographicUrl: null,
     status: 'PUBLISHED',
     isPublic: true,
+    publishedAt: new Date(),
     templateId: null,
+    tokensUsed: 0,
+    aiModelUsed: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   } as TeacherContent;
@@ -297,7 +300,7 @@ router.post('/:id/generate-exports', async (req: Request, res: Response) => {
       console.log(`[SampleExport] Generating quiz PDF...`);
       const quizContent = {
         ...teacherContent,
-        contentType: 'QUIZ' as ContentType,
+        contentType: 'QUIZ' as TeacherContentType,
         title: sample.quizContent?.title || `${sample.title} - Quiz`,
       };
       const quizPdf = await exportContent(quizContent, pdfOptions);
@@ -318,7 +321,7 @@ router.post('/:id/generate-exports', async (req: Request, res: Response) => {
       console.log(`[SampleExport] Generating flashcards PDF...`);
       const flashcardContent = {
         ...teacherContent,
-        contentType: 'FLASHCARDS' as ContentType,
+        contentType: 'FLASHCARD_DECK' as TeacherContentType,
         title: sample.flashcardContent?.title || `${sample.title} - Flashcards`,
       };
       const flashcardPdf = await exportContent(flashcardContent, pdfOptions);
@@ -435,7 +438,7 @@ router.post('/generate-all-exports', async (req: Request, res: Response) => {
 
       // 2. Quiz PDF
       try {
-        const quizContent = { ...teacherContent, contentType: 'QUIZ' as ContentType };
+        const quizContent = { ...teacherContent, contentType: 'QUIZ' as TeacherContentType };
         const quizPdf = await exportContent(quizContent, pdfOptions);
         const uploaded = await uploadFile('aiContent', `samples/${sample.id}/${sample.id}-quiz.pdf`, quizPdf.data, 'application/pdf');
         results['quiz-pdf'] = { success: true, url: uploaded.publicUrl };
@@ -445,7 +448,7 @@ router.post('/generate-all-exports', async (req: Request, res: Response) => {
 
       // 3. Flashcards PDF
       try {
-        const flashcardContent = { ...teacherContent, contentType: 'FLASHCARDS' as ContentType };
+        const flashcardContent = { ...teacherContent, contentType: 'FLASHCARD_DECK' as TeacherContentType };
         const flashcardPdf = await exportContent(flashcardContent, pdfOptions);
         const uploaded = await uploadFile('aiContent', `samples/${sample.id}/${sample.id}-flashcards.pdf`, flashcardPdf.data, 'application/pdf');
         results['flashcards-pdf'] = { success: true, url: uploaded.publicUrl };
