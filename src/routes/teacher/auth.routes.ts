@@ -646,12 +646,21 @@ router.get(
   }
 );
 
+// Helper to transform empty strings to undefined for optional enum fields
+const emptyStringToUndefined = (val: unknown) => (val === '' ? undefined : val);
+
 const updateProfileSchema = z.object({
   firstName: z.string().max(100).optional(),
   lastName: z.string().max(100).optional(),
   schoolName: z.string().max(255).optional().nullable(),
-  primarySubject: z.enum(['MATH', 'SCIENCE', 'ENGLISH', 'ARABIC', 'ISLAMIC_STUDIES', 'SOCIAL_STUDIES', 'HISTORY', 'GEOGRAPHY', 'PHYSICAL_EDUCATION', 'HEALTH', 'COMPUTER_SCIENCE', 'READING', 'FOREIGN_LANGUAGE', 'ECONOMICS', 'DRAMA', 'ENVIRONMENTAL_STUDIES', 'ART', 'MUSIC', 'OTHER']).optional().nullable(),
-  gradeRange: z.enum(['ELEMENTARY', 'MIDDLE', 'HIGH', 'MIXED']).optional().nullable(),
+  primarySubject: z.preprocess(
+    emptyStringToUndefined,
+    z.enum(['MATH', 'SCIENCE', 'ENGLISH', 'ARABIC', 'ISLAMIC_STUDIES', 'SOCIAL_STUDIES', 'HISTORY', 'GEOGRAPHY', 'PHYSICAL_EDUCATION', 'HEALTH', 'COMPUTER_SCIENCE', 'READING', 'FOREIGN_LANGUAGE', 'ECONOMICS', 'DRAMA', 'ENVIRONMENTAL_STUDIES', 'ART', 'MUSIC', 'OTHER']).optional().nullable()
+  ),
+  gradeRange: z.preprocess(
+    emptyStringToUndefined,
+    z.enum(['ELEMENTARY', 'MIDDLE', 'HIGH', 'MIXED']).optional().nullable()
+  ),
   // Notification preferences
   notifyProductUpdates: z.boolean().optional(),
   notifyTipsAndTutorials: z.boolean().optional(),
