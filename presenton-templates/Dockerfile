@@ -6,6 +6,3 @@ RUN sed -i 's/DEFAULT_TEMPLATES = \["general", "modern", "standard", "swift"\]/D
 
 # Copy Orbit Learn teacher templates
 COPY orbit-learn-teacher /app/servers/nextjs/presentation-templates/orbit-learn-teacher
-
-# Copy shared schemas
-COPY schemas.ts /app/servers/nextjs/presentation-templates/schemas.ts
