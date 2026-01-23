@@ -7,6 +7,9 @@ RUN sed -i 's/DEFAULT_TEMPLATES = \["general", "modern", "standard", "swift"\]/D
 # Fix: Round border_radius to integer in AutoShapeBox conversion (fixes Pydantic validation error)
 RUN sed -i 's/border_radius: borderRadius || undefined/border_radius: borderRadius ? Math.round(borderRadius) : undefined/' /app/servers/nextjs/utils/pptx_models_utils.ts
 
+# Fix: Correct gemini_flash model name (gemini-2.5-flash-image-preview -> gemini-2.5-flash-image)
+RUN sed -i 's/gemini-2.5-flash-image-preview/gemini-2.5-flash-image/g' /app/servers/fastapi/services/image_generation_service.py
+
 # Copy Orbit Learn teacher templates
 COPY orbit-learn-teacher /app/servers/nextjs/presentation-templates/orbit-learn-teacher
 
