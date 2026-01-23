@@ -7,8 +7,8 @@
 import { TeacherContent, Subject } from '@prisma/client';
 
 // Presenton API configuration
-const PRESENTON_API_URL = 'https://api.presenton.ai/api/v1/ppt/presentation/generate';
-const PRESENTON_API_KEY = process.env.PRESENTON_API_KEY;
+const PRESENTON_API_URL = process.env.PRESENTON_API_URL || 'https://api.presenton.ai/v1/presentation/generate';
+const PRESENTON_API_KEY = process.env.PRESENTON_API_KEY; // Not needed for local self-hosted
 
 // Export options interface
 export interface PresentonExportOptions {
@@ -328,7 +328,7 @@ export async function generateLessonPPTX(
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',
-    template: 'general',
+    template: 'orbit-learn-teacher',
     include_table_of_contents: false,
     include_title_slide: true,
     export_as: 'pptx',
