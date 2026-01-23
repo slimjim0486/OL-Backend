@@ -1167,8 +1167,8 @@ Review your account settings at: ${config.frontendUrl}/parent/settings
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 50px; font-weight: bold; font-size: 17px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
-            ${isUrgent ? 'Get More Credits Now 🚀' : 'View Billing Options 💳'}
+          <a href="${config.frontendUrl}${isUrgent ? '/teacher/billing' : '/teacher/usage'}" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 50px; font-weight: bold; font-size: 17px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
+            ${isUrgent ? 'Get More Credits Now 🚀' : 'View Usage Details 📊'}
           </a>
         </div>
 
@@ -1198,7 +1198,10 @@ ${isUrgent
   : "Need more credits? Upgrade your plan or purchase a credit pack anytime."
 }
 
-Manage your billing at: ${config.frontendUrl}/teacher/billing
+${isUrgent
+  ? `Get more credits at: ${config.frontendUrl}/teacher/billing`
+  : `View your usage details at: ${config.frontendUrl}/teacher/usage`
+}
 
 - The Orbit Learn Team
       `,
