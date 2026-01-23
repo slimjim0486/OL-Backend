@@ -359,8 +359,27 @@ export const subscriptionService = {
     }
 
     // Stripe API returns current_period_end as a number (Unix timestamp)
-    // Use type assertion since Stripe types don't expose this property directly
-    const currentPeriodEnd = (subscription as any).current_period_end as number;
+    // Handle both direct property and items-based period end
+    let currentPeriodEnd: number | undefined;
+
+    if ((subscription as any).current_period_end) {
+      currentPeriodEnd = (subscription as any).current_period_end;
+    } else if (subscription.items?.data?.[0]?.current_period_end) {
+      currentPeriodEnd = (subscription.items.data[0] as any).current_period_end;
+    }
+
+    // Calculate subscription expiry date
+    let subscriptionExpiresAt: Date | null = null;
+    if (currentPeriodEnd && !isNaN(currentPeriodEnd)) {
+      subscriptionExpiresAt = new Date(currentPeriodEnd * 1000);
+    } else {
+      const daysToAdd = subscription.items?.data?.[0]?.price?.recurring?.interval === 'year' ? 365 : 30;
+      subscriptionExpiresAt = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+      logger.warn('Could not determine current_period_end during sync, using fallback expiry', {
+        subscriptionId: subscription.id,
+        fallbackDays: daysToAdd,
+      });
+    }
 
     // Calculate trial end if applicable
     let trialEndsAt: Date | null = null;
@@ -386,6 +405,7 @@ export const subscriptionService = {
       subscriptionStatus,
       tokenQuota,
       currentPeriodEnd,
+      subscriptionExpiresAt,
     });
 
     await prisma.teacher.update({
@@ -394,7 +414,7 @@ export const subscriptionService = {
         subscriptionTier: tier,
         subscriptionStatus,
         stripeSubscriptionId: subscription.id,
-        subscriptionExpiresAt: new Date(currentPeriodEnd * 1000),
+        subscriptionExpiresAt,
         monthlyTokenQuota: BigInt(tokenQuota),
         trialEndsAt,
       },
@@ -438,13 +458,17 @@ export const subscriptionService = {
         const tier = determineTierFromSubscription(subscription) || teacher.subscriptionTier;
 
         // Stripe API returns current_period_end as a number (Unix timestamp)
-        const currentPeriodEnd = (subscription as any).current_period_end as number;
+        const rawPeriodEnd = (subscription as any).current_period_end ||
+          (subscription.items?.data?.[0] as any)?.current_period_end;
+        const currentPeriodEnd = rawPeriodEnd && !isNaN(rawPeriodEnd)
+          ? new Date(rawPeriodEnd * 1000)
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback to 30 days
 
         return {
           id: subscription.id,
           status: subscription.status,
           tier: tier || teacher.subscriptionTier,
-          currentPeriodEnd: new Date(currentPeriodEnd * 1000),
+          currentPeriodEnd,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           isAnnual: priceId ? isAnnualSubscription(priceId) : false,
         };
@@ -481,13 +505,17 @@ export const subscriptionService = {
 
           const priceId = activeSubscription.items.data[0]?.price?.id;
           const tier = determineTierFromSubscription(activeSubscription);
-          const currentPeriodEnd = (activeSubscription as any).current_period_end as number;
+          const rawPeriodEnd = (activeSubscription as any).current_period_end ||
+            (activeSubscription.items?.data?.[0] as any)?.current_period_end;
+          const currentPeriodEnd = rawPeriodEnd && !isNaN(rawPeriodEnd)
+            ? new Date(rawPeriodEnd * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback to 30 days
 
           return {
             id: activeSubscription.id,
             status: activeSubscription.status,
             tier: tier || 'BASIC',
-            currentPeriodEnd: new Date(currentPeriodEnd * 1000),
+            currentPeriodEnd,
             cancelAtPeriodEnd: activeSubscription.cancel_at_period_end,
             isAnnual: priceId ? isAnnualSubscription(priceId) : false,
           };
@@ -667,7 +695,32 @@ export const subscriptionService = {
     }
 
     // Stripe API returns current_period_end as a number (Unix timestamp)
-    const currentPeriodEnd = (subscription as any).current_period_end as number;
+    // Handle both direct property and items-based period end
+    let currentPeriodEnd: number | undefined;
+
+    // Try direct property first (standard location)
+    if ((subscription as any).current_period_end) {
+      currentPeriodEnd = (subscription as any).current_period_end;
+    }
+    // Fallback to items data
+    else if (subscription.items?.data?.[0]?.current_period_end) {
+      currentPeriodEnd = (subscription.items.data[0] as any).current_period_end;
+    }
+
+    // Calculate subscription expiry date
+    let subscriptionExpiresAt: Date | null = null;
+    if (currentPeriodEnd && !isNaN(currentPeriodEnd)) {
+      subscriptionExpiresAt = new Date(currentPeriodEnd * 1000);
+    } else {
+      // Fallback: set expiry to 30 days from now for monthly, 365 for annual
+      const daysToAdd = subscription.items?.data?.[0]?.price?.recurring?.interval === 'year' ? 365 : 30;
+      subscriptionExpiresAt = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+      logger.warn('Could not determine current_period_end, using fallback expiry', {
+        subscriptionId: subscription.id,
+        fallbackDays: daysToAdd,
+        subscriptionExpiresAt,
+      });
+    }
 
     // Update teacher's subscription info
     try {
@@ -676,6 +729,8 @@ export const subscriptionService = {
         subscriptionId: subscription.id,
         tier,
         tokenQuota: creditsToTokens(product.credits),
+        currentPeriodEnd,
+        subscriptionExpiresAt,
       });
 
       await prisma.teacher.update({
@@ -684,7 +739,7 @@ export const subscriptionService = {
           subscriptionTier: tier,
           subscriptionStatus: subscription.status === 'active' || subscription.status === 'trialing' ? 'ACTIVE' : 'PAST_DUE',
           stripeSubscriptionId: subscription.id,
-          subscriptionExpiresAt: new Date(currentPeriodEnd * 1000),
+          subscriptionExpiresAt,
           monthlyTokenQuota: BigInt(creditsToTokens(product.credits)),
           trialEndsAt,
         },
