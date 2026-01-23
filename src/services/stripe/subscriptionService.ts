@@ -15,14 +15,12 @@ import { logger } from '../../utils/logger.js';
 import { TeacherSubscriptionTier, SubscriptionStatus } from '@prisma/client';
 import {
   getProductByTier,
-  getProductByPriceId,
-  getCreditPackByPriceId,
   isAnnualSubscription,
   getTierFromPriceId,
   SUBSCRIPTION_PRODUCTS,
   CREDIT_PACKS,
 } from '../../config/stripeProducts.js';
-import { quotaService, creditsToTokens } from '../teacher/quotaService.js';
+import { creditsToTokens } from '../teacher/quotaService.js';
 import { referralService } from '../sharing/index.js';
 
 // Initialize Stripe client
@@ -84,6 +82,41 @@ function determineTierFromSubscription(subscription: Stripe.Subscription): Teach
   }
 
   return null;
+}
+
+const TIER_RANK: Record<TeacherSubscriptionTier, number> = {
+  FREE: 0,
+  BASIC: 1,
+  PROFESSIONAL: 2,
+};
+
+function isTierDowngrade(
+  currentTier: TeacherSubscriptionTier,
+  nextTier: TeacherSubscriptionTier
+): boolean {
+  return TIER_RANK[nextTier] < TIER_RANK[currentTier];
+}
+
+function shouldDeferDowngrade(
+  currentTier: TeacherSubscriptionTier | null | undefined,
+  nextTier: TeacherSubscriptionTier,
+  subscription: Stripe.Subscription
+): boolean {
+  if (!currentTier || !isTierDowngrade(currentTier, nextTier)) {
+    return false;
+  }
+
+  const pendingUpdate = (subscription as any).pending_update;
+  if (!pendingUpdate) {
+    return false;
+  }
+
+  const billingCycleAnchor = pendingUpdate.billing_cycle_anchor;
+  if (typeof billingCycleAnchor === 'number') {
+    return billingCycleAnchor * 1000 > Date.now();
+  }
+
+  return true;
 }
 
 // =============================================================================
@@ -348,7 +381,33 @@ export const subscriptionService = {
       return;
     }
 
-    const product = getProductByTier(tier);
+    // Check if we should defer a downgrade (pending_update with future billing_cycle_anchor)
+    const existingTeacher = await prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { subscriptionTier: true },
+    });
+
+    const deferDowngrade = shouldDeferDowngrade(
+      existingTeacher?.subscriptionTier,
+      tier,
+      subscription
+    );
+
+    // Use existing tier if downgrade is deferred, otherwise use the detected tier
+    const effectiveTier = deferDowngrade && existingTeacher?.subscriptionTier
+      ? existingTeacher.subscriptionTier
+      : tier;
+
+    if (deferDowngrade) {
+      logger.info('Deferring downgrade during sync until period end', {
+        teacherId,
+        subscriptionId: subscription.id,
+        currentTier: existingTeacher?.subscriptionTier,
+        detectedTier: tier,
+      });
+    }
+
+    const product = getProductByTier(effectiveTier);
     if (!product) {
       logger.error('Could not find product for tier during sync', {
         teacherId,
@@ -411,7 +470,7 @@ export const subscriptionService = {
     await prisma.teacher.update({
       where: { id: teacherId },
       data: {
-        subscriptionTier: tier,
+        subscriptionTier: effectiveTier,
         subscriptionStatus,
         stripeSubscriptionId: subscription.id,
         subscriptionExpiresAt,
@@ -423,7 +482,7 @@ export const subscriptionService = {
     logger.info('Successfully synced subscription from Stripe to database', {
       teacherId,
       subscriptionId: subscription.id,
-      tier,
+      tier: effectiveTier,
     });
   },
 
@@ -455,7 +514,14 @@ export const subscriptionService = {
         const subscription = await stripe.subscriptions.retrieve(teacher.stripeSubscriptionId);
 
         const priceId = subscription.items.data[0]?.price?.id;
-        const tier = determineTierFromSubscription(subscription) || teacher.subscriptionTier;
+        const detectedTier = determineTierFromSubscription(subscription);
+        const effectiveTier = detectedTier && shouldDeferDowngrade(
+          teacher.subscriptionTier,
+          detectedTier,
+          subscription
+        )
+          ? teacher.subscriptionTier
+          : (detectedTier || teacher.subscriptionTier);
 
         // Stripe API returns current_period_end as a number (Unix timestamp)
         const rawPeriodEnd = (subscription as any).current_period_end ||
@@ -467,7 +533,7 @@ export const subscriptionService = {
         return {
           id: subscription.id,
           status: subscription.status,
-          tier: tier || teacher.subscriptionTier,
+          tier: effectiveTier,
           currentPeriodEnd,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           isAnnual: priceId ? isAnnualSubscription(priceId) : false,
@@ -504,7 +570,14 @@ export const subscriptionService = {
           await this.syncSubscriptionFromStripe(teacherId, activeSubscription);
 
           const priceId = activeSubscription.items.data[0]?.price?.id;
-          const tier = determineTierFromSubscription(activeSubscription);
+          const detectedTier = determineTierFromSubscription(activeSubscription);
+          const effectiveTier = detectedTier && shouldDeferDowngrade(
+            teacher.subscriptionTier,
+            detectedTier,
+            activeSubscription
+          )
+            ? teacher.subscriptionTier
+            : (detectedTier || teacher.subscriptionTier);
           const rawPeriodEnd = (activeSubscription as any).current_period_end ||
             (activeSubscription.items?.data?.[0] as any)?.current_period_end;
           const currentPeriodEnd = rawPeriodEnd && !isNaN(rawPeriodEnd)
@@ -514,7 +587,7 @@ export const subscriptionService = {
           return {
             id: activeSubscription.id,
             status: activeSubscription.status,
-            tier: tier || 'BASIC',
+            tier: effectiveTier || 'BASIC',
             currentPeriodEnd,
             cancelAtPeriodEnd: activeSubscription.cancel_at_period_end,
             isAnnual: priceId ? isAnnualSubscription(priceId) : false,
@@ -686,7 +759,30 @@ export const subscriptionService = {
       return;
     }
 
-    const product = getProductByTier(tier);
+    const existingTeacher = await prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { subscriptionTier: true },
+    });
+
+    const shouldDelayDowngrade = shouldDeferDowngrade(
+      existingTeacher?.subscriptionTier,
+      tier,
+      subscription
+    );
+    const effectiveTier = shouldDelayDowngrade && existingTeacher?.subscriptionTier
+      ? existingTeacher.subscriptionTier
+      : tier;
+
+    if (shouldDelayDowngrade) {
+      logger.info('Deferring downgrade until period end', {
+        teacherId,
+        subscriptionId: subscription.id,
+        currentTier: existingTeacher?.subscriptionTier,
+        detectedTier: tier,
+      });
+    }
+
+    const product = getProductByTier(effectiveTier);
 
     // Calculate trial end if applicable
     let trialEndsAt: Date | null = null;
@@ -736,7 +832,7 @@ export const subscriptionService = {
       await prisma.teacher.update({
         where: { id: teacherId },
         data: {
-          subscriptionTier: tier,
+          subscriptionTier: effectiveTier,
           subscriptionStatus: subscription.status === 'active' || subscription.status === 'trialing' ? 'ACTIVE' : 'PAST_DUE',
           stripeSubscriptionId: subscription.id,
           subscriptionExpiresAt,
@@ -748,7 +844,7 @@ export const subscriptionService = {
       logger.info('Subscription created/updated successfully', {
         teacherId,
         subscriptionId: subscription.id,
-        tier,
+        tier: effectiveTier,
         status: subscription.status,
       });
     } catch (dbError: any) {
@@ -853,15 +949,55 @@ export const subscriptionService = {
     // Check if this is a credit pack purchase
     if (session.metadata?.type === 'credit_pack') {
       const credits = parseInt(session.metadata.credits || '0', 10);
-      if (credits > 0) {
-        await quotaService.addBonusCredits(teacherId, credits);
+      const packId = session.metadata.packId;
+
+      if (!packId || credits <= 0) {
+        logger.warn('Credit pack checkout missing pack details', {
+          teacherId,
+          sessionId: session.id,
+          packId,
+          credits,
+        });
+        return;
+      }
+
+      try {
+        await prisma.$transaction([
+          prisma.teacherCreditPackPurchase.create({
+            data: {
+              teacherId,
+              stripeSessionId: session.id,
+              packId,
+              credits,
+            },
+          }),
+          prisma.teacher.update({
+            where: { id: teacherId },
+            data: {
+              bonusCredits: { increment: credits },
+            },
+          }),
+        ]);
 
         logger.info('Credit pack purchased', {
           teacherId,
+          packId,
           credits,
           sessionId: session.id,
         });
+      } catch (error: any) {
+        if (error?.code === 'P2002') {
+          logger.warn('Credit pack purchase already processed', {
+            teacherId,
+            packId,
+            credits,
+            sessionId: session.id,
+          });
+          return;
+        }
+        throw error;
       }
+
       return;
     }
 

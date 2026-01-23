@@ -194,14 +194,15 @@ export const quotaService = {
       return this.checkQuota(teacherId, operation, estimatedTokens);
     }
 
-    // Calculate total available tokens including rollover and bonus credits
-    // For now, these fields might not exist yet in the database
-    const rolledOverTokens = BigInt((teacher as any).rolledOverCredits || 0) * BigInt(TOKENS_PER_CREDIT);
-    const bonusTokens = BigInt((teacher as any).bonusCredits || 0) * BigInt(TOKENS_PER_CREDIT);
-
-    const totalAvailable = monthlyLimit + rolledOverTokens + bonusTokens;
-    const remaining = totalAvailable - currentUsage;
-    const allowed = remaining >= BigInt(estimate);
+    const rolledOverCredits = Number((teacher as any).rolledOverCredits || 0);
+    const bonusCredits = Number((teacher as any).bonusCredits || 0);
+    const { totalRemainingTokens } = calculateRemainingTokens({
+      monthlyLimit,
+      currentUsage,
+      rolledOverCredits,
+      bonusCredits,
+    });
+    const allowed = totalRemainingTokens >= BigInt(estimate);
 
     // Calculate percent used of subscription credits only (for display)
     const percentUsed = monthlyLimit > BigInt(0)
@@ -213,7 +214,7 @@ export const quotaService = {
     const estimatedCost = estimate * costPerToken;
 
     let warning: string | undefined;
-    const remainingCredits = tokensToCredits(remaining);
+    const remainingCredits = tokensToCredits(totalRemainingTokens);
     if (percentUsed >= 90) {
       warning = `Only ${remainingCredits} credits left this month. Get more credits at Settings → Billing to avoid interruptions.`;
     } else if (percentUsed >= 75) {
@@ -222,8 +223,8 @@ export const quotaService = {
 
     return {
       allowed,
-      remainingTokens: remaining,
-      remainingCredits: tokensToCredits(remaining),
+      remainingTokens: totalRemainingTokens,
+      remainingCredits,
       estimatedCost,
       quotaResetDate: resetDate,
       warning,
@@ -251,7 +252,13 @@ export const quotaService = {
     // Get teacher to check org membership
     const teacher = await prisma.teacher.findUnique({
       where: { id: teacherId },
-      select: { organizationId: true },
+      select: {
+        organizationId: true,
+        monthlyTokenQuota: true,
+        currentMonthUsage: true,
+        rolledOverCredits: true,
+        bonusCredits: true,
+      },
     });
 
     if (!teacher) {
@@ -296,11 +303,26 @@ export const quotaService = {
       ]);
     } else {
       // Update individual teacher usage
+      const rolledOverCredits = teacher.rolledOverCredits || 0;
+      const bonusCredits = teacher.bonusCredits || 0;
+      const bonusCreditsToDeduct = calculateBonusCreditsToDeduct({
+        monthlyLimit: teacher.monthlyTokenQuota,
+        currentUsage: teacher.currentMonthUsage,
+        tokensUsed,
+        rolledOverCredits,
+      });
+      const safeBonusDeduction = Math.min(bonusCreditsToDeduct, bonusCredits);
+
+      const updateData: Record<string, unknown> = {
+        currentMonthUsage: { increment: tokensUsed },
+      };
+      if (safeBonusDeduction > 0) {
+        updateData.bonusCredits = { decrement: safeBonusDeduction };
+      }
+
       await prisma.teacher.update({
         where: { id: teacherId },
-        data: {
-          currentMonthUsage: { increment: tokensUsed },
-        },
+        data: updateData,
       });
 
       // Check and send credit usage notifications (async, non-blocking)
@@ -438,19 +460,30 @@ export const quotaService = {
     const rolloverCredits = (teacher as any).rolledOverCredits || 0;
     const bonusCredits = (teacher as any).bonusCredits || 0;
 
-    // Calculate credit balance
+    const {
+      rolloverRemainingTokens,
+      totalRemainingTokens,
+    } = calculateRemainingTokens({
+      monthlyLimit,
+      currentUsage: used,
+      rolledOverCredits: rolloverCredits,
+      bonusCredits,
+    });
+
+    // Calculate credit balance (credits.total = used + remaining)
     const subscriptionCredits = tokensToCredits(monthlyLimit);
-    const totalCredits = subscriptionCredits + rolloverCredits + bonusCredits;
     const usedCredits = tokensToCredits(used);
-    const remainingCredits = totalCredits - usedCredits;
+    const rolloverRemainingCredits = tokensToCredits(rolloverRemainingTokens);
+    const remainingCredits = tokensToCredits(totalRemainingTokens);
+    const totalCredits = usedCredits + remainingCredits;
 
     const creditBalance: CreditBalance = {
       subscription: subscriptionCredits,
-      rollover: rolloverCredits,
+      rollover: rolloverRemainingCredits,
       bonus: bonusCredits,
       total: totalCredits,
       used: usedCredits,
-      remaining: Math.max(0, remainingCredits),
+      remaining: remainingCredits,
     };
 
     const remaining = monthlyLimit - used;
@@ -788,6 +821,65 @@ function getCurrentMonthStart(): Date {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
+function calculateRemainingTokens(params: {
+  monthlyLimit: bigint;
+  currentUsage: bigint;
+  rolledOverCredits: number;
+  bonusCredits: number;
+}): {
+  subscriptionRemainingTokens: bigint;
+  rolloverRemainingTokens: bigint;
+  bonusRemainingTokens: bigint;
+  totalRemainingTokens: bigint;
+  usageBeyondSubscription: bigint;
+} {
+  const { monthlyLimit, currentUsage, rolledOverCredits, bonusCredits } = params;
+  const rolloverTokens = BigInt(rolledOverCredits) * BigInt(TOKENS_PER_CREDIT);
+  const bonusTokens = BigInt(bonusCredits) * BigInt(TOKENS_PER_CREDIT);
+
+  const subscriptionRemainingTokens =
+    currentUsage < monthlyLimit ? monthlyLimit - currentUsage : BigInt(0);
+  const usageBeyondSubscription =
+    currentUsage > monthlyLimit ? currentUsage - monthlyLimit : BigInt(0);
+  const rolloverRemainingTokens =
+    usageBeyondSubscription < rolloverTokens ? rolloverTokens - usageBeyondSubscription : BigInt(0);
+
+  const totalRemainingTokens =
+    subscriptionRemainingTokens + rolloverRemainingTokens + bonusTokens;
+
+  return {
+    subscriptionRemainingTokens,
+    rolloverRemainingTokens,
+    bonusRemainingTokens: bonusTokens,
+    totalRemainingTokens,
+    usageBeyondSubscription,
+  };
+}
+
+function calculateBonusCreditsToDeduct(params: {
+  monthlyLimit: bigint;
+  currentUsage: bigint;
+  tokensUsed: number;
+  rolledOverCredits: number;
+}): number {
+  const { monthlyLimit, currentUsage, tokensUsed, rolledOverCredits } = params;
+  const rolloverTokens = BigInt(rolledOverCredits) * BigInt(TOKENS_PER_CREDIT);
+  const threshold = monthlyLimit + rolloverTokens;
+
+  const usageBefore = currentUsage;
+  const usageAfter = currentUsage + BigInt(tokensUsed);
+
+  const bonusUsageBeforeTokens =
+    usageBefore > threshold ? usageBefore - threshold : BigInt(0);
+  const bonusUsageAfterTokens =
+    usageAfter > threshold ? usageAfter - threshold : BigInt(0);
+
+  const bonusUsedBeforeCredits = tokensToCredits(bonusUsageBeforeTokens);
+  const bonusUsedAfterCredits = tokensToCredits(bonusUsageAfterTokens);
+
+  return Math.max(0, bonusUsedAfterCredits - bonusUsedBeforeCredits);
+}
+
 /**
  * Format tier name for display
  */
@@ -849,9 +941,15 @@ async function checkAndSendCreditNotifications(teacherId: string): Promise<void>
 
   // Calculate credits
   const subscriptionCredits = tokensToCredits(teacher.monthlyTokenQuota);
-  const totalCredits = subscriptionCredits + (teacher.rolledOverCredits || 0) + (teacher.bonusCredits || 0);
   const usedCredits = tokensToCredits(teacher.currentMonthUsage);
-  const remainingCredits = Math.max(0, totalCredits - usedCredits);
+  const { totalRemainingTokens } = calculateRemainingTokens({
+    monthlyLimit: teacher.monthlyTokenQuota,
+    currentUsage: teacher.currentMonthUsage,
+    rolledOverCredits: teacher.rolledOverCredits || 0,
+    bonusCredits: teacher.bonusCredits || 0,
+  });
+  const remainingCredits = tokensToCredits(totalRemainingTokens);
+  const totalCredits = usedCredits + remainingCredits;
 
   // Calculate percentage based on subscription credits (not total with bonuses)
   const percentUsed = subscriptionCredits > 0

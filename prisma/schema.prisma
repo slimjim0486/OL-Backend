@@ -958,6 +958,9 @@ model Teacher {
   referralRewards   ReferralReward[]
   shareableContents ShareableContent[]
 
+  // Credit Pack Purchases
+  creditPackPurchases TeacherCreditPackPurchase[]
+
   // Onboarding
   tutorialCompletedAt DateTime? // When dashboard tutorial was completed (null = not completed)
 
@@ -969,6 +972,18 @@ model Teacher {
   @@index([email])
   @@index([organizationId])
   @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
+}
+
+model TeacherCreditPackPurchase {
+  id             String   @id @default(uuid())
+  teacherId      String
+  teacher        Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  stripeSessionId String  @unique
+  packId         String
+  credits        Int
+  createdAt      DateTime @default(now())
+
+  @@index([teacherId, createdAt])
 }
 
 // ============================================
