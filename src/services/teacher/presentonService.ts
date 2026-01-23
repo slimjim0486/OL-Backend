@@ -367,7 +367,11 @@ export async function generateLessonPPTX(
   console.log(`[Presenton] Presentation generated: ${result.presentation_id}, credits used: ${result.credits_consumed}`);
 
   // Download the generated PPTX file
-  const fileUrl = result.path;
+  // Presenton returns a local path like "/app_data/exports/file.pptx" - convert to full URL
+  const presentonBaseUrl = PRESENTON_API_URL.replace('/api/v1/ppt/presentation/generate', '');
+  const fileUrl = result.path.startsWith('http')
+    ? result.path
+    : `${presentonBaseUrl}${result.path}`;
   console.log(`[Presenton] Downloading PPTX from: ${fileUrl}`);
 
   const fileResponse = await fetch(fileUrl);
