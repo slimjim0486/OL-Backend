@@ -1,13 +1,10 @@
-import { z } from "zod";
-import { ImageSchema } from "../schemas";
+import React from 'react';
+import * as z from "zod";
+import { ImageSchema } from '@/presentation-templates/defaultSchemes';
 
-/**
- * Orbit Learn Teacher Portal - Title Slide
- *
- * The opening slide for lessons featuring the lesson title,
- * subject/grade info, and Orbit Learn branding with a
- * "Retro Classroom" aesthetic.
- */
+export const layoutId = 'orbit-learn-title-slide';
+export const layoutName = 'Title Slide';
+export const layoutDescription = 'Opening slide with lesson title, subject/grade info, and Orbit Learn branding';
 
 export const Schema = z.object({
   title: z
@@ -31,7 +28,7 @@ export const Schema = z.object({
     .max(4)
     .default("📐")
     .meta({
-      description: "A single emoji that represents the lesson topic (e.g., 📐 for math, 🔬 for science, 📚 for reading)"
+      description: "A single emoji that represents the lesson topic"
     }),
   heroImage: ImageSchema.optional().meta({
     description: "Optional decorative image related to the lesson topic"
@@ -40,10 +37,14 @@ export const Schema = z.object({
 
 type SchemaType = z.infer<typeof Schema>;
 
-const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
+interface SlideProps {
+  data?: Partial<SchemaType>;
+}
+
+const SlideComponent: React.FC<SlideProps> = ({ data: slideData }) => {
   return (
     <div
-      className="h-full w-full relative overflow-hidden"
+      className="w-full rounded-sm max-w-[1280px] shadow-lg max-h-[720px] aspect-video relative overflow-hidden"
       style={{
         fontFamily: "'Outfit', sans-serif",
         background: "#FDF8F3"
@@ -90,33 +91,17 @@ const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
           boxShadow: '3px 3px 0px 0px rgba(0,0,0,1)'
         }}
       />
-      <div
-        className="absolute top-1/3 left-8 w-10 h-10 rounded-lg -rotate-12"
-        style={{
-          background: '#7BAE7F',
-          border: '2px solid #000',
-          boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)'
-        }}
-      />
 
       {/* Main content container */}
       <div className="relative z-10 h-full w-full flex flex-col items-center justify-center px-16 py-12">
 
         {/* Orbit Learn Logo - top left */}
         <div className="absolute top-8 left-8 flex items-center gap-3">
-          <img
-            src="/static/orbit-logo.png"
-            alt="Orbit Learn"
-            className="w-10 h-10"
-            style={{
-              filter: 'drop-shadow(2px 2px 0px rgba(0,0,0,0.2))'
-            }}
-          />
           <span
             className="text-lg font-semibold"
             style={{
-              fontFamily: "'Fraunces', serif",
-              color: '#1E2A3A'
+              fontFamily: "'Poppins', sans-serif",
+              color: '#2D5A4A'
             }}
           >
             Orbit Learn
@@ -132,22 +117,18 @@ const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
             boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)'
           }}
         >
-          <span className="text-5xl">{data.decorativeEmoji}</span>
+          <span className="text-5xl">{slideData?.decorativeEmoji || '📐'}</span>
         </div>
 
         {/* Title */}
         <h1
-          className="text-center mb-4 leading-tight"
+          className="text-center mb-4 leading-tight text-5xl font-bold"
           style={{
-            fontFamily: "'Fraunces', serif",
-            fontSize: '3.5rem',
-            fontWeight: 800,
             color: '#1E2A3A',
-            maxWidth: '900px',
-            textShadow: '2px 2px 0px rgba(45,90,74,0.1)'
+            maxWidth: '900px'
           }}
         >
-          {data.title}
+          {slideData?.title || 'Introduction to Fractions'}
         </h1>
 
         {/* Subtitle badge */}
@@ -161,32 +142,11 @@ const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
         >
           <span
             className="text-xl font-semibold"
-            style={{
-              color: '#FDF8F3',
-              fontFamily: "'Outfit', sans-serif"
-            }}
+            style={{ color: '#FDF8F3' }}
           >
-            {data.subtitle}
+            {slideData?.subtitle || 'Mathematics • Grade 3'}
           </span>
         </div>
-
-        {/* Optional hero image */}
-        {data.heroImage?.__image_url__ && (
-          <div
-            className="mt-8 rounded-2xl overflow-hidden"
-            style={{
-              border: '4px solid #000',
-              boxShadow: '6px 6px 0px 0px rgba(0,0,0,1)',
-              maxWidth: '400px'
-            }}
-          >
-            <img
-              src={data.heroImage.__image_url__}
-              alt={data.heroImage.__image_prompt__ || 'Lesson illustration'}
-              className="w-full h-auto"
-            />
-          </div>
-        )}
       </div>
 
       {/* Bottom decorative bar */}

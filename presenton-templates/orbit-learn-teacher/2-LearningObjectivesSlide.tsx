@@ -1,12 +1,10 @@
-import { z } from "zod";
-import { IconSchema } from "../schemas";
+import React from 'react';
+import * as z from "zod";
+import { IconSchema } from '@/presentation-templates/defaultSchemes';
 
-/**
- * Orbit Learn Teacher Portal - Learning Objectives Slide
- *
- * Displays the lesson's learning objectives in a clear,
- * numbered list format with icons for visual engagement.
- */
+export const layoutId = 'orbit-learn-objectives-slide';
+export const layoutName = 'Learning Objectives';
+export const layoutDescription = 'Displays 3-5 learning objectives with numbered badges';
 
 const ObjectiveSchema = z.object({
   text: z
@@ -14,7 +12,7 @@ const ObjectiveSchema = z.object({
     .min(10)
     .max(150)
     .meta({
-      description: "A single learning objective, starting with an action verb (e.g., 'Understand', 'Identify', 'Apply')"
+      description: "A single learning objective, starting with an action verb"
     }),
   icon: IconSchema.optional().meta({
     description: "Optional icon representing this objective"
@@ -27,7 +25,7 @@ export const Schema = z.object({
     .max(40)
     .default("Learning Objectives")
     .meta({
-      description: "The section header, typically 'Learning Objectives' or 'What You'll Learn'"
+      description: "The section header"
     }),
   objectives: z
     .array(ObjectiveSchema)
@@ -36,58 +34,33 @@ export const Schema = z.object({
     .default([
       { text: "Understand the basic concept of fractions as parts of a whole" },
       { text: "Identify numerators and denominators in fraction notation" },
-      { text: "Compare simple fractions using visual models" },
-      { text: "Apply fraction concepts to real-world scenarios" }
+      { text: "Compare simple fractions using visual models" }
     ])
     .meta({
-      description: "List of 2-5 learning objectives for this lesson, each starting with an action verb"
-    }),
-  footerNote: z
-    .string()
-    .max(100)
-    .optional()
-    .meta({
-      description: "Optional note at the bottom (e.g., 'By the end of this lesson...')"
+      description: "List of 2-5 learning objectives for this lesson"
     })
 });
 
 type SchemaType = z.infer<typeof Schema>;
 
-const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
-  const objectives = data.objectives || [];
+interface SlideProps {
+  data?: Partial<SchemaType>;
+}
+
+const SlideComponent: React.FC<SlideProps> = ({ data: slideData }) => {
+  const objectives = slideData?.objectives || [];
 
   return (
     <div
-      className="h-full w-full relative overflow-hidden"
+      className="w-full rounded-sm max-w-[1280px] shadow-lg max-h-[720px] aspect-video relative overflow-hidden"
       style={{
         fontFamily: "'Outfit', sans-serif",
         background: "#FDF8F3"
       }}
     >
-      {/* Subtle background pattern */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `
-            radial-gradient(circle at 90% 10%, rgba(45,90,74,0.08) 0%, transparent 30%),
-            radial-gradient(circle at 10% 90%, rgba(212,168,83,0.1) 0%, transparent 30%)
-          `
-        }}
-      />
-
-      {/* Decorative corner element */}
-      <div
-        className="absolute top-0 right-0 w-32 h-32"
-        style={{
-          background: 'linear-gradient(135deg, #2D5A4A 0%, transparent 100%)',
-          opacity: 0.1
-        }}
-      />
-
       {/* Main content */}
       <div className="relative z-10 h-full w-full flex flex-col px-14 py-10">
-
-        {/* Header with icon */}
+        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <div
             className="w-14 h-14 rounded-xl flex items-center justify-center"
@@ -99,15 +72,8 @@ const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
           >
             <span className="text-2xl">🎯</span>
           </div>
-          <h2
-            style={{
-              fontFamily: "'Fraunces', serif",
-              fontSize: '2.5rem',
-              fontWeight: 700,
-              color: '#1E2A3A'
-            }}
-          >
-            {data.headerTitle}
+          <h2 className="text-4xl font-bold" style={{ color: '#1E2A3A' }}>
+            {slideData?.headerTitle || 'Learning Objectives'}
           </h2>
         </div>
 
@@ -116,14 +82,13 @@ const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
           {objectives.map((objective, index) => (
             <div
               key={index}
-              className="flex items-start gap-4 p-5 rounded-2xl transition-all"
+              className="flex items-start gap-4 p-5 rounded-2xl"
               style={{
                 background: '#FFFFFF',
                 border: '3px solid #000',
                 boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)'
               }}
             >
-              {/* Number badge */}
               <div
                 className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
                 style={{
@@ -134,75 +99,25 @@ const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
                   border: '2px solid #000'
                 }}
               >
-                <span
-                  className="text-xl font-bold"
-                  style={{ color: '#FDF8F3' }}
-                >
+                <span className="text-xl font-bold" style={{ color: '#FDF8F3' }}>
                   {index + 1}
                 </span>
               </div>
-
-              {/* Objective text */}
-              <p
-                className="flex-1 pt-2"
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 500,
-                  color: '#1E2A3A',
-                  lineHeight: 1.5
-                }}
-              >
+              <p className="flex-1 pt-2 text-xl font-medium" style={{ color: '#1E2A3A' }}>
                 {objective.text}
               </p>
-
-              {/* Optional icon */}
-              {objective.icon?.__icon_url__ && (
-                <img
-                  src={objective.icon.__icon_url__}
-                  alt=""
-                  className="w-10 h-10 flex-shrink-0"
-                />
-              )}
             </div>
           ))}
         </div>
-
-        {/* Footer note */}
-        {data.footerNote && (
-          <div
-            className="mt-6 px-5 py-3 rounded-xl"
-            style={{
-              background: 'rgba(45,90,74,0.1)',
-              borderLeft: '4px solid #2D5A4A'
-            }}
-          >
-            <p
-              style={{
-                fontSize: '1rem',
-                color: '#3D4F66',
-                fontStyle: 'italic'
-              }}
-            >
-              {data.footerNote}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Orbit Learn branding - bottom right */}
-      <div className="absolute bottom-6 right-8 flex items-center gap-2 opacity-60">
-        <img
-          src="/static/orbit-logo.png"
-          alt="Orbit Learn"
-          className="w-6 h-6"
-        />
-        <span
-          className="text-sm font-medium"
-          style={{ color: '#3D4F66' }}
-        >
-          Orbit Learn
-        </span>
-      </div>
+      {/* Bottom bar */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-2"
+        style={{
+          background: 'linear-gradient(90deg, #2D5A4A 0%, #D4A853 50%, #C75B39 100%)'
+        }}
+      />
     </div>
   );
 };
