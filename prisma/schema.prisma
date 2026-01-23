@@ -897,6 +897,10 @@ model Teacher {
   primarySubject Subject? // Primary teaching subject
   gradeRange     String? // e.g., "ELEMENTARY", "MIDDLE", "HIGH", "MIXED"
 
+  // Location (captured from IP on login)
+  country     String? // e.g., "United Arab Emirates"
+  countryCode String? // e.g., "AE"
+
   // Email verification (disabled - teachers are auto-verified on signup)
   emailVerified   Boolean   @default(true)
   emailVerifiedAt DateTime?

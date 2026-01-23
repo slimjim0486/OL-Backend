@@ -435,7 +435,7 @@ export const reportsService = {
 
     // Build orderBy
     const orderBy: Prisma.TeacherOrderByWithRelationInput = {};
-    const validSortFields = ['email', 'firstName', 'lastName', 'subscriptionTier', 'createdAt'];
+    const validSortFields = ['email', 'firstName', 'lastName', 'subscriptionTier', 'createdAt', 'lastLoginAt'];
     if (validSortFields.includes(sortBy)) {
       (orderBy as any)[sortBy] = sortOrder;
     } else {
@@ -459,6 +459,8 @@ export const reportsService = {
             schoolName: true,
             primarySubject: true,
             gradeRange: true,
+            country: true,
+            countryCode: true,
             emailVerified: true,
             authProvider: true,
             subscriptionTier: true,
@@ -572,6 +574,7 @@ export const reportsService = {
               audioUpdates: true,
               substitutePlans: true,
               iepGoalSessions: true,
+              exports: true,
             },
           },
         },
@@ -583,6 +586,15 @@ export const reportsService = {
 
       // Calculate total tokens used
       const totalTokensUsed = teacher.tokenUsageLogs.reduce((sum, log) => sum + log.tokensUsed, 0);
+
+      // Count PPTX exports specifically
+      const pptxExportsCount = await prisma.teacherExport.count({
+        where: {
+          teacherId,
+          format: 'PPTX',
+          status: 'COMPLETED',
+        },
+      });
 
       return {
         ...teacher,
@@ -596,6 +608,8 @@ export const reportsService = {
         audioUpdatesCount: teacher._count.audioUpdates,
         subPlansCount: teacher._count.substitutePlans,
         iepGoalsCount: teacher._count.iepGoalSessions,
+        exportsCount: teacher._count.exports,
+        pptxExportsCount,
         recentTokensUsed: totalTokensUsed,
         quotaUsedPercent: Number(teacher.monthlyTokenQuota) > 0
           ? Math.round((Number(teacher.currentMonthUsage) / Number(teacher.monthlyTokenQuota)) * 100)

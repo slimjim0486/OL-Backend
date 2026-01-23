@@ -15,6 +15,7 @@ import { UnauthorizedError, ConflictError, ValidationError, NotFoundError } from
 import { TeacherRole, TeacherSubscriptionTier } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 import { referralService } from '../sharing/index.js';
+import { currencyService } from '../currency/currencyService.js';
 
 const SALT_ROUNDS = 12;
 
@@ -270,10 +271,26 @@ export const teacherAuthService = {
       ipAddress,
     });
 
-    // Update last login
+    // Update last login and capture country from IP (if not already set)
+    const updateData: { lastLoginAt: Date; country?: string; countryCode?: string } = {
+      lastLoginAt: new Date(),
+    };
+
+    if (!teacher.country && ipAddress) {
+      try {
+        const locationInfo = await currencyService.getCurrencyInfoByIP(ipAddress);
+        if (locationInfo.countryCode) {
+          updateData.country = locationInfo.countryName;
+          updateData.countryCode = locationInfo.countryCode;
+        }
+      } catch (err) {
+        logger.warn('Failed to get location from IP for teacher login', { ipAddress, error: err });
+      }
+    }
+
     await prisma.teacher.update({
       where: { id: teacher.id },
-      data: { lastLoginAt: new Date() },
+      data: updateData,
     });
 
     // Calculate quota info
@@ -449,10 +466,26 @@ export const teacherAuthService = {
       ipAddress,
     });
 
-    // Update last login
+    // Update last login and capture country from IP (if not already set)
+    const googleUpdateData: { lastLoginAt: Date; country?: string; countryCode?: string } = {
+      lastLoginAt: new Date(),
+    };
+
+    if (!teacher.country && ipAddress) {
+      try {
+        const locationInfo = await currencyService.getCurrencyInfoByIP(ipAddress);
+        if (locationInfo.countryCode) {
+          googleUpdateData.country = locationInfo.countryName;
+          googleUpdateData.countryCode = locationInfo.countryCode;
+        }
+      } catch (err) {
+        logger.warn('Failed to get location from IP for Google sign-in', { ipAddress, error: err });
+      }
+    }
+
     await prisma.teacher.update({
       where: { id: teacher.id },
-      data: { lastLoginAt: new Date() },
+      data: googleUpdateData,
     });
 
     // Calculate quota info
