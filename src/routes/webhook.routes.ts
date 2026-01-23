@@ -127,6 +127,8 @@ router.post('/stripe-consent', async (req: Request, res: Response) => {
  * - invoice.payment_failed
  */
 router.post('/stripe-subscription', async (req: Request, res: Response) => {
+  logger.info('Teacher subscription webhook endpoint hit');
+
   const signature = req.headers['stripe-signature'] as string;
 
   if (!signature) {
@@ -144,7 +146,12 @@ router.post('/stripe-subscription', async (req: Request, res: Response) => {
       'teacher' // Use teacher subscription webhook secret
     );
   } catch (err: any) {
-    logger.error('Stripe subscription webhook signature verification failed', { error: err.message });
+    logger.error('Stripe subscription webhook signature verification failed', {
+      error: err.message,
+      hint: err.message.includes('not configured')
+        ? 'STRIPE_WEBHOOK_SECRET_TEACHER environment variable is not set'
+        : 'Check that the webhook signing secret matches the one in Stripe Dashboard',
+    });
     return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
   }
 

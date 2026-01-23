@@ -321,4 +321,47 @@ router.get(
   }
 );
 
+/**
+ * POST /api/teacher/subscription/sync
+ * Manually sync subscription from Stripe
+ * Used when webhook fails to update the database
+ */
+router.post(
+  '/sync',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Check Stripe configuration
+      if (!subscriptionService.isConfigured()) {
+        return res.status(503).json({
+          success: false,
+          error: 'Payment system is not configured.',
+        });
+      }
+
+      // Force a sync by fetching subscription info (which will auto-sync if found)
+      const subscriptionInfo = await subscriptionService.getSubscriptionInfo(req.teacher!.id);
+
+      if (subscriptionInfo) {
+        res.json({
+          success: true,
+          message: 'Subscription synced successfully.',
+          data: {
+            subscription: subscriptionInfo,
+          },
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'No active subscription found in Stripe for this account.',
+          hint: 'If you recently completed a purchase, please wait a moment and try again.',
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;

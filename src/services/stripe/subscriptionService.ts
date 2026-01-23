@@ -491,9 +491,26 @@ export const subscriptionService = {
             cancelAtPeriodEnd: activeSubscription.cancel_at_period_end,
             isAnnual: priceId ? isAnnualSubscription(priceId) : false,
           };
+        } else {
+          logger.info('No active subscriptions found for customer in Stripe', {
+            teacherId,
+            customerId: teacher.stripeCustomerId,
+            totalSubscriptions: subscriptions.data.length,
+            statuses: subscriptions.data.map(s => s.status),
+          });
         }
-      } catch (error) {
-        logger.error('Failed to list subscriptions for customer', { error, teacherId, customerId: teacher.stripeCustomerId });
+      } catch (error: any) {
+        // Log detailed error info for debugging
+        logger.error('Failed to list subscriptions for customer', {
+          error: error.message || error,
+          errorType: error.type,
+          errorCode: error.code,
+          teacherId,
+          customerId: teacher.stripeCustomerId,
+          hint: error.code === 'resource_missing'
+            ? 'Customer ID may be from a different Stripe environment (test vs live)'
+            : undefined,
+        });
       }
     }
 
@@ -562,6 +579,13 @@ export const subscriptionService = {
    * Handle subscription created/updated from webhook
    */
   async handleSubscriptionCreated(subscription: Stripe.Subscription): Promise<void> {
+    logger.info('Processing subscription created/updated webhook', {
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      metadata: subscription.metadata,
+      customerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id,
+    });
+
     // Skip family subscriptions - they're handled by familySubscriptionService
     if (subscription.metadata.type === 'family') {
       logger.debug('Skipping family subscription in teacher handler', {
@@ -576,6 +600,11 @@ export const subscriptionService = {
       const customerId = typeof subscription.customer === 'string'
         ? subscription.customer
         : subscription.customer?.id;
+
+      logger.info('teacherId missing from subscription metadata, attempting to find by customer ID', {
+        subscriptionId: subscription.id,
+        customerId,
+      });
 
       if (customerId) {
         const teacher = await prisma.teacher.findFirst({
@@ -604,13 +633,27 @@ export const subscriptionService = {
     }
 
     // Use the helper function with price-based fallback
+    const priceId = subscription.items.data[0]?.price?.id;
+    const priceAmount = subscription.items.data[0]?.price?.unit_amount;
     const tier = determineTierFromSubscription(subscription);
+
+    logger.info('Tier detection result', {
+      subscriptionId: subscription.id,
+      teacherId,
+      priceId,
+      priceAmount,
+      detectedTier: tier,
+      configuredBasicMonthlyPriceId: process.env.STRIPE_PRICE_TEACHER_BASIC_MONTHLY || '(not set)',
+      configuredBasicAnnualPriceId: process.env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL || '(not set)',
+      configuredProMonthlyPriceId: process.env.STRIPE_PRICE_TEACHER_PRO_MONTHLY || '(not set)',
+    });
 
     if (!tier) {
       logger.warn('Could not determine tier from subscription', {
         subscriptionId: subscription.id,
-        priceId: subscription.items.data[0]?.price?.id,
-        priceAmount: subscription.items.data[0]?.price?.unit_amount,
+        priceId,
+        priceAmount,
+        hint: 'Price ID does not match configured IDs and amount-based fallback failed',
       });
       return;
     }
@@ -627,24 +670,45 @@ export const subscriptionService = {
     const currentPeriodEnd = (subscription as any).current_period_end as number;
 
     // Update teacher's subscription info
-    await prisma.teacher.update({
-      where: { id: teacherId },
-      data: {
-        subscriptionTier: tier,
-        subscriptionStatus: subscription.status === 'active' || subscription.status === 'trialing' ? 'ACTIVE' : 'PAST_DUE',
-        stripeSubscriptionId: subscription.id,
-        subscriptionExpiresAt: new Date(currentPeriodEnd * 1000),
-        monthlyTokenQuota: BigInt(creditsToTokens(product.credits)),
-        trialEndsAt,
-      },
-    });
+    try {
+      logger.info('Attempting to update teacher subscription in database', {
+        teacherId,
+        subscriptionId: subscription.id,
+        tier,
+        tokenQuota: creditsToTokens(product.credits),
+      });
 
-    logger.info('Subscription created/updated', {
-      teacherId,
-      subscriptionId: subscription.id,
-      tier,
-      status: subscription.status,
-    });
+      await prisma.teacher.update({
+        where: { id: teacherId },
+        data: {
+          subscriptionTier: tier,
+          subscriptionStatus: subscription.status === 'active' || subscription.status === 'trialing' ? 'ACTIVE' : 'PAST_DUE',
+          stripeSubscriptionId: subscription.id,
+          subscriptionExpiresAt: new Date(currentPeriodEnd * 1000),
+          monthlyTokenQuota: BigInt(creditsToTokens(product.credits)),
+          trialEndsAt,
+        },
+      });
+
+      logger.info('Subscription created/updated successfully', {
+        teacherId,
+        subscriptionId: subscription.id,
+        tier,
+        status: subscription.status,
+      });
+    } catch (dbError: any) {
+      logger.error('Failed to update teacher subscription in database', {
+        teacherId,
+        subscriptionId: subscription.id,
+        tier,
+        error: dbError.message || dbError,
+        errorCode: dbError.code,
+        hint: dbError.code === 'P2025'
+          ? 'Teacher not found in database - teacherId may be invalid'
+          : undefined,
+      });
+      throw dbError; // Re-throw to ensure webhook returns error
+    }
 
     // Handle referral conversion and reward fulfillment
     // Only reward on active subscriptions (not trials)
