@@ -1192,8 +1192,9 @@ export const subscriptionService = {
       }
 
       const promoCode = promoCodes.data[0];
-      // Coupon is expanded, so it's a full Coupon object, not just a string
-      const coupon = promoCode.coupon as Stripe.Coupon;
+      // Coupon is expanded via expand: ['data.coupon'], so access it with type assertion
+      // The Stripe SDK types don't fully represent expanded fields
+      const coupon = (promoCode as any).coupon as Stripe.Coupon;
 
       // Check if coupon is still valid
       if (!coupon.valid) {
