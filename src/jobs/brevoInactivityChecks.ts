@@ -20,6 +20,7 @@
  */
 
 import cron from 'node-cron';
+import { fileURLToPath } from 'url';
 import { prisma } from '../config/database.js';
 import { trackBrevoEvent } from '../services/brevo/brevoTrackingService.js';
 import { logger } from '../utils/logger.js';
@@ -300,8 +301,9 @@ export function scheduleBrevoInactivityChecks(): void {
 // CLI RUNNER
 // ============================================================================
 
-// Allow running directly from command line
-if (require.main === module) {
+// Allow running directly from command line (ESM version)
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMainModule) {
   runBrevoInactivityChecks()
     .then((results) => {
       console.log('Inactivity checks complete:', results);
