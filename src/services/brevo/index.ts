@@ -6,6 +6,8 @@
  */
 
 export {
+  addContactToList,
+  upsertBrevoContact,
   trackBrevoEvent,
   trackLessonCreated,
   trackCreditUsage,

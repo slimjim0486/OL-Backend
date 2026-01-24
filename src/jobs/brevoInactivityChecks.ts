@@ -1,13 +1,13 @@
 /**
  * Brevo Inactivity Check Job
  *
- * Daily cron job that checks for inactive teachers and sends
- * behavioral trigger events to Brevo.
+ * Daily cron job that checks for inactive teachers and adds them
+ * to Brevo lists to trigger automated email sequences.
  *
- * Triggers:
- * - B6: signup_no_lesson_day3 - Signed up 3 days ago, no lessons created
- * - B7: inactive_7_days - Last active 7 days ago, has created at least 1 lesson
- * - B8: inactive_14_days - Last active 14 days ago (final re-engagement)
+ * Lists:
+ * - B6 (List 17): signup_no_lesson_day3 - Signed up 3 days ago, no lessons created
+ * - B7 (List 18): inactive_7_days - Last active 7 days ago, has created at least 1 lesson
+ * - B8 (List 19): inactive_14_days - Last active 14 days ago (final re-engagement)
  *
  * Run this job daily at a consistent time (e.g., 9 AM local time)
  *
@@ -22,8 +22,15 @@
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
 import { prisma } from '../config/database.js';
-import { trackBrevoEvent } from '../services/brevo/brevoTrackingService.js';
+import { addContactToList, upsertBrevoContact } from '../services/brevo/brevoTrackingService.js';
 import { logger } from '../utils/logger.js';
+
+// List IDs for inactivity triggers
+const BREVO_LISTS = {
+  B6_DAY3_NO_LESSON: 17,
+  B7_INACTIVE_7_DAYS: 18,
+  B8_INACTIVE_14_DAYS: 19,
+};
 
 // ============================================================================
 // DATE HELPERS
@@ -109,11 +116,10 @@ async function checkSignupNoLessonDay3(): Promise<number> {
     }).catch(() => null);
 
     if (!alreadySent) {
-      await trackBrevoEvent({
-        email: teacher.email,
-        event: 'signup_no_lesson_day3',
-        properties: buildContactProperties(teacher),
-      });
+      // Update contact attributes first
+      await upsertBrevoContact(teacher.email, buildContactProperties(teacher));
+      // Add to list to trigger automation
+      await addContactToList(teacher.email, BREVO_LISTS.B6_DAY3_NO_LESSON);
 
       // Record trigger sent
       await prisma.teacherTriggerLog?.create({
@@ -170,11 +176,10 @@ async function checkInactive7Days(): Promise<number> {
     }).catch(() => null);
 
     if (!alreadySent) {
-      await trackBrevoEvent({
-        email: teacher.email,
-        event: 'inactive_7_days',
-        properties: buildContactProperties(teacher),
-      });
+      // Update contact attributes first
+      await upsertBrevoContact(teacher.email, buildContactProperties(teacher));
+      // Add to list to trigger automation
+      await addContactToList(teacher.email, BREVO_LISTS.B7_INACTIVE_7_DAYS);
 
       // Record trigger sent
       await prisma.teacherTriggerLog?.create({
@@ -228,11 +233,10 @@ async function checkInactive14Days(): Promise<number> {
     }).catch(() => null);
 
     if (!alreadySent) {
-      await trackBrevoEvent({
-        email: teacher.email,
-        event: 'inactive_14_days',
-        properties: buildContactProperties(teacher),
-      });
+      // Update contact attributes first
+      await upsertBrevoContact(teacher.email, buildContactProperties(teacher));
+      // Add to list to trigger automation
+      await addContactToList(teacher.email, BREVO_LISTS.B8_INACTIVE_14_DAYS);
 
       // Record trigger sent
       await prisma.teacherTriggerLog?.create({
