@@ -46,10 +46,17 @@ function formatBillingDate(timestampSeconds?: number | null): string {
   });
 }
 
+// Type for invoice line item with properties we need from Stripe API
+interface InvoiceLineItemData {
+  type?: string;
+  price?: Stripe.Price | null;
+  period?: { start: number; end: number };
+}
+
 function getInvoiceSubscriptionLine(
   invoice: Stripe.Invoice
-): Stripe.InvoiceLineItem | null {
-  const lines = invoice.lines?.data || [];
+): InvoiceLineItemData | null {
+  const lines = (invoice.lines?.data || []) as unknown as InvoiceLineItemData[];
   return (
     lines.find(line => line.type === 'subscription') ||
     lines.find(line => line.price?.recurring) ||
