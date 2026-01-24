@@ -101,6 +101,8 @@ router.get(
  * POST /api/teacher/subscription/checkout
  * Create a checkout session for subscription
  * Requires verified email to prevent fraud
+ *
+ * Optional: pass promoCode (e.g., "EARLYBIRD30") to auto-apply discount
  */
 router.post(
   '/checkout',
@@ -109,7 +111,7 @@ router.post(
   requireVerifiedEmail,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { tier, isAnnual = false, successUrl, cancelUrl } = req.body;
+      const { tier, isAnnual = false, successUrl, cancelUrl, promoCode } = req.body;
 
       // Validate tier
       if (!tier || !['BASIC', 'PROFESSIONAL'].includes(tier)) {
@@ -140,7 +142,8 @@ router.post(
         tier as TeacherSubscriptionTier,
         isAnnual,
         successUrl,
-        cancelUrl
+        cancelUrl,
+        promoCode // Pass promo code to service
       );
 
       res.json({

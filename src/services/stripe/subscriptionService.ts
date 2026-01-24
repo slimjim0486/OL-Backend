@@ -215,13 +215,15 @@ export const subscriptionService = {
 
   /**
    * Create a checkout session for a subscription
+   * @param promoCode - Optional promo code (e.g., "EARLYBIRD30") to auto-apply
    */
   async createCheckoutSession(
     teacherId: string,
     tier: TeacherSubscriptionTier,
     isAnnual: boolean = false,
     successUrl: string,
-    cancelUrl: string
+    cancelUrl: string,
+    promoCode?: string
   ): Promise<CheckoutSessionResult> {
     if (!stripe) {
       throw new Error('Stripe is not configured');
@@ -284,6 +286,7 @@ export const subscriptionService = {
         isAnnual: isAnnual.toString(),
         type: 'teacher',
         ...(referral && { referralId: referral.id, referralCodeId: referral.referralCodeId }),
+        ...(promoCode && { promoCode }),
       },
       subscription_data: {
         metadata: {
@@ -295,8 +298,38 @@ export const subscriptionService = {
       },
     };
 
-    // Apply referral discount if applicable
-    if (referral) {
+    // Apply promo code if provided (takes precedence over referral discount)
+    if (promoCode) {
+      try {
+        // Look up the promotion code by its customer-facing code
+        const promoCodes = await stripe.promotionCodes.list({
+          code: promoCode,
+          active: true,
+          limit: 1,
+        });
+
+        if (promoCodes.data.length > 0) {
+          sessionParams.discounts = [{ promotion_code: promoCodes.data[0].id }];
+          logger.info('Applying promo code to teacher checkout', {
+            teacherId,
+            promoCode,
+            promotionCodeId: promoCodes.data[0].id,
+          });
+        } else {
+          logger.warn('Promo code not found or inactive', { teacherId, promoCode });
+          // Don't fail checkout - just skip the discount
+        }
+      } catch (error) {
+        logger.error('Error looking up promo code', {
+          teacherId,
+          promoCode,
+          error: error instanceof Error ? error.message : error,
+        });
+        // Don't fail checkout - just skip the discount
+      }
+    }
+    // Apply referral discount if applicable (and no promo code was applied)
+    else if (referral) {
       const refereeCouponId = process.env.STRIPE_COUPON_REFEREE_TEACHER;
       if (refereeCouponId) {
         sessionParams.discounts = [{ coupon: refereeCouponId }];
@@ -319,6 +352,7 @@ export const subscriptionService = {
       teacherId,
       tier,
       isAnnual,
+      promoCode: promoCode || null,
       sessionId: session.id,
     });
 
