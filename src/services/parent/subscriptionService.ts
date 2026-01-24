@@ -13,6 +13,7 @@ import { prisma } from '../../config/database.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
 import { SubscriptionTier } from '@prisma/client';
+import { ConflictError } from '../../middleware/errorHandler.js';
 import {
   getFamilyProductByTier,
   getFamilyProductByPriceId,
@@ -31,6 +32,54 @@ const stripe = config.stripe.secretKey
       apiVersion: '2025-11-17.clover',
     })
   : null;
+
+const ACTIVE_SUBSCRIPTION_STATUSES: Stripe.Subscription['status'][] = [
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+  'paused',
+];
+
+function isActiveSubscription(subscription: Stripe.Subscription): boolean {
+  return ACTIVE_SUBSCRIPTION_STATUSES.includes(subscription.status);
+}
+
+function isFamilySubscription(subscription: Stripe.Subscription): boolean {
+  if (subscription.metadata?.type === 'family') {
+    return true;
+  }
+
+  const priceId = subscription.items.data[0]?.price?.id;
+  return !!(priceId && getFamilyProductByPriceId(priceId));
+}
+
+async function findActiveFamilySubscription(
+  customerId: string
+): Promise<Stripe.Subscription | null> {
+  if (!stripe) {
+    return null;
+  }
+
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 10,
+  });
+
+  const activeSubscription = subscriptions.data.find(isActiveSubscription) || null;
+
+  if (activeSubscription && !isFamilySubscription(activeSubscription)) {
+    logger.warn('Active subscription found for family customer with unexpected metadata', {
+      customerId,
+      subscriptionId: activeSubscription.id,
+      metadata: activeSubscription.metadata,
+    });
+  }
+
+  return activeSubscription;
+}
 
 // =============================================================================
 // TYPES
@@ -153,6 +202,23 @@ export const familySubscriptionService = {
 
     const customerId = await this.getOrCreateCustomer(parentId);
 
+    const activeSubscription = await findActiveFamilySubscription(customerId);
+    if (activeSubscription) {
+      try {
+        await this.syncSubscriptionFromStripe(parentId, activeSubscription);
+      } catch (error) {
+        logger.warn('Failed to sync existing family subscription before checkout', {
+          parentId,
+          subscriptionId: activeSubscription.id,
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+
+      throw new ConflictError(
+        'You already have an active subscription. Use Manage Billing to update or resume your plan.'
+      );
+    }
+
     // Check if this parent was referred and has a valid referral
     const referral = await prisma.referral.findFirst({
       where: {
@@ -247,6 +313,72 @@ export const familySubscriptionService = {
   },
 
   /**
+   * Sync subscription from Stripe to database
+   * This is used when webhook updates are missed or subscription data is out of sync.
+   */
+  async syncSubscriptionFromStripe(parentId: string, subscription: Stripe.Subscription): Promise<void> {
+    const priceId = subscription.items.data[0]?.price?.id;
+    const tier = priceId ? getFamilyTierFromPriceId(priceId) : null;
+
+    if (!tier) {
+      logger.warn('Could not determine tier from Stripe subscription during sync', {
+        parentId,
+        subscriptionId: subscription.id,
+        priceId,
+      });
+      return;
+    }
+
+    let currentPeriodEnd: number | undefined;
+    if ((subscription as any).current_period_end) {
+      currentPeriodEnd = (subscription as any).current_period_end;
+    } else if (subscription.items?.data?.[0]?.current_period_end) {
+      currentPeriodEnd = (subscription.items.data[0] as any).current_period_end;
+    }
+
+    let subscriptionExpiresAt: Date | null = null;
+    if (currentPeriodEnd && !isNaN(currentPeriodEnd)) {
+      subscriptionExpiresAt = new Date(currentPeriodEnd * 1000);
+    } else {
+      const interval = subscription.items?.data?.[0]?.price?.recurring?.interval;
+      const fallbackDays = interval === 'year' ? 365 : 30;
+      subscriptionExpiresAt = new Date(Date.now() + fallbackDays * 24 * 60 * 60 * 1000);
+      logger.warn('Could not determine current_period_end during family sync, using fallback expiry', {
+        parentId,
+        subscriptionId: subscription.id,
+        fallbackDays,
+      });
+    }
+
+    let trialEndsAt: Date | null = null;
+    if (subscription.trial_end) {
+      trialEndsAt = new Date(subscription.trial_end * 1000);
+    }
+
+    const subscriptionStatus = (subscription.status === 'active' || subscription.status === 'trialing')
+      ? 'ACTIVE' as const
+      : 'PAST_DUE' as const;
+
+    await prisma.parent.update({
+      where: { id: parentId },
+      data: {
+        subscriptionTier: tier,
+        subscriptionStatus,
+        stripeSubscriptionId: subscription.id,
+        subscriptionExpiresAt,
+        trialEndsAt,
+      },
+    });
+
+    logger.info('Synced family subscription from Stripe', {
+      parentId,
+      subscriptionId: subscription.id,
+      tier,
+      status: subscription.status,
+    });
+  },
+
+  /**
    * Get current subscription info for a parent
    */
   async getSubscriptionInfo(parentId: string): Promise<FamilySubscriptionInfo | null> {
@@ -265,6 +397,57 @@ export const familySubscriptionService = {
     });
 
     if (!parent?.stripeSubscriptionId) {
+      if (parent?.stripeCustomerId) {
+        try {
+          const activeSubscription = await findActiveFamilySubscription(parent.stripeCustomerId);
+
+          if (activeSubscription) {
+            logger.info('Found active family subscription in Stripe that was missing from database - syncing', {
+              parentId,
+              subscriptionId: activeSubscription.id,
+              customerId: parent.stripeCustomerId,
+            });
+
+            await this.syncSubscriptionFromStripe(parentId, activeSubscription);
+
+            const priceId = activeSubscription.items.data[0]?.price?.id;
+            const tier = priceId ? getFamilyTierFromPriceId(priceId) : parent.subscriptionTier;
+            const product = getFamilyProductByTier(tier || 'FREE');
+
+            const rawPeriodEnd = (activeSubscription as any).current_period_end ||
+              (activeSubscription.items?.data?.[0] as any)?.current_period_end;
+            const interval = activeSubscription.items?.data?.[0]?.price?.recurring?.interval;
+            const fallbackDays = interval === 'year' ? 365 : 30;
+            const currentPeriodEnd = rawPeriodEnd && !isNaN(rawPeriodEnd)
+              ? new Date(rawPeriodEnd * 1000)
+              : new Date(Date.now() + fallbackDays * 24 * 60 * 60 * 1000);
+
+            const trialEnd = activeSubscription.trial_end;
+            const isInTrial = activeSubscription.status === 'trialing';
+            const trialEndsAt = trialEnd ? new Date(trialEnd * 1000) : null;
+
+            return {
+              id: activeSubscription.id,
+              status: activeSubscription.status,
+              tier: tier || parent.subscriptionTier,
+              currentPeriodEnd,
+              cancelAtPeriodEnd: activeSubscription.cancel_at_period_end,
+              isAnnual: priceId ? isFamilyAnnualSubscription(priceId) : false,
+              childLimit: product.childLimit,
+              lessonLimit: product.lessonsPerMonth,
+              isInTrial,
+              trialEndsAt,
+            };
+          }
+        } catch (error) {
+          logger.error('Failed to list family subscriptions for customer', {
+            error: error instanceof Error ? error.message : error,
+            parentId,
+            customerId: parent.stripeCustomerId,
+          });
+        }
+      }
+
       // Return info for FREE tier (no Stripe subscription)
       const product = getFamilyProductByTier(parent?.subscriptionTier || 'FREE');
       return {
@@ -288,10 +471,15 @@ export const familySubscriptionService = {
       const tier = priceId ? getFamilyTierFromPriceId(priceId) : parent.subscriptionTier;
       const product = getFamilyProductByTier(tier || 'FREE');
 
-      // Stripe API returns current_period_end as a number (Unix timestamp)
-      const currentPeriodEnd = (subscription as any).current_period_end as number;
-      const trialEnd = subscription.trial_end;
+      const rawPeriodEnd = (subscription as any).current_period_end ||
+        (subscription.items?.data?.[0] as any)?.current_period_end;
+      const interval = subscription.items?.data?.[0]?.price?.recurring?.interval;
+      const fallbackDays = interval === 'year' ? 365 : 30;
+      const currentPeriodEnd = rawPeriodEnd && !isNaN(rawPeriodEnd)
+        ? new Date(rawPeriodEnd * 1000)
+        : new Date(Date.now() + fallbackDays * 24 * 60 * 60 * 1000);
 
+      const trialEnd = subscription.trial_end;
       const isInTrial = subscription.status === 'trialing';
       const trialEndsAt = trialEnd ? new Date(trialEnd * 1000) : null;
 
@@ -299,7 +487,7 @@ export const familySubscriptionService = {
         id: subscription.id,
         status: subscription.status,
         tier: tier || parent.subscriptionTier,
-        currentPeriodEnd: new Date(currentPeriodEnd * 1000),
+        currentPeriodEnd,
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
         isAnnual: priceId ? isFamilyAnnualSubscription(priceId) : false,
         childLimit: product.childLimit,

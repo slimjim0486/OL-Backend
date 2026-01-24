@@ -8,14 +8,55 @@
  */
 
 import { Router, Request, Response } from 'express';
+import Stripe from 'stripe';
+import { prisma } from '../config/database.js';
+import { getProductByTier, getTierFromPriceId } from '../config/stripeProducts.js';
+import { getFamilyProductByTier, getFamilyTierFromPriceId } from '../config/stripeProductsFamily.js';
+import { consentService } from '../services/auth/consentService.js';
+import { emailService } from '../services/email/emailService.js';
+import { familySubscriptionService } from '../services/parent/subscriptionService.js';
 import { stripeService } from '../services/stripe/index.js';
 import { subscriptionService } from '../services/stripe/subscriptionService.js';
-import { familySubscriptionService } from '../services/parent/subscriptionService.js';
-import { consentService } from '../services/auth/consentService.js';
 import { logger } from '../utils/logger.js';
-import Stripe from 'stripe';
 
 const router = Router();
+
+const DEFAULT_CURRENCY = 'USD';
+
+function formatAmount(amount: number, currency?: string | null): string {
+  const normalizedCurrency = (currency || DEFAULT_CURRENCY).toUpperCase();
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: normalizedCurrency,
+    }).format(amount / 100);
+  } catch (error) {
+    return `$${(amount / 100).toFixed(2)}`;
+  }
+}
+
+function formatBillingDate(timestampSeconds?: number | null): string {
+  if (!timestampSeconds) {
+    return 'See billing portal';
+  }
+  return new Date(timestampSeconds * 1000).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function getInvoiceSubscriptionLine(
+  invoice: Stripe.Invoice
+): Stripe.InvoiceLineItem | null {
+  const lines = invoice.lines?.data || [];
+  return (
+    lines.find(line => line.type === 'subscription') ||
+    lines.find(line => line.price?.recurring) ||
+    lines[0] ||
+    null
+  );
+}
 
 /**
  * Stripe webhook for credit card consent verification
@@ -240,6 +281,72 @@ router.post('/stripe-subscription', async (req: Request, res: Response) => {
           subscriptionId,
           amountPaid: invoice.amount_paid,
         });
+
+        if (invoice.billing_reason !== 'subscription_cycle') {
+          logger.info('Skipping teacher renewal email for non-renewal invoice', {
+            invoiceId: invoice.id,
+            billingReason: invoice.billing_reason,
+          });
+          break;
+        }
+
+        if (!subscriptionId) {
+          logger.warn('Teacher invoice paid without subscription ID', { invoiceId: invoice.id });
+          break;
+        }
+
+        try {
+          const lineItem = getInvoiceSubscriptionLine(invoice);
+          const priceId = lineItem?.price?.id;
+          const interval = lineItem?.price?.recurring?.interval;
+          const fallbackDays = interval === 'year' ? 365 : 30;
+          const fallbackEnd = interval
+            ? Math.floor(Date.now() / 1000) + fallbackDays * 24 * 60 * 60
+            : undefined;
+          const nextBillingDate = formatBillingDate(lineItem?.period?.end || fallbackEnd);
+          const amountPaid = formatAmount(invoice.amount_paid, invoice.currency);
+          const receiptUrl = invoice.hosted_invoice_url || invoice.invoice_pdf || null;
+          const invoiceNumber = invoice.number || null;
+
+          const teacher = await prisma.teacher.findFirst({
+            where: { stripeSubscriptionId: subscriptionId },
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
+              subscriptionTier: true,
+            },
+          });
+
+          if (!teacher?.email) {
+            logger.warn('Teacher subscription renewal email skipped - missing teacher', {
+              subscriptionId,
+              invoiceId: invoice.id,
+            });
+            break;
+          }
+
+          const tier = priceId ? getTierFromPriceId(priceId) : teacher.subscriptionTier;
+          const planName = tier ? getProductByTier(tier).name : 'Teacher Plan';
+          const teacherName = [teacher.firstName, teacher.lastName].filter(Boolean).join(' ') || 'there';
+
+          await emailService.sendTeacherSubscriptionRenewalEmail(
+            teacher.email,
+            teacherName,
+            planName,
+            amountPaid,
+            nextBillingDate,
+            receiptUrl,
+            invoiceNumber
+          );
+        } catch (error) {
+          logger.error('Failed to send teacher subscription renewal email', {
+            invoiceId: invoice.id,
+            subscriptionId,
+            error: error instanceof Error ? error.message : error,
+          });
+        }
+
         // Subscription update handled by customer.subscription.updated
         break;
       }
@@ -373,6 +480,72 @@ router.post('/stripe-family', async (req: Request, res: Response) => {
           subscriptionId,
           amountPaid: invoice.amount_paid,
         });
+
+        if (invoice.billing_reason !== 'subscription_cycle') {
+          logger.info('Skipping family renewal email for non-renewal invoice', {
+            invoiceId: invoice.id,
+            billingReason: invoice.billing_reason,
+          });
+          break;
+        }
+
+        if (!subscriptionId) {
+          logger.warn('Family invoice paid without subscription ID', { invoiceId: invoice.id });
+          break;
+        }
+
+        try {
+          const lineItem = getInvoiceSubscriptionLine(invoice);
+          const priceId = lineItem?.price?.id;
+          const interval = lineItem?.price?.recurring?.interval;
+          const fallbackDays = interval === 'year' ? 365 : 30;
+          const fallbackEnd = interval
+            ? Math.floor(Date.now() / 1000) + fallbackDays * 24 * 60 * 60
+            : undefined;
+          const nextBillingDate = formatBillingDate(lineItem?.period?.end || fallbackEnd);
+          const amountPaid = formatAmount(invoice.amount_paid, invoice.currency);
+          const receiptUrl = invoice.hosted_invoice_url || invoice.invoice_pdf || null;
+          const invoiceNumber = invoice.number || null;
+
+          const parent = await prisma.parent.findFirst({
+            where: { stripeSubscriptionId: subscriptionId },
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
+              subscriptionTier: true,
+            },
+          });
+
+          if (!parent?.email) {
+            logger.warn('Family subscription renewal email skipped - missing parent', {
+              subscriptionId,
+              invoiceId: invoice.id,
+            });
+            break;
+          }
+
+          const tier = priceId ? getFamilyTierFromPriceId(priceId) : parent.subscriptionTier;
+          const planName = tier ? getFamilyProductByTier(tier).name : 'Family Plan';
+          const parentName = [parent.firstName, parent.lastName].filter(Boolean).join(' ') || 'there';
+
+          await emailService.sendParentSubscriptionRenewalEmail(
+            parent.email,
+            parentName,
+            planName,
+            amountPaid,
+            nextBillingDate,
+            receiptUrl,
+            invoiceNumber
+          );
+        } catch (error) {
+          logger.error('Failed to send family subscription renewal email', {
+            invoiceId: invoice.id,
+            subscriptionId,
+            error: error instanceof Error ? error.message : error,
+          });
+        }
+
         // Subscription update handled by customer.subscription.updated
         break;
       }

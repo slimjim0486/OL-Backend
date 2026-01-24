@@ -761,6 +761,234 @@ If you didn't create an account, please ignore this email.
   }),
 
   /**
+   * Subscription renewal confirmation (parent)
+   */
+  subscriptionRenewalParent: (
+    parentName: string,
+    planName: string,
+    amountPaid: string,
+    nextBillingDate: string,
+    receiptUrl?: string | null,
+    invoiceNumber?: string | null
+  ) => {
+    const receiptSection = receiptUrl
+      ? `
+        <div style="text-align: center; margin: 24px 0 8px;">
+          <a href="${receiptUrl}" style="display: inline-block; background: #ffffff; color: #7C3AED; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; border: 2px solid #C4B5FD;">
+            View Receipt
+          </a>
+        </div>
+      `
+      : '';
+
+    const invoiceRow = invoiceNumber
+      ? `
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Invoice:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${invoiceNumber}</td>
+            </tr>
+        `
+      : '';
+
+    return {
+      subject: `✅ Subscription Renewed - ${planName}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Renewed</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">Subscription Renewed</h1>
+        <p style="color: rgba(255,255,255,0.95); margin-top: 8px; font-size: 16px;">
+          Thanks for being part of Orbit Learn!
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Hi ${parentName},
+        </p>
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Your ${planName} subscription has been renewed successfully.
+        </p>
+
+        <div style="background: linear-gradient(135deg, #EDE9FE 0%, #CCFBF1 100%); border-radius: 16px; padding: 20px; margin: 24px 0;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Plan:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${planName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Amount Paid:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${amountPaid}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Next Billing Date:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${nextBillingDate}</td>
+            </tr>
+            ${invoiceRow}
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0 16px;">
+          <a href="${config.frontendUrl}/parent/billing" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
+            Manage Billing
+          </a>
+        </div>
+        ${receiptSection}
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          Questions? Reply to this email or contact support.<br><br>
+          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
+      text: `
+Subscription Renewed
+
+Hi ${parentName},
+
+Your ${planName} subscription has been renewed successfully.
+
+Plan: ${planName}
+Amount Paid: ${amountPaid}
+Next Billing Date: ${nextBillingDate}
+${invoiceNumber ? `Invoice: ${invoiceNumber}\n` : ''}${receiptUrl ? `Receipt: ${receiptUrl}\n` : ''}
+Manage billing: ${config.frontendUrl}/parent/billing
+
+Questions? Reply to this email or contact support.
+- The Orbit Learn Team
+      `,
+    };
+  },
+
+  /**
+   * Subscription renewal confirmation (teacher)
+   */
+  subscriptionRenewalTeacher: (
+    teacherName: string,
+    planName: string,
+    amountPaid: string,
+    nextBillingDate: string,
+    receiptUrl?: string | null,
+    invoiceNumber?: string | null
+  ) => {
+    const receiptSection = receiptUrl
+      ? `
+        <div style="text-align: center; margin: 24px 0 8px;">
+          <a href="${receiptUrl}" style="display: inline-block; background: #ffffff; color: #059669; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; border: 2px solid #A7F3D0;">
+            View Receipt
+          </a>
+        </div>
+      `
+      : '';
+
+    const invoiceRow = invoiceNumber
+      ? `
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Invoice:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${invoiceNumber}</td>
+            </tr>
+        `
+      : '';
+
+    return {
+      subject: `✅ Subscription Renewed - ${planName}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Renewed</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">Subscription Renewed</h1>
+        <p style="color: rgba(255,255,255,0.95); margin-top: 8px; font-size: 16px;">
+          Thanks for building with Orbit Learn!
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Hi ${teacherName},
+        </p>
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Your ${planName} subscription has been renewed successfully.
+        </p>
+
+        <div style="background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%); border-radius: 16px; padding: 20px; margin: 24px 0;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Plan:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${planName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Amount Paid:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${amountPaid}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Next Billing Date:</td>
+              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${nextBillingDate}</td>
+            </tr>
+            ${invoiceRow}
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0 16px;">
+          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #059669 0%, #10B981 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
+            Manage Billing
+          </a>
+        </div>
+        ${receiptSection}
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          Questions? Reply to this email or contact support.<br><br>
+          <span style="color: #10B981;">- The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
+      text: `
+Subscription Renewed
+
+Hi ${teacherName},
+
+Your ${planName} subscription has been renewed successfully.
+
+Plan: ${planName}
+Amount Paid: ${amountPaid}
+Next Billing Date: ${nextBillingDate}
+${invoiceNumber ? `Invoice: ${invoiceNumber}\n` : ''}${receiptUrl ? `Receipt: ${receiptUrl}\n` : ''}
+Manage billing: ${config.frontendUrl}/teacher/billing
+
+Questions? Reply to this email or contact support.
+- The Orbit Learn Team
+      `,
+    };
+  },
+
+  /**
    * Usage warning email (70% and 90% thresholds)
    */
   usageWarning: (
@@ -1782,6 +2010,54 @@ export const emailService = {
     }
   },
 
+  /**
+   * Send subscription renewal email to parent
+   */
+  async sendParentSubscriptionRenewalEmail(
+    email: string,
+    parentName: string,
+    planName: string,
+    amountPaid: string,
+    nextBillingDate: string,
+    receiptUrl?: string | null,
+    invoiceNumber?: string | null
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped parent subscription renewal email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.subscriptionRenewalParent(
+        parentName,
+        planName,
+        amountPaid,
+        nextBillingDate,
+        receiptUrl,
+        invoiceNumber
+      );
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send parent subscription renewal email', { error, email });
+        return false;
+      }
+
+      logger.info(`Parent subscription renewal email sent to ${email}`);
+      return true;
+    } catch (error) {
+      logger.error('Error sending parent subscription renewal email', { error, email });
+      return false;
+    }
+  },
+
   // =====================================================
   // TEACHER PORTAL EMAIL METHODS
   // =====================================================
@@ -1868,6 +2144,54 @@ export const emailService = {
       return true;
     } catch (error) {
       logger.error('Error sending teacher credit limit reached email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send subscription renewal email to teacher
+   */
+  async sendTeacherSubscriptionRenewalEmail(
+    email: string,
+    teacherName: string,
+    planName: string,
+    amountPaid: string,
+    nextBillingDate: string,
+    receiptUrl?: string | null,
+    invoiceNumber?: string | null
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped teacher subscription renewal email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.subscriptionRenewalTeacher(
+        teacherName,
+        planName,
+        amountPaid,
+        nextBillingDate,
+        receiptUrl,
+        invoiceNumber
+      );
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send teacher subscription renewal email', { error, email });
+        return false;
+      }
+
+      logger.info(`Teacher subscription renewal email sent to ${email}`);
+      return true;
+    } catch (error) {
+      logger.error('Error sending teacher subscription renewal email', { error, email });
       return false;
     }
   },

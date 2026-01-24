@@ -13,6 +13,7 @@ import { prisma } from '../../config/database.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
 import { TeacherSubscriptionTier, SubscriptionStatus } from '@prisma/client';
+import { ConflictError } from '../../middleware/errorHandler.js';
 import {
   getProductByTier,
   isAnnualSubscription,
@@ -29,6 +30,35 @@ const stripe = config.stripe.secretKey
       apiVersion: '2025-11-17.clover',
     })
   : null;
+
+const ACTIVE_SUBSCRIPTION_STATUSES: Stripe.Subscription['status'][] = [
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+  'paused',
+];
+
+function isActiveSubscription(subscription: Stripe.Subscription): boolean {
+  return ACTIVE_SUBSCRIPTION_STATUSES.includes(subscription.status);
+}
+
+async function findActiveTeacherSubscription(
+  customerId: string
+): Promise<Stripe.Subscription | null> {
+  if (!stripe) {
+    return null;
+  }
+
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 10,
+  });
+
+  return subscriptions.data.find(isActiveSubscription) || null;
+}
 
 // =============================================================================
 // TYPES
@@ -209,6 +239,23 @@ export const subscriptionService = {
     }
 
     const customerId = await this.getOrCreateCustomer(teacherId);
+
+    const activeSubscription = await findActiveTeacherSubscription(customerId);
+    if (activeSubscription) {
+      try {
+        await this.syncSubscriptionFromStripe(teacherId, activeSubscription);
+      } catch (error) {
+        logger.warn('Failed to sync existing teacher subscription before checkout', {
+          teacherId,
+          subscriptionId: activeSubscription.id,
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+
+      throw new ConflictError(
+        'You already have an active subscription. Use Manage Billing to update or resume your plan.'
+      );
+    }
 
     // Check if this teacher was referred and has a valid referral
     const referral = await prisma.referral.findFirst({
