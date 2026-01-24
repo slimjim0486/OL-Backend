@@ -51,7 +51,14 @@ import voiceRoutes from './routes/voice.routes.js';
 // Services initialization
 import { initializeContentProcessor, shutdownContentProcessor } from './services/learning/contentProcessor.js';
 import { badgeService } from './services/gamification/badgeService.js';
-import { initializeMemoryAggregationJob, shutdownMemoryAggregationJob, initializeExportJob, shutdownExportJob } from './jobs/index.js';
+import {
+  initializeMemoryAggregationJob,
+  shutdownMemoryAggregationJob,
+  initializeExportJob,
+  shutdownExportJob,
+  initializeDocumentAnalysisJob,
+  shutdownDocumentAnalysisJob,
+} from './jobs/index.js';
 
 // Validate environment
 try {
@@ -248,6 +255,14 @@ async function startServer(): Promise<void> {
       logger.warn('Export job initialization skipped');
     }
 
+    // Initialize document analysis job queue (async PDF/PPT analysis)
+    try {
+      await initializeDocumentAnalysisJob();
+      logger.info('Document analysis job initialized');
+    } catch (error) {
+      logger.warn('Document analysis job initialization skipped');
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
@@ -264,6 +279,7 @@ async function startServer(): Promise<void> {
           await shutdownContentProcessor();
           await shutdownMemoryAggregationJob();
           await shutdownExportJob();
+          await shutdownDocumentAnalysisJob();
           await prisma.$disconnect();
           await redis.quit();
           logger.info('Server shut down successfully');

@@ -14,3 +14,12 @@ export {
 } from './exportJob.js';
 
 export type { ExportJobData } from './exportJob.js';
+
+export {
+  initializeDocumentAnalysisJob,
+  shutdownDocumentAnalysisJob,
+  queueDocumentAnalysisJob,
+  getDocumentAnalysisQueueStatus,
+} from './documentAnalysisJob.js';
+
+export type { DocumentAnalysisJobData } from './documentAnalysisJob.js';

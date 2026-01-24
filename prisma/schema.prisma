@@ -955,6 +955,7 @@ model Teacher {
   substitutePlans SubstitutePlan[]
   iepGoalSessions IEPGoalSession[]
   exports         TeacherExport[]
+  documentAnalyses TeacherDocumentAnalysis[]
 
   // Referral & Sharing
   referralCode      ReferralCode?
@@ -2230,6 +2231,13 @@ enum ContentStatus {
   ARCHIVED
 }
 
+enum DocumentAnalysisStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum TokenOperation {
   CONTENT_ANALYSIS
   LESSON_GENERATION
@@ -2543,4 +2551,30 @@ model TeacherExport {
   @@index([teacherId, createdAt])
   @@index([teacherId, status])
   @@index([status, createdAt]) // For cleanup jobs
+}
+
+// ============================================
+// TEACHER PORTAL - DOCUMENT ANALYSIS JOBS
+// ============================================
+
+model TeacherDocumentAnalysis {
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  filename String?
+  mimeType String
+
+  status       DocumentAnalysisStatus @default(QUEUED)
+  result       Json?
+  errorMessage String?
+
+  tokensUsed Int?
+  modelUsed  String?
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([teacherId, createdAt])
+  @@index([teacherId, status])
 }

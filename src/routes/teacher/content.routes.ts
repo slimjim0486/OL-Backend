@@ -6,8 +6,16 @@ import { geminiService } from '../../services/ai/geminiService.js';
 import { authenticateTeacher, requireTeacher } from '../../middleware/teacherAuth.js';
 import { validateInput } from '../../middleware/validateInput.js';
 import { z } from 'zod';
-import { TeacherContentType, ContentStatus, Subject, SourceType, TokenOperation } from '@prisma/client';
+import {
+  TeacherContentType,
+  ContentStatus,
+  Subject,
+  SourceType,
+  TokenOperation,
+  DocumentAnalysisStatus,
+} from '@prisma/client';
 import { prisma } from '../../config/database.js';
+import { queueDocumentAnalysisJob } from '../../jobs/index.js';
 
 const router = Router();
 
@@ -577,6 +585,80 @@ router.post(
   }
 );
 
+/**
+ * POST /api/teacher/content/analyze-pdf-async
+ * Queue a PDF analysis job and return job status
+ */
+router.post(
+  '/analyze-pdf-async',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(analyzePDFSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { pdfBase64, filename } = req.body;
+
+      // Check file size (base64 is ~33% larger than original)
+      // 10MB PDF = ~13.3MB base64
+      const maxBase64Size = 14 * 1024 * 1024; // ~14MB base64 = ~10MB PDF
+      if (pdfBase64.length > maxBase64Size) {
+        res.status(400).json({
+          success: false,
+          error: 'PDF file too large',
+          message: 'PDF files must be under 10MB. Please compress your PDF or split it into smaller files.',
+        });
+        return;
+      }
+
+      const estimatedTokens = 4000;
+      await quotaService.enforceQuota(
+        req.teacher!.id,
+        TokenOperation.CONTENT_ANALYSIS,
+        estimatedTokens
+      );
+
+      const analysisRecord = await prisma.teacherDocumentAnalysis.create({
+        data: {
+          teacherId: req.teacher!.id,
+          filename: filename || 'document.pdf',
+          mimeType: 'application/pdf',
+          status: DocumentAnalysisStatus.QUEUED,
+        },
+      });
+
+      try {
+        await queueDocumentAnalysisJob({
+          analysisId: analysisRecord.id,
+          teacherId: req.teacher!.id,
+          mimeType: 'application/pdf',
+          fileBase64: pdfBase64,
+          filename: filename || 'document.pdf',
+        });
+      } catch (queueError) {
+        await prisma.teacherDocumentAnalysis.update({
+          where: { id: analysisRecord.id },
+          data: {
+            status: DocumentAnalysisStatus.FAILED,
+            errorMessage: 'Failed to queue PDF analysis job',
+          },
+        });
+        throw queueError;
+      }
+
+      res.status(202).json({
+        success: true,
+        data: {
+          analysisId: analysisRecord.id,
+          status: analysisRecord.status,
+        },
+        message: 'PDF analysis queued',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // ============================================
 // PPT ANALYSIS ROUTES
 // ============================================
@@ -659,6 +741,124 @@ router.post(
           filename: filename || 'presentation.pptx',
         },
         message: 'PowerPoint analyzed successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/content/analyze-ppt-async
+ * Queue a PPT analysis job and return job status
+ */
+router.post(
+  '/analyze-ppt-async',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(analyzePPTSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { pptBase64, filename, mimeType } = req.body;
+
+      // Check file size (base64 is ~33% larger than original)
+      // 10MB PPT = ~13.3MB base64
+      const maxBase64Size = 14 * 1024 * 1024; // ~14MB base64 = ~10MB PPT
+      if (pptBase64.length > maxBase64Size) {
+        res.status(400).json({
+          success: false,
+          error: 'PowerPoint file too large',
+          message: 'PowerPoint files must be under 10MB. Please compress your file or split it into smaller presentations.',
+        });
+        return;
+      }
+
+      const estimatedTokens = 5000;
+      await quotaService.enforceQuota(
+        req.teacher!.id,
+        TokenOperation.CONTENT_ANALYSIS,
+        estimatedTokens
+      );
+
+      const analysisRecord = await prisma.teacherDocumentAnalysis.create({
+        data: {
+          teacherId: req.teacher!.id,
+          filename: filename || 'presentation.pptx',
+          mimeType,
+          status: DocumentAnalysisStatus.QUEUED,
+        },
+      });
+
+      try {
+        await queueDocumentAnalysisJob({
+          analysisId: analysisRecord.id,
+          teacherId: req.teacher!.id,
+          mimeType,
+          fileBase64: pptBase64,
+          filename: filename || 'presentation.pptx',
+        });
+      } catch (queueError) {
+        await prisma.teacherDocumentAnalysis.update({
+          where: { id: analysisRecord.id },
+          data: {
+            status: DocumentAnalysisStatus.FAILED,
+            errorMessage: 'Failed to queue PowerPoint analysis job',
+          },
+        });
+        throw queueError;
+      }
+
+      res.status(202).json({
+        success: true,
+        data: {
+          analysisId: analysisRecord.id,
+          status: analysisRecord.status,
+        },
+        message: 'PowerPoint analysis queued',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/teacher/content/analyze-jobs/:id
+ * Get document analysis job status/results
+ */
+router.get(
+  '/analyze-jobs/:id',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const analysis = await prisma.teacherDocumentAnalysis.findFirst({
+        where: {
+          id: req.params.id,
+          teacherId: req.teacher!.id,
+        },
+      });
+
+      if (!analysis) {
+        res.status(404).json({
+          success: false,
+          error: 'Analysis job not found',
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          analysisId: analysis.id,
+          status: analysis.status,
+          filename: analysis.filename,
+          mimeType: analysis.mimeType,
+          result: analysis.result,
+          errorMessage: analysis.errorMessage,
+          createdAt: analysis.createdAt,
+          completedAt: analysis.completedAt,
+        },
       });
     } catch (error) {
       next(error);
