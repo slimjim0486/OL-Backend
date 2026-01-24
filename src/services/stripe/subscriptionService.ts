@@ -1158,6 +1158,91 @@ export const subscriptionService = {
       savings: pack.savings,
     }));
   },
+
+  /**
+   * Validate a promo code and return its discount details
+   * Returns null if the code is invalid or expired
+   */
+  async validatePromoCode(code: string): Promise<{
+    code: string;
+    percentOff: number | null;
+    amountOff: number | null;
+    currency: string | null;
+    duration: 'forever' | 'once' | 'repeating';
+    durationInMonths: number | null;
+    name: string | null;
+    valid: boolean;
+  } | null> {
+    if (!stripe) {
+      throw new Error('Stripe is not configured');
+    }
+
+    try {
+      // Look up the promotion code by its customer-facing code
+      const promoCodes = await stripe.promotionCodes.list({
+        code: code.toUpperCase(),
+        active: true,
+        limit: 1,
+        expand: ['data.coupon'],
+      });
+
+      if (promoCodes.data.length === 0) {
+        logger.info('Promo code not found or inactive', { code });
+        return null;
+      }
+
+      const promoCode = promoCodes.data[0];
+      const coupon = promoCode.coupon;
+
+      // Check if coupon is still valid
+      if (!coupon.valid) {
+        logger.info('Promo code coupon is no longer valid', { code, couponId: coupon.id });
+        return null;
+      }
+
+      // Check redemption limits
+      if (promoCode.max_redemptions && promoCode.times_redeemed >= promoCode.max_redemptions) {
+        logger.info('Promo code has reached max redemptions', {
+          code,
+          maxRedemptions: promoCode.max_redemptions,
+          timesRedeemed: promoCode.times_redeemed,
+        });
+        return null;
+      }
+
+      // Check expiration
+      if (promoCode.expires_at && promoCode.expires_at * 1000 < Date.now()) {
+        logger.info('Promo code has expired', { code, expiresAt: promoCode.expires_at });
+        return null;
+      }
+
+      logger.info('Promo code validated successfully', {
+        code,
+        couponId: coupon.id,
+        percentOff: coupon.percent_off,
+        amountOff: coupon.amount_off,
+        duration: coupon.duration,
+        durationInMonths: coupon.duration_in_months,
+      });
+
+      return {
+        code: code.toUpperCase(),
+        percentOff: coupon.percent_off,
+        amountOff: coupon.amount_off,
+        currency: coupon.currency,
+        duration: coupon.duration,
+        durationInMonths: coupon.duration_in_months,
+        name: coupon.name,
+        valid: true,
+      };
+    } catch (error) {
+      logger.error('Error validating promo code', {
+        code,
+        error: error instanceof Error ? error.message : error,
+      });
+      return null;
+    }
+  },
 };
 
 export default subscriptionService;

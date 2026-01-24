@@ -62,6 +62,49 @@ router.get('/credit-packs', async (req: Request, res: Response, next: NextFuncti
   }
 });
 
+/**
+ * GET /api/teacher/subscription/validate-promo
+ * Validate a promo code and get its discount details (public)
+ * Query params: code (required)
+ * Returns: discount info from Stripe coupon
+ */
+router.get('/validate-promo', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { code } = req.query;
+
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Promo code is required.',
+      });
+    }
+
+    // Check Stripe configuration
+    if (!subscriptionService.isConfigured()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Payment system is not configured.',
+      });
+    }
+
+    const promoDetails = await subscriptionService.validatePromoCode(code);
+
+    if (!promoDetails) {
+      return res.status(404).json({
+        success: false,
+        error: 'Invalid or expired promo code.',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: promoDetails,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // =============================================================================
 // PROTECTED ENDPOINTS (Auth required)
 // =============================================================================
