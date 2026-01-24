@@ -10,7 +10,7 @@ import { prisma } from '../config/database.js';
 import { geminiService } from '../services/ai/geminiService.js';
 import { analyzePPT, isPPTMimeType } from '../services/learning/pptProcessor.js';
 import { quotaService } from '../services/teacher/index.js';
-import { DocumentAnalysisStatus, TokenOperation } from '@prisma/client';
+import { DocumentAnalysisStatus, TokenOperation, Prisma } from '@prisma/client';
 
 const QUEUE_NAME = 'teacher-document-analysis';
 const PDF_ESTIMATED_TOKENS = 4000;
@@ -149,7 +149,7 @@ async function processDocumentAnalysisJob(
       where: { id: analysisId },
       data: {
         status: DocumentAnalysisStatus.COMPLETED,
-        result: resultData,
+        result: resultData as Prisma.InputJsonValue,
         tokensUsed,
         modelUsed: MODEL_USED,
         completedAt: new Date(),
