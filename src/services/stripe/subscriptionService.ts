@@ -1192,7 +1192,8 @@ export const subscriptionService = {
       }
 
       const promoCode = promoCodes.data[0];
-      const coupon = promoCode.coupon;
+      // Coupon is expanded, so it's a full Coupon object, not just a string
+      const coupon = promoCode.coupon as Stripe.Coupon;
 
       // Check if coupon is still valid
       if (!coupon.valid) {
