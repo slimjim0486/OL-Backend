@@ -38,6 +38,9 @@ import parentSubscriptionRoutes from './routes/parent/index.js';
 import adminRoutes from './routes/admin/index.js';
 import ocrRoutes from './routes/ocr.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+
+// Cron Jobs
+import { scheduleBrevoInactivityChecks } from './jobs/brevoInactivityChecks.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -268,6 +271,11 @@ async function startServer(): Promise<void> {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
       logger.info(`Environment: ${config.nodeEnv}`);
       logger.info(`Frontend URL: ${config.frontendUrl}`);
+
+      // Schedule Brevo inactivity checks (B6, B7, B8 behavioral triggers)
+      // Runs daily at 9 AM to check for inactive teachers
+      scheduleBrevoInactivityChecks();
+      logger.info('Brevo inactivity checks scheduled for 9:00 AM daily');
     });
 
     // Graceful shutdown

@@ -16,6 +16,7 @@ import { TeacherRole, TeacherSubscriptionTier } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 import { referralService } from '../sharing/index.js';
 import { currencyService } from '../currency/currencyService.js';
+import { trackTeacherSignup, trackTeacherActivity } from '../brevo/brevoTrackingService.js';
 
 const SALT_ROUNDS = 12;
 
@@ -187,6 +188,11 @@ export const teacherAuthService = {
 
     logger.info(`Teacher account created and logged in: ${teacher.email}${referralApplied ? ' (with referral)' : ''}`);
 
+    // Track signup in Brevo for behavioral email triggers
+    trackTeacherSignup(teacher).catch(err => {
+      logger.warn('Brevo signup tracking failed', { error: err.message, teacherId: teacher.id });
+    });
+
     // Calculate quota info (same as login)
     const monthlyLimit = teacher.monthlyTokenQuota;
     const used = teacher.currentMonthUsage;
@@ -271,9 +277,10 @@ export const teacherAuthService = {
       ipAddress,
     });
 
-    // Update last login and capture country from IP (if not already set)
-    const updateData: { lastLoginAt: Date; country?: string; countryCode?: string } = {
+    // Update last login, last active, and capture country from IP (if not already set)
+    const updateData: { lastLoginAt: Date; lastActiveAt: Date; country?: string; countryCode?: string } = {
       lastLoginAt: new Date(),
+      lastActiveAt: new Date(),
     };
 
     if (!teacher.country && ipAddress) {
@@ -288,9 +295,14 @@ export const teacherAuthService = {
       }
     }
 
-    await prisma.teacher.update({
+    const updatedTeacher = await prisma.teacher.update({
       where: { id: teacher.id },
       data: updateData,
+    });
+
+    // Track activity in Brevo for behavioral email triggers
+    trackTeacherActivity(updatedTeacher).catch(err => {
+      logger.warn('Brevo activity tracking failed', { error: err.message, teacherId: teacher.id });
     });
 
     // Calculate quota info

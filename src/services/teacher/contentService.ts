@@ -3,6 +3,7 @@ import { prisma } from '../../config/database.js';
 import { TeacherContentType, ContentStatus, Subject, TokenOperation, SourceType } from '@prisma/client';
 import { quotaService } from './quotaService.js';
 import { logger } from '../../utils/logger.js';
+import { trackLessonCreated } from '../brevo/brevoTrackingService.js';
 
 // ============================================
 // TYPES
@@ -110,6 +111,28 @@ export const contentService = {
       hasInfographicUrl: !!input.infographicUrl,
       infographicUrl: input.infographicUrl?.substring(0, 100), // Log first 100 chars
     });
+
+    // Track lesson creation in Brevo for behavioral email triggers (B1, B2, B3)
+    if (input.contentType === 'LESSON') {
+      try {
+        const updatedTeacher = await prisma.teacher.update({
+          where: { id: teacherId },
+          data: {
+            lessonCount: { increment: 1 },
+            lastActiveAt: new Date(),
+          },
+        });
+
+        // Fire Brevo event (non-blocking)
+        trackLessonCreated({
+          teacher: updatedTeacher,
+          lessonTitle: input.title,
+          lessonSubject: input.subject?.toString(),
+        }).catch(err => logger.warn('Brevo tracking failed', { error: err.message }));
+      } catch (err: any) {
+        logger.warn('Failed to update teacher lesson count', { error: err.message });
+      }
+    }
 
     return content;
   },

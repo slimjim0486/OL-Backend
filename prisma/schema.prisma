@@ -969,14 +969,22 @@ model Teacher {
   // Onboarding
   tutorialCompletedAt DateTime? // When dashboard tutorial was completed (null = not completed)
 
+  // Brevo behavioral email tracking
+  lastActiveAt DateTime? // Track last activity for inactivity triggers
+  lessonCount  Int       @default(0) // Cached count for quick access
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
+  // Brevo trigger logs
+  triggerLogs TeacherTriggerLog[]
+
   @@index([email])
   @@index([organizationId])
   @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
+  @@index([lastActiveAt]) // For inactivity queries
 }
 
 model TeacherCreditPackPurchase {
@@ -2577,4 +2585,22 @@ model TeacherDocumentAnalysis {
 
   @@index([teacherId, createdAt])
   @@index([teacherId, status])
+}
+
+// ============================================
+// BREVO BEHAVIORAL EMAIL TRACKING
+// ============================================
+
+model TeacherTriggerLog {
+  id          String   @id @default(uuid())
+  teacherId   String
+  teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  triggerName String // e.g., "credits_50_percent", "inactive_7_days"
+  monthKey    String // e.g., "2026-0" for January 2026
+  sentAt      DateTime @default(now())
+  metadata    Json? // Optional additional data
+
+  @@index([teacherId])
+  @@index([triggerName])
+  @@index([teacherId, triggerName])
 }

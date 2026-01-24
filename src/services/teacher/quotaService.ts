@@ -4,6 +4,7 @@ import { TokenOperation, TeacherSubscriptionTier } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 import { PaymentRequiredError } from '../../middleware/errorHandler.js';
 import { emailService } from '../email/emailService.js';
+import { trackCreditUsage } from '../brevo/brevoTrackingService.js';
 
 // =============================================================================
 // TOKEN COSTS (Updated December 2025 - Google Gemini API Pricing)
@@ -330,6 +331,14 @@ export const quotaService = {
       checkAndSendCreditNotifications(teacherId).catch((err) => {
         logger.error('Failed to check/send credit notifications', { error: err, teacherId });
       });
+
+      // Track credit usage in Brevo for behavioral triggers (B4, B5)
+      const updatedTeacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
+      if (updatedTeacher) {
+        trackCreditUsage(updatedTeacher).catch((err) => {
+          logger.warn('Brevo credit tracking failed', { error: err.message });
+        });
+      }
     }
 
     logger.info(`Token usage recorded`, {
