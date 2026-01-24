@@ -171,35 +171,48 @@ export async function trackLessonCreated(data: TeacherEventData): Promise<void> 
   });
 
   // Fire specific milestone events (only for FREE tier to avoid spamming paid users)
+  // Use deduplication to prevent multiple milestone emails in quick succession
   if (teacher.subscriptionTier === 'FREE') {
     if (lessonCount === 1) {
-      await trackBrevoEvent({
-        email: teacher.email,
-        event: 'first_lesson_created',
-        properties,
-        eventdata: { lesson_title: lessonTitle },
-      });
-      logger.info('Triggered B1: First lesson created', { email: teacher.email });
+      const alreadySent = await checkTriggerSentThisMonth(teacher.id, 'first_lesson_created');
+      if (!alreadySent) {
+        await trackBrevoEvent({
+          email: teacher.email,
+          event: 'first_lesson_created',
+          properties,
+          eventdata: { lesson_title: lessonTitle },
+        });
+        await recordTriggerSent(teacher.id, 'first_lesson_created');
+        logger.info('Triggered B1: First lesson created', { email: teacher.email });
+      }
     }
 
     if (lessonCount === 2) {
-      await trackBrevoEvent({
-        email: teacher.email,
-        event: 'second_lesson_created',
-        properties,
-        eventdata: { lesson_title: lessonTitle },
-      });
-      logger.info('Triggered B2: Second lesson created', { email: teacher.email });
+      const alreadySent = await checkTriggerSentThisMonth(teacher.id, 'second_lesson_created');
+      if (!alreadySent) {
+        await trackBrevoEvent({
+          email: teacher.email,
+          event: 'second_lesson_created',
+          properties,
+          eventdata: { lesson_title: lessonTitle },
+        });
+        await recordTriggerSent(teacher.id, 'second_lesson_created');
+        logger.info('Triggered B2: Second lesson created', { email: teacher.email });
+      }
     }
 
     if (lessonCount === 3) {
-      await trackBrevoEvent({
-        email: teacher.email,
-        event: 'third_lesson_created',
-        properties,
-        eventdata: { lesson_title: lessonTitle },
-      });
-      logger.info('Triggered B3: Third lesson (activation!)', { email: teacher.email });
+      const alreadySent = await checkTriggerSentThisMonth(teacher.id, 'third_lesson_created');
+      if (!alreadySent) {
+        await trackBrevoEvent({
+          email: teacher.email,
+          event: 'third_lesson_created',
+          properties,
+          eventdata: { lesson_title: lessonTitle },
+        });
+        await recordTriggerSent(teacher.id, 'third_lesson_created');
+        logger.info('Triggered B3: Third lesson (activation!)', { email: teacher.email });
+      }
     }
   }
 }
