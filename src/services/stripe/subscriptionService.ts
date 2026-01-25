@@ -1209,10 +1209,8 @@ export const subscriptionService = {
       }
 
       // Fetch the coupon separately to get full details
-      // promoCode.coupon is the coupon ID (string)
-      const couponId = typeof promoCode.coupon === 'string'
-        ? promoCode.coupon
-        : promoCode.coupon.id;
+      // promoCode.coupon is the coupon ID - use type assertion since Stripe types are incomplete
+      const couponId = (promoCode as any).coupon as string;
 
       const coupon = await stripe.coupons.retrieve(couponId);
 
