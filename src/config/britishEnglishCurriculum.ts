@@ -1,18 +1,25 @@
 /**
  * British National Curriculum - English Standards
- * Years 1-9 (Key Stages 1, 2, and 3)
+ * Years 1-13 (Key Stages 1, 2, 3, 4, and 5)
  *
- * Source: GOV.UK National Curriculum in England
- * https://www.gov.uk/government/publications/national-curriculum-in-england-english-programmes-of-study/national-curriculum-in-england-english-programmes-of-study
+ * Sources:
+ * - KS1-3: GOV.UK National Curriculum in England
+ *   https://www.gov.uk/government/publications/national-curriculum-in-england-english-programmes-of-study
+ * - KS4 (GCSE): DfE GCSE English Language and Literature Subject Content (2015)
+ *   https://www.gov.uk/government/publications/gcse-english-language
+ *   https://www.gov.uk/government/publications/gcse-english-literature
+ * - KS5 (A-Level): DfE GCE AS and A Level English Subject Content (2014)
+ *   https://www.gov.uk/government/publications/gce-as-and-a-level-english-language-and-literature
  *
  * VERIFIED: 2025-01-15 against official GOV.UK documentation
  *
  * Notation System: UK.KS{keyStage}.Y{year}.EN.{strand}.{number}
  * - UK = United Kingdom
- * - KS = Key Stage (1, 2, or 3)
- * - Y = Year (1-9)
+ * - KS = Key Stage (1, 2, 3, 4, or 5)
+ * - Y = Year (1-13)
  * - EN = English
  * - Strand codes:
+ *   KS1/KS2:
  *   - SL = Spoken Language
  *   - RWR = Reading - Word Reading
  *   - RC = Reading - Comprehension
@@ -20,10 +27,32 @@
  *   - WTH = Writing - Transcription (Handwriting)
  *   - WC = Writing - Composition
  *   - WVG = Writing - Vocabulary, Grammar and Punctuation
- *   - R = Reading (KS3)
- *   - W = Writing (KS3)
- *   - GV = Grammar and Vocabulary (KS3)
- *   - SE = Spoken English (KS3)
+ *   KS3:
+ *   - R = Reading
+ *   - W = Writing
+ *   - GV = Grammar and Vocabulary
+ *   - SE = Spoken English
+ *   KS4 (GCSE English Language):
+ *   - EL.R = English Language - Reading
+ *   - EL.W = English Language - Writing
+ *   - EL.SL = English Language - Spoken Language
+ *   KS4 (GCSE English Literature):
+ *   - LIT.R = Literature - Reading
+ *   - LIT.CR = Literature - Critical Reading
+ *   - LIT.W = Literature - Writing about Literature
+ *   KS5 (A-Level English Language):
+ *   - AL.TL = Textual Analysis and Representation
+ *   - AL.LC = Language Change
+ *   - AL.CV = Child Language Acquisition
+ *   - AL.LD = Language Diversity
+ *   - AL.LV = Language and Variation
+ *   - AL.NE = Non-Examined Assessment
+ *   KS5 (A-Level English Literature):
+ *   - LT.DR = Drama
+ *   - LT.PR = Prose
+ *   - LT.PO = Poetry
+ *   - LT.CR = Critical Analysis
+ *   - LT.NE = Non-Examined Assessment
  */
 
 export interface BritishNCEnglishStandard {
@@ -2465,6 +2494,636 @@ const year9Standards: BritishNCEnglishStandard[] = [
 ];
 
 // =============================================================================
+// KEY STAGE 4: YEAR 10 - GCSE English Language & Literature (Ages 14-15)
+// =============================================================================
+
+const year10Standards: BritishNCEnglishStandard[] = [
+  // ENGLISH LANGUAGE - Reading
+  {
+    notation: 'UK.KS4.Y10.EN.EL.R.1',
+    strand: 'English Language - Reading',
+    description: 'identify and interpret explicit and implicit information and ideas',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.R.2',
+    strand: 'English Language - Reading',
+    description: 'select and synthesise evidence from different texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.R.3',
+    strand: 'English Language - Reading',
+    description: 'explain, comment on and analyse how writers use language and structure to achieve effects and influence readers',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.R.4',
+    strand: 'English Language - Reading',
+    description: 'compare writers\' ideas and perspectives, as well as how these are conveyed, across two or more texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.R.5',
+    strand: 'English Language - Reading',
+    description: 'evaluate texts critically and support this with appropriate textual references',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.R.6',
+    strand: 'English Language - Reading',
+    description: 'read a wide range of texts fluently and with good understanding, including literary non-fiction and other writing',
+    isStatutory: true
+  },
+  // ENGLISH LANGUAGE - Writing
+  {
+    notation: 'UK.KS4.Y10.EN.EL.W.1',
+    strand: 'English Language - Writing',
+    description: 'communicate clearly, effectively and imaginatively, selecting and adapting tone, style and register for different forms, purposes and audiences',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.W.2',
+    strand: 'English Language - Writing',
+    description: 'organise information and ideas, using structural and grammatical features to support coherence and cohesion of texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.W.3',
+    strand: 'English Language - Writing',
+    description: 'use a range of vocabulary and sentence structures for clarity, purpose and effect, with accurate spelling and punctuation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.W.4',
+    strand: 'English Language - Writing',
+    description: 'write for a range of purposes and audiences, including narratives, descriptions, persuasive texts and arguments',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.W.5',
+    strand: 'English Language - Writing',
+    description: 'apply Standard English conventions consistently and accurately in writing',
+    isStatutory: true
+  },
+  // ENGLISH LANGUAGE - Spoken Language
+  {
+    notation: 'UK.KS4.Y10.EN.EL.SL.1',
+    strand: 'English Language - Spoken Language',
+    description: 'present information and ideas clearly to an audience, adapting speech to different contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.SL.2',
+    strand: 'English Language - Spoken Language',
+    description: 'respond appropriately to questions and feedback, exploring ideas in depth',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.EL.SL.3',
+    strand: 'English Language - Spoken Language',
+    description: 'use Standard English in formal situations and understanding its importance',
+    isStatutory: true
+  },
+  // ENGLISH LITERATURE - Reading
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.R.1',
+    strand: 'English Literature - Reading',
+    description: 'read a wide range of literature including whole texts from different forms, periods and cultures',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.R.2',
+    strand: 'English Literature - Reading',
+    description: 'read and evaluate texts critically, making references to texts and considering how meaning is shaped',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.R.3',
+    strand: 'English Literature - Reading',
+    description: 'study at least one Shakespeare play and experience a range of poetry since 1789, including the Romantics',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.R.4',
+    strand: 'English Literature - Reading',
+    description: 'study a 19th century novel and fiction or drama from the British literary heritage',
+    isStatutory: true
+  },
+  // ENGLISH LITERATURE - Critical Reading
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.CR.1',
+    strand: 'English Literature - Critical Reading',
+    description: 'understand and critically evaluate texts, making comparisons between different texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.CR.2',
+    strand: 'English Literature - Critical Reading',
+    description: 'analyse the language, form and structure used by a writer to create meanings and effects',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.CR.3',
+    strand: 'English Literature - Critical Reading',
+    description: 'explore relationships between texts and the contexts in which they were written',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.CR.4',
+    strand: 'English Literature - Critical Reading',
+    description: 'use literary and critical terminology accurately in discussing and writing about texts',
+    isStatutory: true
+  },
+  // ENGLISH LITERATURE - Writing about Literature
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.W.1',
+    strand: 'English Literature - Writing about Literature',
+    description: 'write analytical essays on texts studied, supporting interpretations with textual references',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.W.2',
+    strand: 'English Literature - Writing about Literature',
+    description: 'structure responses coherently, using appropriate register and vocabulary for literary analysis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.EN.LIT.W.3',
+    strand: 'English Literature - Writing about Literature',
+    description: 'develop and sustain interpretations of literary texts, considering alternative readings',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
+// KEY STAGE 4: YEAR 11 - GCSE English Language & Literature (Ages 15-16)
+// =============================================================================
+
+const year11Standards: BritishNCEnglishStandard[] = [
+  // ENGLISH LANGUAGE - Advanced Reading
+  {
+    notation: 'UK.KS4.Y11.EN.EL.R.1',
+    strand: 'English Language - Reading',
+    description: 'compare and contrast writers\' viewpoints across multiple texts on similar themes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.EL.R.2',
+    strand: 'English Language - Reading',
+    description: 'analyse unseen fiction and non-fiction texts, identifying and interpreting themes and ideas',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.EL.R.3',
+    strand: 'English Language - Reading',
+    description: 'evaluate how language features and structural choices create effects in different text types',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.EL.R.4',
+    strand: 'English Language - Reading',
+    description: 'demonstrate sophisticated understanding of how writers construct meaning using linguistic and structural techniques',
+    isStatutory: true
+  },
+  // ENGLISH LANGUAGE - Advanced Writing
+  {
+    notation: 'UK.KS4.Y11.EN.EL.W.1',
+    strand: 'English Language - Writing',
+    description: 'write with technical accuracy using a varied vocabulary and range of sentence structures',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.EL.W.2',
+    strand: 'English Language - Writing',
+    description: 'produce extended pieces of writing that are well-organised and sustain coherence throughout',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.EL.W.3',
+    strand: 'English Language - Writing',
+    description: 'demonstrate control of a range of writing styles appropriate to purpose, form and audience',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.EL.W.4',
+    strand: 'English Language - Writing',
+    description: 'craft language for deliberate effects and create compelling narratives or arguments',
+    isStatutory: true
+  },
+  // ENGLISH LITERATURE - Drama Study
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.DR.1',
+    strand: 'English Literature - Drama',
+    description: 'analyse Shakespeare\'s use of language, form and dramatic conventions to create character and convey themes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.DR.2',
+    strand: 'English Literature - Drama',
+    description: 'evaluate the significance of stagecraft in creating meaning and dramatic effect',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.DR.3',
+    strand: 'English Literature - Drama',
+    description: 'understand the influence of historical and social context on dramatic texts',
+    isStatutory: true
+  },
+  // ENGLISH LITERATURE - Prose Study
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.PR.1',
+    strand: 'English Literature - Prose',
+    description: 'analyse narrative techniques and their effects in 19th century fiction',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.PR.2',
+    strand: 'English Literature - Prose',
+    description: 'understand the relationship between texts and their social, historical and cultural contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.PR.3',
+    strand: 'English Literature - Prose',
+    description: 'compare and contrast prose texts, considering themes, characterisation and narrative voice',
+    isStatutory: true
+  },
+  // ENGLISH LITERATURE - Poetry Study
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.PO.1',
+    strand: 'English Literature - Poetry',
+    description: 'analyse poetic techniques including imagery, form, rhythm and tone',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.PO.2',
+    strand: 'English Literature - Poetry',
+    description: 'compare poems thematically, considering how meaning is created and conveyed',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.PO.3',
+    strand: 'English Literature - Poetry',
+    description: 'analyse unseen poetry, identifying and interpreting language and structural features',
+    isStatutory: true
+  },
+  // ENGLISH LITERATURE - Critical Comparison
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.CR.1',
+    strand: 'English Literature - Critical Reading',
+    description: 'construct sustained, analytical essays comparing literary texts from different genres and periods',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.CR.2',
+    strand: 'English Literature - Critical Reading',
+    description: 'evaluate literary texts using critical and theoretical perspectives',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.EN.LIT.CR.3',
+    strand: 'English Literature - Critical Reading',
+    description: 'develop personal and critical responses to literature, supporting with well-integrated textual evidence',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
+// KEY STAGE 5: YEAR 12 - A-Level English Language & Literature (Ages 16-17)
+// =============================================================================
+
+const year12Standards: BritishNCEnglishStandard[] = [
+  // A-LEVEL ENGLISH LANGUAGE - Textual Analysis
+  {
+    notation: 'UK.KS5.Y12.EN.AL.TL.1',
+    strand: 'A-Level English Language - Textual Analysis',
+    description: 'apply systematic frameworks to analyse spoken and written texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.TL.2',
+    strand: 'A-Level English Language - Textual Analysis',
+    description: 'analyse the ways meanings are shaped in texts through choices of vocabulary, grammar and discourse',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.TL.3',
+    strand: 'A-Level English Language - Textual Analysis',
+    description: 'explore how texts construct representations of the world, including social groups and events',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.TL.4',
+    strand: 'A-Level English Language - Textual Analysis',
+    description: 'understand and apply concepts of register, mode, genre and purpose in textual analysis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.TL.5',
+    strand: 'A-Level English Language - Textual Analysis',
+    description: 'analyse graphological and phonological features and their effects on meaning',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LANGUAGE - Language and Context
+  {
+    notation: 'UK.KS5.Y12.EN.AL.LC.1',
+    strand: 'A-Level English Language - Language Change',
+    description: 'understand and analyse how the English language has changed over time',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.LC.2',
+    strand: 'A-Level English Language - Language Change',
+    description: 'explore semantic, lexical and grammatical change in the history of English',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.LC.3',
+    strand: 'A-Level English Language - Language Change',
+    description: 'evaluate attitudes towards language change and standardisation',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LANGUAGE - Language Diversity
+  {
+    notation: 'UK.KS5.Y12.EN.AL.LD.1',
+    strand: 'A-Level English Language - Language Diversity',
+    description: 'analyse how language varies according to social and regional factors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.LD.2',
+    strand: 'A-Level English Language - Language Diversity',
+    description: 'understand concepts of dialect, sociolect, idiolect and accent',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.LD.3',
+    strand: 'A-Level English Language - Language Diversity',
+    description: 'explore World Englishes and the global spread of English',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.AL.LD.4',
+    strand: 'A-Level English Language - Language Diversity',
+    description: 'evaluate social and political attitudes to language variation',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LITERATURE - Drama
+  {
+    notation: 'UK.KS5.Y12.EN.LT.DR.1',
+    strand: 'A-Level English Literature - Drama',
+    description: 'study plays from different periods and genres including tragedy, comedy and modern drama',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.DR.2',
+    strand: 'A-Level English Literature - Drama',
+    description: 'analyse how dramatists create meaning through language, form and structure',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.DR.3',
+    strand: 'A-Level English Literature - Drama',
+    description: 'understand the significance of theatrical conventions and stagecraft',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.DR.4',
+    strand: 'A-Level English Literature - Drama',
+    description: 'explore the relationship between drama texts and their contexts of production and reception',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LITERATURE - Prose
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PR.1',
+    strand: 'A-Level English Literature - Prose',
+    description: 'study prose fiction from different periods including pre-1900 and post-1900 texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PR.2',
+    strand: 'A-Level English Literature - Prose',
+    description: 'analyse narrative techniques including point of view, voice, chronology and setting',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PR.3',
+    strand: 'A-Level English Literature - Prose',
+    description: 'understand how prose writers use language to create character and atmosphere',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PR.4',
+    strand: 'A-Level English Literature - Prose',
+    description: 'explore literary traditions and movements in the development of prose fiction',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LITERATURE - Poetry
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PO.1',
+    strand: 'A-Level English Literature - Poetry',
+    description: 'study poetry from different periods including pre-1900 and post-1900 texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PO.2',
+    strand: 'A-Level English Literature - Poetry',
+    description: 'analyse poetic form, including verse forms, rhythm, rhyme and sound patterns',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PO.3',
+    strand: 'A-Level English Literature - Poetry',
+    description: 'understand how poets use imagery, figurative language and symbolism',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.PO.4',
+    strand: 'A-Level English Literature - Poetry',
+    description: 'explore the relationship between poetic texts and their literary and historical contexts',
+    isStatutory: true
+  },
+  // A-LEVEL - Critical Approaches
+  {
+    notation: 'UK.KS5.Y12.EN.LT.CR.1',
+    strand: 'A-Level English Literature - Critical Analysis',
+    description: 'develop understanding of different critical approaches to literature',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.CR.2',
+    strand: 'A-Level English Literature - Critical Analysis',
+    description: 'apply critical terminology accurately and appropriately in literary analysis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.EN.LT.CR.3',
+    strand: 'A-Level English Literature - Critical Analysis',
+    description: 'construct sustained arguments about literary texts, supported by relevant evidence',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
+// KEY STAGE 5: YEAR 13 - A-Level English Language & Literature (Ages 17-18)
+// =============================================================================
+
+const year13Standards: BritishNCEnglishStandard[] = [
+  // A-LEVEL ENGLISH LANGUAGE - Child Language Acquisition
+  {
+    notation: 'UK.KS5.Y13.EN.AL.CV.1',
+    strand: 'A-Level English Language - Child Language Acquisition',
+    description: 'understand theories of child language acquisition and development',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.CV.2',
+    strand: 'A-Level English Language - Child Language Acquisition',
+    description: 'analyse features of child language at different developmental stages',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.CV.3',
+    strand: 'A-Level English Language - Child Language Acquisition',
+    description: 'explore factors affecting language development including social, cognitive and biological factors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.CV.4',
+    strand: 'A-Level English Language - Child Language Acquisition',
+    description: 'analyse transcripts of child language data, identifying patterns and developmental features',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LANGUAGE - Language and Power
+  {
+    notation: 'UK.KS5.Y13.EN.AL.LP.1',
+    strand: 'A-Level English Language - Language and Power',
+    description: 'analyse how language is used to exercise and maintain power in different contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.LP.2',
+    strand: 'A-Level English Language - Language and Power',
+    description: 'explore language and gender, including theories and debates about gendered language use',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.LP.3',
+    strand: 'A-Level English Language - Language and Power',
+    description: 'analyse political and media discourse, including persuasion and manipulation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.LP.4',
+    strand: 'A-Level English Language - Language and Power',
+    description: 'evaluate the relationship between language, identity and social groups',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LANGUAGE - Language Investigation
+  {
+    notation: 'UK.KS5.Y13.EN.AL.NE.1',
+    strand: 'A-Level English Language - Non-Examined Assessment',
+    description: 'conduct an independent language investigation on a topic of personal interest',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.NE.2',
+    strand: 'A-Level English Language - Non-Examined Assessment',
+    description: 'collect, analyse and present language data using appropriate methodologies',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AL.NE.3',
+    strand: 'A-Level English Language - Non-Examined Assessment',
+    description: 'apply linguistic frameworks and concepts to original research',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LITERATURE - Comparative Study
+  {
+    notation: 'UK.KS5.Y13.EN.LT.CP.1',
+    strand: 'A-Level English Literature - Comparative Study',
+    description: 'compare and contrast texts from different periods and genres',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.LT.CP.2',
+    strand: 'A-Level English Literature - Comparative Study',
+    description: 'explore thematic connections and differences across literary texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.LT.CP.3',
+    strand: 'A-Level English Literature - Comparative Study',
+    description: 'analyse how genre conventions shape meaning in different literary forms',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LITERATURE - Critical Theory
+  {
+    notation: 'UK.KS5.Y13.EN.LT.TH.1',
+    strand: 'A-Level English Literature - Critical Theory',
+    description: 'understand and apply different theoretical approaches to literary texts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.LT.TH.2',
+    strand: 'A-Level English Literature - Critical Theory',
+    description: 'evaluate the strengths and limitations of different critical perspectives',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.LT.TH.3',
+    strand: 'A-Level English Literature - Critical Theory',
+    description: 'engage with literary criticism and scholarly debates about texts studied',
+    isStatutory: true
+  },
+  // A-LEVEL ENGLISH LITERATURE - Independent Critical Study
+  {
+    notation: 'UK.KS5.Y13.EN.LT.NE.1',
+    strand: 'A-Level English Literature - Non-Examined Assessment',
+    description: 'produce an extended comparative essay on texts of own choosing',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.LT.NE.2',
+    strand: 'A-Level English Literature - Non-Examined Assessment',
+    description: 'demonstrate independent reading and original critical thinking',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.LT.NE.3',
+    strand: 'A-Level English Literature - Non-Examined Assessment',
+    description: 'engage with critical and theoretical perspectives in independent study',
+    isStatutory: true
+  },
+  // A-LEVEL - Advanced Essay Writing
+  {
+    notation: 'UK.KS5.Y13.EN.AW.1',
+    strand: 'A-Level English - Advanced Writing',
+    description: 'construct sophisticated, nuanced arguments about language and literature',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AW.2',
+    strand: 'A-Level English - Advanced Writing',
+    description: 'integrate quotations and evidence seamlessly into analytical writing',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AW.3',
+    strand: 'A-Level English - Advanced Writing',
+    description: 'demonstrate mastery of academic register and critical vocabulary',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.EN.AW.4',
+    strand: 'A-Level English - Advanced Writing',
+    description: 'develop and sustain original interpretations with intellectual rigour',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
 // BRITISH NATIONAL CURRICULUM ENGLISH DATA EXPORT
 // =============================================================================
 
@@ -2483,7 +3142,11 @@ export const britishNCEnglish: BritishNCEnglishJurisdiction = {
     { year: 6, keyStage: 2, ageRangeMin: 10, ageRangeMax: 11, standards: year6Standards },
     { year: 7, keyStage: 3, ageRangeMin: 11, ageRangeMax: 12, standards: year7Standards },
     { year: 8, keyStage: 3, ageRangeMin: 12, ageRangeMax: 13, standards: year8Standards },
-    { year: 9, keyStage: 3, ageRangeMin: 13, ageRangeMax: 14, standards: year9Standards }
+    { year: 9, keyStage: 3, ageRangeMin: 13, ageRangeMax: 14, standards: year9Standards },
+    { year: 10, keyStage: 4, ageRangeMin: 14, ageRangeMax: 15, standards: year10Standards },
+    { year: 11, keyStage: 4, ageRangeMin: 15, ageRangeMax: 16, standards: year11Standards },
+    { year: 12, keyStage: 5, ageRangeMin: 16, ageRangeMax: 17, standards: year12Standards },
+    { year: 13, keyStage: 5, ageRangeMin: 17, ageRangeMax: 18, standards: year13Standards }
   ]
 };
 

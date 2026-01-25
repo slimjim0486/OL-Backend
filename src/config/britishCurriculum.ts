@@ -1,18 +1,26 @@
 /**
  * British National Curriculum - Mathematics Standards
- * Years 1-6 (Key Stages 1 and 2) - PRIMARY ONLY
+ * Years 1-13 (Key Stages 1-5)
  *
- * Source: GOV.UK National Curriculum in England
- * https://www.gov.uk/government/publications/national-curriculum-in-england-mathematics-programmes-of-study/national-curriculum-in-england-mathematics-programmes-of-study
+ * Sources:
+ * - KS1-3 (Years 1-9): GOV.UK National Curriculum in England
+ *   https://www.gov.uk/government/publications/national-curriculum-in-england-mathematics-programmes-of-study
+ * - KS4 (Years 10-11 GCSE): DfE GCSE Mathematics Subject Content
+ *   https://www.gov.uk/government/publications/gcse-mathematics-subject-content-and-assessment-objectives
+ * - KS5 (Years 12-13 A-Level): DfE A-Level Mathematics Subject Content
+ *   https://www.gov.uk/government/publications/gce-as-and-a-level-mathematics
  *
- * VERIFIED: 2025-01-14 against official GOV.UK documentation
+ * VERIFIED: 2026-01-24 against official DfE documentation
  *
  * Notation System: UK.KS{keyStage}.Y{year}.MA.{strand}.{number}
  * - UK = United Kingdom
- * - KS = Key Stage (1 or 2)
- * - Y = Year (1-6)
+ * - KS = Key Stage (1-5)
+ * - Y = Year (1-13)
  * - MA = Mathematics
- * - Strand codes:
+ *
+ * Strand codes by Key Stage:
+ *
+ * KS1-2 (Years 1-6):
  *   - NPV = Number - Place Value
  *   - NAS = Number - Addition and Subtraction
  *   - NMD = Number - Multiplication and Division
@@ -23,6 +31,46 @@
  *   - STA = Statistics
  *   - ALG = Algebra (Year 6 only)
  *   - RAT = Ratio and Proportion (Year 6 only)
+ *
+ * KS3 (Years 7-9):
+ *   - NUM = Number
+ *   - ALG = Algebra
+ *   - RPR = Ratio, Proportion and Rates of Change
+ *   - GEO = Geometry and Measures
+ *   - PRB = Probability
+ *   - STA = Statistics
+ *   - WMF = Working Mathematically - Develop Fluency
+ *   - WMR = Working Mathematically - Reason Mathematically
+ *   - WMS = Working Mathematically - Solve Problems
+ *
+ * KS4 GCSE (Years 10-11):
+ *   - NUM = Number
+ *   - ALG = Algebra
+ *   - RPR = Ratio, Proportion and Rates of Change
+ *   - GEO = Geometry and Measures
+ *   - PRB = Probability
+ *   - STA = Statistics
+ *
+ * KS5 A-Level (Years 12-13):
+ *   - PRF = Proof
+ *   - ALG = Algebra and Functions
+ *   - CGE = Coordinate Geometry
+ *   - SEQ = Sequences and Series
+ *   - TRG = Trigonometry
+ *   - EXP = Exponentials and Logarithms
+ *   - DIF = Differentiation
+ *   - INT = Integration
+ *   - NME = Numerical Methods
+ *   - VEC = Vectors
+ *   - SSA = Statistical Sampling
+ *   - DPI = Data Presentation and Interpretation
+ *   - PRB = Probability
+ *   - SDI = Statistical Distributions
+ *   - SHT = Statistical Hypothesis Testing
+ *   - QUM = Quantities and Units in Mechanics
+ *   - KIN = Kinematics
+ *   - FNL = Forces and Newton's Laws
+ *   - MOM = Moments
  */
 
 export interface BritishNCStandard {
@@ -2180,6 +2228,1872 @@ const year9Standards: BritishNCStandard[] = [
 ];
 
 // =============================================================================
+// KEY STAGE 4: YEARS 10-11 (Ages 14-16) - GCSE MATHEMATICS
+// Source: DfE GCSE Mathematics Subject Content (2013, updated 2021)
+// =============================================================================
+
+const year10Standards: BritishNCStandard[] = [
+  // NUMBER (NUM)
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.1',
+    strand: 'Number',
+    description: 'order positive and negative integers, decimals and fractions; use the symbols =, ≠, <, >, ≤, ≥',
+    isStatutory: true,
+    guidance: 'Foundation and Higher tier. Students extend ordering to negative numbers and use inequality symbols fluently.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.2',
+    strand: 'Number',
+    description: 'apply the four operations, including formal written methods, to integers, decimals and simple fractions (proper and improper), and mixed numbers – all both positive and negative',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.3',
+    strand: 'Number',
+    description: 'understand and use place value (e.g. when working with very large or very small numbers, and when calculating with decimals)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.4',
+    strand: 'Number',
+    description: 'recognise and use relationships between operations, including inverse operations (e.g. cancellation to simplify calculations and expressions)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.5',
+    strand: 'Number',
+    description: 'use conventional notation for priority of operations, including brackets, powers, roots and reciprocals',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.6',
+    strand: 'Number',
+    description: 'use the concepts and vocabulary of prime numbers, factors (divisors), multiples, common factors, common multiples, highest common factor, lowest common multiple, prime factorisation, including using product notation and the unique factorisation theorem',
+    isStatutory: true,
+    guidance: 'Higher tier includes unique factorisation theorem proof understanding.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.7',
+    strand: 'Number',
+    description: 'apply systematic listing strategies including use of the product rule for counting',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.8',
+    strand: 'Number',
+    description: 'use positive integer powers and associated real roots (square, cube and higher), recognise powers of 2, 3, 4, 5',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.9',
+    strand: 'Number',
+    description: 'calculate with roots, and with integer and fractional indices',
+    isStatutory: true,
+    guidance: 'Higher tier extends to negative and fractional indices.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.10',
+    strand: 'Number',
+    description: 'calculate exactly with fractions, surds and multiples of π; simplify surd expressions involving squares and rationalise denominators',
+    isStatutory: true,
+    guidance: 'Higher tier only. Foundation students work with fractions and multiples of π.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.11',
+    strand: 'Number',
+    description: 'calculate with and interpret standard form A × 10ⁿ, where 1 ≤ A < 10 and n is an integer',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.12',
+    strand: 'Number',
+    description: 'work interchangeably with terminating decimals and their corresponding fractions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.13',
+    strand: 'Number',
+    description: 'define percentage as "number of parts per hundred"; interpret percentages and percentage changes as a fraction or a decimal, and interpret these multiplicatively',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.14',
+    strand: 'Number',
+    description: 'interpret fractions and percentages as operators',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.15',
+    strand: 'Number',
+    description: 'use standard units of mass, length, time, money and other measures (including standard compound measures) using decimal quantities where appropriate',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.16',
+    strand: 'Number',
+    description: 'round numbers and measures to an appropriate degree of accuracy (e.g. to a specified number of decimal places or significant figures)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.17',
+    strand: 'Number',
+    description: 'use approximation through rounding to estimate answers and calculate possible resulting errors expressed using inequality notation a < x ≤ b',
+    isStatutory: true,
+    guidance: 'Higher tier includes error intervals and bounds.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.NUM.18',
+    strand: 'Number',
+    description: 'apply and interpret limits of accuracy, including upper and lower bounds',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+
+  // ALGEBRA (ALG)
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.1',
+    strand: 'Algebra',
+    description: 'use and interpret algebraic notation, including: ab in place of a × b, 3y in place of y + y + y and 3 × y, a² in place of a × a, a³ in place of a × a × a, a/b in place of a ÷ b, coefficients written as fractions rather than as decimals, brackets',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.2',
+    strand: 'Algebra',
+    description: 'substitute numerical values into formulae and expressions, including scientific formulae',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.3',
+    strand: 'Algebra',
+    description: 'understand and use the concepts and vocabulary of expressions, equations, formulae, identities, inequalities, terms and factors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.4',
+    strand: 'Algebra',
+    description: 'simplify and manipulate algebraic expressions by collecting like terms, multiplying a single term over a bracket, taking out common factors, expanding products of two or more binomials',
+    isStatutory: true,
+    guidance: 'Higher tier extends to expanding products of three binomials.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.5',
+    strand: 'Algebra',
+    description: 'understand and use standard mathematical formulae; rearrange formulae to change the subject',
+    isStatutory: true,
+    guidance: 'Higher tier includes rearranging where the subject appears twice or as a power.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.6',
+    strand: 'Algebra',
+    description: 'know the difference between an equation and an identity; argue mathematically to show algebraic expressions are equivalent, and use algebra to support and construct arguments',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.7',
+    strand: 'Algebra',
+    description: 'where appropriate, interpret simple expressions as functions with inputs and outputs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.8',
+    strand: 'Algebra',
+    description: 'work with coordinates in all four quadrants',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.9',
+    strand: 'Algebra',
+    description: 'plot graphs of equations that correspond to straight-line graphs in the coordinate plane; use the form y = mx + c to identify parallel and perpendicular lines',
+    isStatutory: true,
+    guidance: 'Higher tier includes finding equations of perpendicular lines.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.10',
+    strand: 'Algebra',
+    description: 'find the equation of the line through two given points, or through one point with a given gradient',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.11',
+    strand: 'Algebra',
+    description: 'identify and interpret gradients and intercepts of linear functions graphically and algebraically',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.12',
+    strand: 'Algebra',
+    description: 'recognise, sketch and interpret graphs of linear functions, quadratic functions, simple cubic functions, the reciprocal function y = 1/x with x ≠ 0',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.13',
+    strand: 'Algebra',
+    description: 'solve linear equations in one unknown algebraically (including those with the unknown on both sides of the equation)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.14',
+    strand: 'Algebra',
+    description: 'solve quadratic equations algebraically by factorising, by completing the square and by using the quadratic formula; find approximate solutions using a graph',
+    isStatutory: true,
+    guidance: 'Completing the square and quadratic formula are Higher tier.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.15',
+    strand: 'Algebra',
+    description: 'solve two simultaneous equations in two variables (linear/linear or linear/quadratic) algebraically; find approximate solutions using a graph',
+    isStatutory: true,
+    guidance: 'Linear/quadratic is Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.16',
+    strand: 'Algebra',
+    description: 'translate simple situations or procedures into algebraic expressions or formulae; derive an equation, solve the equation and interpret the solution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.17',
+    strand: 'Algebra',
+    description: 'solve linear inequalities in one or two variable(s), and quadratic inequalities in one variable; represent the solution set on a number line, using set notation and on a graph',
+    isStatutory: true,
+    guidance: 'Quadratic inequalities are Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.18',
+    strand: 'Algebra',
+    description: 'generate terms of a sequence from either a term-to-term or a position-to-term rule',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.19',
+    strand: 'Algebra',
+    description: 'recognise and use sequences of triangular, square and cube numbers, simple arithmetic progressions, Fibonacci type sequences, quadratic sequences, and simple geometric progressions',
+    isStatutory: true,
+    guidance: 'Quadratic and geometric sequences are Higher tier.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.ALG.20',
+    strand: 'Algebra',
+    description: 'deduce expressions to calculate the nth term of linear and quadratic sequences',
+    isStatutory: true,
+    guidance: 'Quadratic nth term is Higher tier only.'
+  },
+
+  // RATIO, PROPORTION AND RATES OF CHANGE (RPR)
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.1',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'change freely between related standard units (e.g. time, length, area, volume/capacity, mass) and compound units (e.g. speed, rates of pay, prices) in numerical and algebraic contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.2',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'use scale factors, scale diagrams and maps',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.3',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'express one quantity as a fraction of another, where the fraction is less than 1 or greater than 1',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.4',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'use ratio notation, including reduction to simplest form',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.5',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'divide a given quantity into two parts in a given part:part or part:whole ratio; express the division of a quantity into two parts as a ratio',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.6',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'apply ratio to real contexts and problems (such as those involving conversion, comparison, scaling, mixing, concentrations)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.7',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'understand and use proportion as equality of ratios',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.8',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'relate ratios to fractions and to linear functions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.9',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'define percentage as "number of parts per hundred"; interpret percentages and percentage changes as a fraction or a decimal, and interpret these multiplicatively',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.10',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'express a change as a percentage of the original, and express a percentage change as a multiplier',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.11',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'solve problems involving percentage change, including percentage increase/decrease and original value problems, and simple interest including in financial mathematics',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.12',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'solve problems involving direct and inverse proportion, including graphical and algebraic representations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.13',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'use compound units such as speed, rates of pay, unit pricing, density and pressure',
+    isStatutory: true,
+    guidance: 'Density and pressure are Higher tier.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.14',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'compare lengths, areas and volumes using ratio notation; make links to similarity (including trigonometric ratios) and scale factors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.15',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'understand that X is inversely proportional to Y is equivalent to X is proportional to 1/Y; interpret equations that describe direct and inverse proportion',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.RPR.16',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'set up, solve and interpret the answers in growth and decay problems, including compound interest and work with general iterative processes',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+
+  // GEOMETRY AND MEASURES (GEO)
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.1',
+    strand: 'Geometry and Measures',
+    description: 'use conventional terms and notations: points, lines, vertices, edges, planes, parallel lines, perpendicular lines, right angles, polygons, regular polygons and polygons with reflection and/or rotation symmetries',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.2',
+    strand: 'Geometry and Measures',
+    description: 'use the standard conventions for labelling and referring to the sides and angles of triangles',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.3',
+    strand: 'Geometry and Measures',
+    description: 'draw diagrams from written description',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.4',
+    strand: 'Geometry and Measures',
+    description: 'apply the properties of angles at a point, angles at a point on a straight line, vertically opposite angles; understand and use alternate and corresponding angles on parallel lines',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.5',
+    strand: 'Geometry and Measures',
+    description: 'derive and use the sum of angles in a triangle (e.g. to deduce and use the angle sum in any polygon, and to derive properties of regular polygons)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.6',
+    strand: 'Geometry and Measures',
+    description: 'apply angle facts, triangle congruence, similarity and properties of quadrilaterals to conjecture and derive results about angles and sides, including Pythagoras\' Theorem, and use known results to obtain simple proofs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.7',
+    strand: 'Geometry and Measures',
+    description: 'use Pythagoras\' Theorem and trigonometric ratios in similar triangles to solve problems involving right-angled triangles',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.8',
+    strand: 'Geometry and Measures',
+    description: 'use the trigonometric ratios and their exact values for 0°, 30°, 45°, 60° and 90°; know and apply the sine rule and cosine rule to find unknown lengths and angles',
+    isStatutory: true,
+    guidance: 'Sine rule and cosine rule are Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.9',
+    strand: 'Geometry and Measures',
+    description: 'know and apply Area = ½ab sin C to calculate the area, sides or angles of any triangle',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.10',
+    strand: 'Geometry and Measures',
+    description: 'identify, describe and construct congruent and similar shapes, including on coordinate axes, by considering rotation, reflection, translation and enlargement (including fractional and negative scale factors)',
+    isStatutory: true,
+    guidance: 'Negative scale factors are Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.11',
+    strand: 'Geometry and Measures',
+    description: 'describe the changes and invariance achieved by combinations of rotations, reflections and translations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.12',
+    strand: 'Geometry and Measures',
+    description: 'identify and apply circle definitions and properties, including: centre, radius, chord, diameter, circumference, tangent, arc, sector and segment',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.13',
+    strand: 'Geometry and Measures',
+    description: 'apply and prove the standard circle theorems concerning angles, radii, tangents and chords, and use them to prove related results',
+    isStatutory: true,
+    guidance: 'Circle theorems proofs are Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.14',
+    strand: 'Geometry and Measures',
+    description: 'construct and interpret plans and elevations of 3D shapes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.15',
+    strand: 'Geometry and Measures',
+    description: 'interpret and use bearings',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.16',
+    strand: 'Geometry and Measures',
+    description: 'calculate arc lengths, angles and areas of sectors of circles',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.17',
+    strand: 'Geometry and Measures',
+    description: 'calculate surface areas and volumes of spheres, pyramids, cones and composite solids',
+    isStatutory: true,
+    guidance: 'Spheres, pyramids and cones are Higher tier; composite solids with these shapes are also Higher tier.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.18',
+    strand: 'Geometry and Measures',
+    description: 'apply the concepts of congruence and similarity, including the relationships between lengths, areas and volumes in similar figures',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.19',
+    strand: 'Geometry and Measures',
+    description: 'know the formulae for: Pythagoras\' theorem a² + b² = c², and the trigonometric ratios, sin θ = opposite/hypotenuse, cos θ = adjacent/hypotenuse, tan θ = opposite/adjacent; apply them to find angles and lengths in right-angled triangles and, where possible, general triangles in two and three dimensional figures',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.20',
+    strand: 'Geometry and Measures',
+    description: 'know the exact values of sin θ and cos θ for θ = 0°, 30°, 45°, 60° and 90°; know the exact value of tan θ for θ = 0°, 30°, 45° and 60°',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.21',
+    strand: 'Geometry and Measures',
+    description: 'describe translations as 2D vectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.22',
+    strand: 'Geometry and Measures',
+    description: 'apply addition and subtraction of vectors, multiplication of vectors by a scalar, and diagrammatic and column representations of vectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.GEO.23',
+    strand: 'Geometry and Measures',
+    description: 'use vectors to construct geometric arguments and proofs',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+
+  // PROBABILITY (PRB)
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.1',
+    strand: 'Probability',
+    description: 'record, describe and analyse the frequency of outcomes of probability experiments using tables and frequency trees',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.2',
+    strand: 'Probability',
+    description: 'apply ideas of randomness, fairness and equally likely events to calculate expected outcomes of multiple future experiments',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.3',
+    strand: 'Probability',
+    description: 'relate relative expected frequencies to theoretical probability, using appropriate language and the 0-1 probability scale',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.4',
+    strand: 'Probability',
+    description: 'apply the property that the probabilities of an exhaustive set of outcomes sum to one; apply the property that the probabilities of an exhaustive set of mutually exclusive events sum to one',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.5',
+    strand: 'Probability',
+    description: 'understand that empirical unbiased samples tend towards theoretical probability distributions, with increasing sample size',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.6',
+    strand: 'Probability',
+    description: 'enumerate sets and combinations of sets systematically, using tables, grids, Venn diagrams and tree diagrams',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.7',
+    strand: 'Probability',
+    description: 'construct theoretical possibility spaces for single and combined experiments with equally likely outcomes and use these to calculate theoretical probabilities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.8',
+    strand: 'Probability',
+    description: 'calculate the probability of independent and dependent combined events, including using tree diagrams and other representations, and know the underlying assumptions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.PRB.9',
+    strand: 'Probability',
+    description: 'calculate and interpret conditional probabilities through representation using expected frequencies with two-way tables, tree diagrams and Venn diagrams',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+
+  // STATISTICS (STA)
+  {
+    notation: 'UK.KS4.Y10.MA.STA.1',
+    strand: 'Statistics',
+    description: 'infer properties of populations or distributions from a sample, whilst knowing the limitations of sampling',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.STA.2',
+    strand: 'Statistics',
+    description: 'interpret and construct tables, charts and diagrams, including frequency tables, bar charts, pie charts and pictograms for categorical data, vertical line charts for ungrouped discrete numerical data, and know their appropriate use',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.STA.3',
+    strand: 'Statistics',
+    description: 'interpret, analyse and compare the distributions of data sets from univariate empirical distributions through: appropriate graphical representation involving discrete, continuous and grouped data, including box plots; appropriate measures of central tendency and spread',
+    isStatutory: true,
+    guidance: 'Box plots are Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.STA.4',
+    strand: 'Statistics',
+    description: 'apply statistics to describe a population',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.STA.5',
+    strand: 'Statistics',
+    description: 'use and interpret scatter graphs of bivariate data; recognise correlation and know that it does not indicate causation; draw estimated lines of best fit; make predictions; interpolate and extrapolate apparent trends whilst knowing the dangers of so doing',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.STA.6',
+    strand: 'Statistics',
+    description: 'interpret, analyse and compare the distributions of data sets from univariate empirical distributions using appropriate measures of central tendency (median, mean, mode and modal class) and spread (range, including consideration of outliers, quartiles and inter-quartile range)',
+    isStatutory: true,
+    guidance: 'Quartiles and IQR are Higher tier.'
+  },
+  {
+    notation: 'UK.KS4.Y10.MA.STA.7',
+    strand: 'Statistics',
+    description: 'use and interpret cumulative frequency graphs and histograms',
+    isStatutory: true,
+    guidance: 'Histograms with unequal class widths are Higher tier only.'
+  }
+];
+
+const year11Standards: BritishNCStandard[] = [
+  // Year 11 consolidates and extends Year 10 GCSE content to exam level
+  // These standards focus on higher-tier content and exam preparation
+
+  // NUMBER - Advanced (NUM)
+  {
+    notation: 'UK.KS4.Y11.MA.NUM.1',
+    strand: 'Number',
+    description: 'change recurring decimals into their corresponding fractions and vice versa',
+    isStatutory: true,
+    guidance: 'Higher tier only. Students must be able to prove that recurring decimals are rational.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.NUM.2',
+    strand: 'Number',
+    description: 'interpret, order and calculate with numbers written in standard form (including negative indices)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.NUM.3',
+    strand: 'Number',
+    description: 'manipulate surds, including rationalising the denominator',
+    isStatutory: true,
+    guidance: 'Higher tier only. Includes expressions like 1/(√3 + 1).'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.NUM.4',
+    strand: 'Number',
+    description: 'apply and interpret limits of accuracy including upper and lower bounds in calculations',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.NUM.5',
+    strand: 'Number',
+    description: 'use inequality notation to specify simple error intervals due to truncation or rounding',
+    isStatutory: true
+  },
+
+  // ALGEBRA - Advanced (ALG)
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.1',
+    strand: 'Algebra',
+    description: 'simplify and manipulate algebraic expressions (including those involving surds and algebraic fractions) by factorising quadratic expressions of the form x² + bx + c, including the difference of two squares; factorising quadratic expressions of the form ax² + bx + c',
+    isStatutory: true,
+    guidance: 'ax² + bx + c factorisation is Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.2',
+    strand: 'Algebra',
+    description: 'simplify algebraic fractions and simplify expressions involving sums, products and powers, including the laws of indices',
+    isStatutory: true,
+    guidance: 'Higher tier includes algebraic fractions with binomial denominators.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.3',
+    strand: 'Algebra',
+    description: 'know and use the quadratic formula to solve quadratic equations; complete the square of a quadratic expression and hence solve the equation',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.4',
+    strand: 'Algebra',
+    description: 'solve simultaneous equations where one is linear and one is quadratic',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.5',
+    strand: 'Algebra',
+    description: 'find approximate solutions to equations numerically using iteration',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.6',
+    strand: 'Algebra',
+    description: 'recognise, sketch and interpret graphs of exponential functions y = kˣ for positive values of k, and the trigonometric functions y = sin x, y = cos x and y = tan x for angles of any size',
+    isStatutory: true,
+    guidance: 'Exponential and trigonometric graphs are Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.7',
+    strand: 'Algebra',
+    description: 'sketch translations and reflections of the graph of a given function',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.8',
+    strand: 'Algebra',
+    description: 'interpret the gradient of a straight line graph as a rate of change; recognise and interpret graphs that illustrate direct and inverse proportion',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.9',
+    strand: 'Algebra',
+    description: 'interpret the gradient at a point on a curve as the instantaneous rate of change; apply the concepts of average and instantaneous rate of change (gradients of chords and tangents) in numerical, algebraic and graphical contexts',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.10',
+    strand: 'Algebra',
+    description: 'calculate or estimate gradients of graphs and areas under graphs (including quadratic and other non-linear graphs), and interpret results in cases such as distance-time graphs, velocity-time graphs and graphs in financial contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.11',
+    strand: 'Algebra',
+    description: 'deduce turning points of quadratic functions by completing the square',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.ALG.12',
+    strand: 'Algebra',
+    description: 'recognise and use the equation of a circle with centre at the origin; find the equation of a tangent to a circle at a given point',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+
+  // RATIO, PROPORTION AND RATES OF CHANGE - Advanced (RPR)
+  {
+    notation: 'UK.KS4.Y11.MA.RPR.1',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'set up, solve and interpret the answers in growth and decay problems, including compound interest',
+    isStatutory: true,
+    guidance: 'Higher tier extends to general exponential growth/decay models.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.RPR.2',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'understand that X is inversely proportional to Y is equivalent to X is proportional to 1/Y; construct and interpret equations that describe direct and inverse proportion',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.RPR.3',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'use compound units such as density, pressure, speed and acceleration in problem-solving',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.RPR.4',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'interpret the gradient of a straight line graph as a rate of change and use this to solve problems',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.RPR.5',
+    strand: 'Ratio, Proportion and Rates of Change',
+    description: 'compare lengths, areas and volumes using ratio notation and/or scale factors; make links to similarity and scale factors',
+    isStatutory: true
+  },
+
+  // GEOMETRY AND MEASURES - Advanced (GEO)
+  {
+    notation: 'UK.KS4.Y11.MA.GEO.1',
+    strand: 'Geometry and Measures',
+    description: 'prove the standard circle theorems: angle in a semicircle is 90°; angle at centre is twice angle at circumference; angles in the same segment are equal; opposite angles in a cyclic quadrilateral sum to 180°; tangent meets radius at 90°; alternate segment theorem',
+    isStatutory: true,
+    guidance: 'Higher tier only. Students must be able to prove theorems and apply them.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.GEO.2',
+    strand: 'Geometry and Measures',
+    description: 'know and use the sine rule a/sin A = b/sin B = c/sin C and cosine rule a² = b² + c² – 2bc cos A; apply these to find unknown lengths and angles',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.GEO.3',
+    strand: 'Geometry and Measures',
+    description: 'apply the formula Area = ½ab sin C to calculate the area of a triangle',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.GEO.4',
+    strand: 'Geometry and Measures',
+    description: 'solve problems involving trigonometry in 3D figures',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.GEO.5',
+    strand: 'Geometry and Measures',
+    description: 'calculate surface area and volume of spheres, pyramids, cones and frustums of cones',
+    isStatutory: true,
+    guidance: 'Frustums are Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.GEO.6',
+    strand: 'Geometry and Measures',
+    description: 'apply the concepts of congruence and similarity, including the relationships between lengths in similar figures, areas of similar figures and volumes of similar figures',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.GEO.7',
+    strand: 'Geometry and Measures',
+    description: 'use vectors to construct geometric arguments and proofs',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+
+  // PROBABILITY - Advanced (PRB)
+  {
+    notation: 'UK.KS4.Y11.MA.PRB.1',
+    strand: 'Probability',
+    description: 'calculate and interpret conditional probabilities through representation using expected frequencies with two-way tables, tree diagrams and Venn diagrams',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.PRB.2',
+    strand: 'Probability',
+    description: 'understand and use set notation including union (∪), intersection (∩) and complement',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.PRB.3',
+    strand: 'Probability',
+    description: 'apply systematic listing strategies including use of the product rule for counting',
+    isStatutory: true
+  },
+
+  // STATISTICS - Advanced (STA)
+  {
+    notation: 'UK.KS4.Y11.MA.STA.1',
+    strand: 'Statistics',
+    description: 'construct and interpret histograms with unequal class widths (using frequency density)',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.STA.2',
+    strand: 'Statistics',
+    description: 'interpret, analyse and compare the distributions of data sets from univariate empirical distributions through appropriate measures of central tendency and spread (median, quartiles, inter-quartile range) and use to compare distributions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.STA.3',
+    strand: 'Statistics',
+    description: 'construct and interpret box plots (box and whisker diagrams)',
+    isStatutory: true,
+    guidance: 'Higher tier only.'
+  },
+  {
+    notation: 'UK.KS4.Y11.MA.STA.4',
+    strand: 'Statistics',
+    description: 'compare distributions using measures of central tendency and measures of spread, including box plots and cumulative frequency curves',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
+// KEY STAGE 5: YEARS 12-13 (Ages 16-18) - A-LEVEL MATHEMATICS
+// Source: DfE A-Level Mathematics Subject Content (2014, for teaching from 2017)
+// =============================================================================
+
+const year12Standards: BritishNCStandard[] = [
+  // PROOF (PRF)
+  {
+    notation: 'UK.KS5.Y12.MA.PRF.1',
+    strand: 'Proof',
+    description: 'understand and use the structure of mathematical proof, proceeding from given assumptions through a series of logical steps to a conclusion; use methods of proof, including proof by deduction and proof by exhaustion',
+    isStatutory: true,
+    guidance: 'Foundation for mathematical reasoning at A-Level.'
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.PRF.2',
+    strand: 'Proof',
+    description: 'construct proofs using mathematical induction; contexts include sums of series, divisibility and powers of matrices',
+    isStatutory: true,
+    guidance: 'Higher content, typically introduced in Year 12 but developed further in Year 13.'
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.PRF.3',
+    strand: 'Proof',
+    description: 'use disproof by counter-example',
+    isStatutory: true
+  },
+
+  // ALGEBRA AND FUNCTIONS (ALG)
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.1',
+    strand: 'Algebra and Functions',
+    description: 'understand and use the laws of indices for all rational exponents',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.2',
+    strand: 'Algebra and Functions',
+    description: 'use and manipulate surds, including rationalising the denominator',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.3',
+    strand: 'Algebra and Functions',
+    description: 'work with quadratic functions and their graphs; the discriminant of a quadratic function, including the conditions for real and repeated roots; completing the square; solution of quadratic equations and quadratic inequalities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.4',
+    strand: 'Algebra and Functions',
+    description: 'solve simultaneous equations in two variables by elimination and by substitution, including one linear and one quadratic equation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.5',
+    strand: 'Algebra and Functions',
+    description: 'solve linear and quadratic inequalities in a single variable and interpret such inequalities graphically, including inequalities with brackets and fractions; express solutions through correct use of "and" and "or", or through set notation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.6',
+    strand: 'Algebra and Functions',
+    description: 'represent linear and quadratic inequalities such as y > x + 1 and y > ax² + bx + c graphically',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.7',
+    strand: 'Algebra and Functions',
+    description: 'manipulate polynomials algebraically, including expanding brackets and collecting like terms, factorisation and simple algebraic division; use of the factor theorem',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.8',
+    strand: 'Algebra and Functions',
+    description: 'understand and use graphs of functions; sketch curves defined by simple equations including polynomials, the modulus of a linear function, y = a/x and y = a/x² (including their vertical and horizontal asymptotes); interpret algebraic solution of equations graphically; use intersection points of graphs to solve equations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.9',
+    strand: 'Algebra and Functions',
+    description: 'understand and use composite functions; inverse functions and their graphs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.10',
+    strand: 'Algebra and Functions',
+    description: 'understand the effect of simple transformations on the graph of y = f(x) including sketching associated graphs: y = af(x), y = f(x) + a, y = f(x + a), y = f(ax) and combinations of these transformations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.11',
+    strand: 'Algebra and Functions',
+    description: 'decompose rational functions into partial fractions (denominators not more than 3 linear terms and/or irreducible quadratic in the denominator)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.ALG.12',
+    strand: 'Algebra and Functions',
+    description: 'use of functions in modelling, including consideration of limitations and refinements of the models',
+    isStatutory: true
+  },
+
+  // COORDINATE GEOMETRY (CGE)
+  {
+    notation: 'UK.KS5.Y12.MA.CGE.1',
+    strand: 'Coordinate Geometry',
+    description: 'understand and use the equation of a straight line, including the forms y - y₁ = m(x - x₁) and ax + by + c = 0; gradient conditions for two straight lines to be parallel or perpendicular',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.CGE.2',
+    strand: 'Coordinate Geometry',
+    description: 'be able to use straight line models in a variety of contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.CGE.3',
+    strand: 'Coordinate Geometry',
+    description: 'understand and use the coordinate geometry of the circle including using the equation of a circle in the form (x − a)² + (y − b)² = r²; completing the square to find the centre and radius of a circle; use of the following properties: the angle in a semicircle is a right angle; the perpendicular from the centre to a chord bisects the chord; the radius of a circle at a given point on its circumference is perpendicular to the tangent to the circle at that point',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.CGE.4',
+    strand: 'Coordinate Geometry',
+    description: 'understand and use the parametric equations of curves and conversion between Cartesian and parametric forms',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.CGE.5',
+    strand: 'Coordinate Geometry',
+    description: 'use parametric equations in modelling in a variety of contexts',
+    isStatutory: true
+  },
+
+  // SEQUENCES AND SERIES (SEQ)
+  {
+    notation: 'UK.KS5.Y12.MA.SEQ.1',
+    strand: 'Sequences and Series',
+    description: 'understand and use the binomial expansion of (a + bx)ⁿ for positive integer n; the notations n! and ⁿCᵣ; link to binomial probabilities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SEQ.2',
+    strand: 'Sequences and Series',
+    description: 'extend the binomial expansion to any rational n; know and use the general term formula',
+    isStatutory: true,
+    guidance: 'Extension to non-positive integer exponents.'
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SEQ.3',
+    strand: 'Sequences and Series',
+    description: 'work with sequences including those given by a formula for the nth term and those generated by a simple relation of the form xₙ₊₁ = f(xₙ); increasing sequences; decreasing sequences; periodic sequences',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SEQ.4',
+    strand: 'Sequences and Series',
+    description: 'understand and use sigma notation for sums of series including use of r, r², r³',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SEQ.5',
+    strand: 'Sequences and Series',
+    description: 'understand and work with arithmetic sequences and series, including the formulae for nth term and the sum to n terms',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SEQ.6',
+    strand: 'Sequences and Series',
+    description: 'understand and work with geometric sequences and series including the formulae for the nth term and the sum of a finite geometric series; the sum to infinity of a convergent geometric series, including the use of |r| < 1; modelling with sequences and series',
+    isStatutory: true
+  },
+
+  // TRIGONOMETRY (TRG)
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.1',
+    strand: 'Trigonometry',
+    description: 'understand and use the definitions of sine, cosine and tangent for all arguments; the sine and cosine rules; the area of a triangle in the form ½ab sin C',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.2',
+    strand: 'Trigonometry',
+    description: 'work with radian measure, including use for arc length and area of sector',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.3',
+    strand: 'Trigonometry',
+    description: 'understand and use the standard small angle approximations of sine, cosine and tangent: sin θ ≈ θ, cos θ ≈ 1 − θ²/2, tan θ ≈ θ where θ is in radians',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.4',
+    strand: 'Trigonometry',
+    description: 'understand and use the sine, cosine and tangent functions; their graphs, symmetries and periodicity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.5',
+    strand: 'Trigonometry',
+    description: 'know and use exact values of sin and cos for 0, π/6, π/4, π/3, π/2, π and multiples thereof; exact values of tan for 0, π/6, π/4, π/3, π and multiples thereof',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.6',
+    strand: 'Trigonometry',
+    description: 'understand and use the definitions of secant, cosecant and cotangent and of arcsin, arccos and arctan; their relationships to sine, cosine and tangent; understanding of their graphs; their ranges and domains',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.7',
+    strand: 'Trigonometry',
+    description: 'understand and use tan θ = sin θ/cos θ and sin²θ + cos²θ = 1 and related identities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.8',
+    strand: 'Trigonometry',
+    description: 'understand and use sec²θ = 1 + tan²θ and cosec²θ = 1 + cot²θ',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.9',
+    strand: 'Trigonometry',
+    description: 'understand and use double angle formulae; use of formulae for sin(A ± B), cos(A ± B) and tan(A ± B)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.10',
+    strand: 'Trigonometry',
+    description: 'understand and use expressions for a cos θ + b sin θ in the equivalent forms of R cos(θ ± α) or R sin(θ ± α)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.11',
+    strand: 'Trigonometry',
+    description: 'solve simple trigonometric equations in a given interval, including quadratic equations in sin, cos and tan and equations involving multiples of the unknown angle',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.12',
+    strand: 'Trigonometry',
+    description: 'construct proofs involving trigonometric functions and identities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.TRG.13',
+    strand: 'Trigonometry',
+    description: 'use trigonometric functions to solve problems in context, including problems involving vectors, kinematics and forces',
+    isStatutory: true
+  },
+
+  // EXPONENTIALS AND LOGARITHMS (EXP)
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.1',
+    strand: 'Exponentials and Logarithms',
+    description: 'know and use the function aˣ and its graph, where a is positive',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.2',
+    strand: 'Exponentials and Logarithms',
+    description: 'know and use the function eˣ and its graph',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.3',
+    strand: 'Exponentials and Logarithms',
+    description: 'know that the gradient of eˣ is equal to kekˣ and hence understand why the exponential model is suitable in many applications',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.4',
+    strand: 'Exponentials and Logarithms',
+    description: 'know and use the definition of logₐx as the inverse of aˣ, where a is positive (a ≠ 1) and x > 0',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.5',
+    strand: 'Exponentials and Logarithms',
+    description: 'know and use the function ln x and its graph',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.6',
+    strand: 'Exponentials and Logarithms',
+    description: 'know and use ln x as the inverse function of eˣ',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.7',
+    strand: 'Exponentials and Logarithms',
+    description: 'understand and use the laws of logarithms: logₐx + logₐy = logₐ(xy), logₐx − logₐy = logₐ(x/y), k logₐx = logₐxᵏ (including k = −1 and k = −½)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.8',
+    strand: 'Exponentials and Logarithms',
+    description: 'solve equations of the form aˣ = b',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.9',
+    strand: 'Exponentials and Logarithms',
+    description: 'use logarithmic graphs to estimate parameters in relationships of the form y = axⁿ and y = kbˣ, given data for x and y',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.EXP.10',
+    strand: 'Exponentials and Logarithms',
+    description: 'understand and use exponential growth and decay; use in modelling (examples may include the use of e in continuous compound interest, radioactive decay, drug concentration decay, exponential growth as a model for population growth); consideration of limitations and refinements of exponential models',
+    isStatutory: true
+  },
+
+  // DIFFERENTIATION (DIF)
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.1',
+    strand: 'Differentiation',
+    description: 'understand and use the derivative of f(x) as the gradient of the tangent to the graph of y = f(x) at a general point (x, y); the gradient of the tangent as a limit; interpretation as a rate of change',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.2',
+    strand: 'Differentiation',
+    description: 'sketching the gradient function for a given curve; second derivatives; differentiation from first principles for small positive integer powers of x and for sin x and cos x',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.3',
+    strand: 'Differentiation',
+    description: 'differentiate xⁿ, for rational values of n, and related constant multiples, sums and differences',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.4',
+    strand: 'Differentiation',
+    description: 'differentiate eᵏˣ, aᵏˣ, sin kx, cos kx, tan kx and related sums, differences and constant multiples',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.5',
+    strand: 'Differentiation',
+    description: 'understand and use the derivative of ln x',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.6',
+    strand: 'Differentiation',
+    description: 'apply differentiation to find gradients, tangents and normals, maxima and minima and stationary points, points of inflection',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.7',
+    strand: 'Differentiation',
+    description: 'identify where functions are increasing or decreasing',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.8',
+    strand: 'Differentiation',
+    description: 'differentiate using the product rule, the quotient rule and the chain rule, including problems involving connected rates of change and inverse functions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.9',
+    strand: 'Differentiation',
+    description: 'differentiate simple functions and relations defined implicitly or parametrically, for first derivative only',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DIF.10',
+    strand: 'Differentiation',
+    description: 'construct simple differential equations in pure mathematics and in context (contexts may include kinematics, population growth and modelling the relationship between price and demand)',
+    isStatutory: true
+  },
+
+  // INTEGRATION (INT)
+  {
+    notation: 'UK.KS5.Y12.MA.INT.1',
+    strand: 'Integration',
+    description: 'know and use the Fundamental Theorem of Calculus',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.2',
+    strand: 'Integration',
+    description: 'integrate xⁿ (excluding n = −1), and related sums, differences and constant multiples',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.3',
+    strand: 'Integration',
+    description: 'integrate eᵏˣ, 1/x, sin kx, cos kx and related sums, differences and constant multiples',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.4',
+    strand: 'Integration',
+    description: 'evaluate definite integrals; use a definite integral to find the area under a curve and the area between two curves',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.5',
+    strand: 'Integration',
+    description: 'understand and use integration as the limit of a sum',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.6',
+    strand: 'Integration',
+    description: 'carry out simple cases of integration by substitution and integration by parts; understand these methods as the inverse processes of the chain and product rules respectively',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.7',
+    strand: 'Integration',
+    description: 'integrate using partial fractions that are linear in the denominator',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.8',
+    strand: 'Integration',
+    description: 'evaluate the analytical solution of simple first order differential equations with separable variables, including finding particular solutions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.INT.9',
+    strand: 'Integration',
+    description: 'interpret the solution of a differential equation in the context of solving a problem, including identifying limitations of the solution; includes links to sherds',
+    isStatutory: true
+  },
+
+  // VECTORS (VEC)
+  {
+    notation: 'UK.KS5.Y12.MA.VEC.1',
+    strand: 'Vectors',
+    description: 'use vectors in two dimensions and in three dimensions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.VEC.2',
+    strand: 'Vectors',
+    description: 'calculate the magnitude and direction of a vector and convert between component form and magnitude/direction form',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.VEC.3',
+    strand: 'Vectors',
+    description: 'add vectors diagrammatically and perform the algebraic operations of vector addition and multiplication by scalars, and understand their geometrical interpretations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.VEC.4',
+    strand: 'Vectors',
+    description: 'understand and use position vectors; calculate the distance between two points represented by position vectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.VEC.5',
+    strand: 'Vectors',
+    description: 'use vectors to solve problems in pure mathematics and in context, including forces and kinematics',
+    isStatutory: true
+  },
+
+  // STATISTICAL SAMPLING (SSA)
+  {
+    notation: 'UK.KS5.Y12.MA.SSA.1',
+    strand: 'Statistical Sampling',
+    description: 'understand and use the terms "population" and "sample"; use samples to make informal inferences about the population',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SSA.2',
+    strand: 'Statistical Sampling',
+    description: 'understand and use sampling techniques, including simple random sampling and opportunity sampling; select or critique sampling techniques in the context of solving a statistical problem, including understanding that different samples can lead to different conclusions about the population',
+    isStatutory: true
+  },
+
+  // DATA PRESENTATION AND INTERPRETATION (DPI)
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.1',
+    strand: 'Data Presentation and Interpretation',
+    description: 'interpret diagrams for single-variable data, including understanding that area in a histogram represents frequency',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.2',
+    strand: 'Data Presentation and Interpretation',
+    description: 'connect to probability distributions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.3',
+    strand: 'Data Presentation and Interpretation',
+    description: 'interpret scatter diagrams and regression lines for bivariate data, including recognition of scatter diagrams which include distinct sections of the population',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.4',
+    strand: 'Data Presentation and Interpretation',
+    description: 'understand and apply the concept of correlation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.5',
+    strand: 'Data Presentation and Interpretation',
+    description: 'interpret measures of central tendency and variation, extending to standard deviation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.6',
+    strand: 'Data Presentation and Interpretation',
+    description: 'be able to calculate standard deviation, including from summary statistics',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.7',
+    strand: 'Data Presentation and Interpretation',
+    description: 'recognise and interpret possible outliers in data sets and statistical diagrams',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.8',
+    strand: 'Data Presentation and Interpretation',
+    description: 'select or critique data presentation techniques in the context of a statistical problem',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.DPI.9',
+    strand: 'Data Presentation and Interpretation',
+    description: 'be able to clean data, including dealing with missing data, errors and outliers',
+    isStatutory: true
+  },
+
+  // PROBABILITY (PRB)
+  {
+    notation: 'UK.KS5.Y12.MA.PRB.1',
+    strand: 'Probability',
+    description: 'understand and use mutually exclusive and independent events when calculating probabilities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.PRB.2',
+    strand: 'Probability',
+    description: 'link to discrete and continuous distributions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.PRB.3',
+    strand: 'Probability',
+    description: 'understand and use conditional probability, including the use of tree diagrams, Venn diagrams, two-way tables',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.PRB.4',
+    strand: 'Probability',
+    description: 'understand and use the conditional probability formula P(A|B) = P(A∩B)/P(B)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.PRB.5',
+    strand: 'Probability',
+    description: 'model with probability, including critiquing assumptions made and the likely effect of more realistic assumptions',
+    isStatutory: true
+  },
+
+  // STATISTICAL DISTRIBUTIONS (SDI)
+  {
+    notation: 'UK.KS5.Y12.MA.SDI.1',
+    strand: 'Statistical Distributions',
+    description: 'understand and use simple, discrete probability distributions (calculation of mean and variance of discrete random variables is excluded), including the binomial distribution, as a model; calculate probabilities using the binomial distribution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SDI.2',
+    strand: 'Statistical Distributions',
+    description: 'understand and use the Normal distribution as a model; find probabilities using the Normal distribution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SDI.3',
+    strand: 'Statistical Distributions',
+    description: 'link to histograms, mean, standard deviation, points of inflection and the binomial distribution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SDI.4',
+    strand: 'Statistical Distributions',
+    description: 'select an appropriate probability distribution for a context, with appropriate reasoning, including recognising when the binomial or Normal model may not be appropriate',
+    isStatutory: true
+  },
+
+  // STATISTICAL HYPOTHESIS TESTING (SHT)
+  {
+    notation: 'UK.KS5.Y12.MA.SHT.1',
+    strand: 'Statistical Hypothesis Testing',
+    description: 'understand and apply the language of statistical hypothesis testing, developed through a binomial model: null hypothesis, alternative hypothesis, significance level, test statistic, 1-tail test, 2-tail test, critical value, critical region, acceptance region, p-value',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SHT.2',
+    strand: 'Statistical Hypothesis Testing',
+    description: 'conduct a statistical hypothesis test for the proportion in the binomial distribution and interpret the results in context',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.SHT.3',
+    strand: 'Statistical Hypothesis Testing',
+    description: 'understand that a sample is being used to make an inference about the population and appreciate that the significance level is the probability of incorrectly rejecting the null hypothesis',
+    isStatutory: true
+  },
+
+  // QUANTITIES AND UNITS IN MECHANICS (QUM)
+  {
+    notation: 'UK.KS5.Y12.MA.QUM.1',
+    strand: 'Quantities and Units in Mechanics',
+    description: 'understand and use fundamental quantities and units in the S.I. system: length, time, mass',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.QUM.2',
+    strand: 'Quantities and Units in Mechanics',
+    description: 'understand and use derived quantities and units: velocity, acceleration, force, weight, moment',
+    isStatutory: true
+  },
+
+  // KINEMATICS (KIN)
+  {
+    notation: 'UK.KS5.Y12.MA.KIN.1',
+    strand: 'Kinematics',
+    description: 'understand and use the language of kinematics: position; displacement; distance travelled; velocity; speed; acceleration',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.KIN.2',
+    strand: 'Kinematics',
+    description: 'understand, use and interpret graphs in kinematics for motion in a straight line: displacement against time and interpretation of gradient; velocity against time and interpretation of gradient and area under the graph',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.KIN.3',
+    strand: 'Kinematics',
+    description: 'understand, use and derive the formulae for constant acceleration for motion in a straight line; extend to 2 dimensions using vectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.KIN.4',
+    strand: 'Kinematics',
+    description: 'use calculus in kinematics for motion in a straight line: v = dr/dt, a = dv/dt = d²r/dt², r = ∫v dt, v = ∫a dt; extend to 2 dimensions using vectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.KIN.5',
+    strand: 'Kinematics',
+    description: 'model motion under gravity in a vertical plane using vectors; projectiles',
+    isStatutory: true
+  },
+
+  // FORCES AND NEWTON'S LAWS (FNL)
+  {
+    notation: 'UK.KS5.Y12.MA.FNL.1',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'understand the concept of a force; understand and use Newton\'s first law',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.FNL.2',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'understand and use Newton\'s second law for motion in a straight line (including where forces need to be resolved); extend to situations where forces need to be resolved (2 dimensions)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.FNL.3',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'understand and use weight and the model of an object as a particle',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.FNL.4',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'understand and use Newton\'s third law; equilibrium of forces on a particle and modelling the contact between two rough surfaces by friction (i.e. friction is sufficiently large to prevent motion, or motion is imminent, or sliding is occurring); understanding of F ≤ μR; motion of a body on a rough surface',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.MA.FNL.5',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'apply Newton\'s laws to linear motion and simple problems involving connected particles',
+    isStatutory: true
+  }
+];
+
+const year13Standards: BritishNCStandard[] = [
+  // Year 13 extends Year 12 content and adds Further Mathematics preparation
+
+  // PROOF - Advanced (PRF)
+  {
+    notation: 'UK.KS5.Y13.MA.PRF.1',
+    strand: 'Proof',
+    description: 'apply proof by contradiction (including proving the irrationality of √2 and the infinity of primes)',
+    isStatutory: true,
+    guidance: 'Extension of proof techniques from Year 12.'
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.PRF.2',
+    strand: 'Proof',
+    description: 'apply advanced mathematical induction proofs including sums of series, divisibility and recurrence relations',
+    isStatutory: true
+  },
+
+  // ALGEBRA AND FUNCTIONS - Advanced (ALG)
+  {
+    notation: 'UK.KS5.Y13.MA.ALG.1',
+    strand: 'Algebra and Functions',
+    description: 'simplify rational expressions including by factorising and cancelling, and algebraic division (by linear expressions only)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.ALG.2',
+    strand: 'Algebra and Functions',
+    description: 'decompose rational functions into partial fractions (including cases with repeated linear terms in the denominator)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.ALG.3',
+    strand: 'Algebra and Functions',
+    description: 'understand and use the modulus function; sketch the modulus of a function and solve equations and inequalities involving the modulus function',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.ALG.4',
+    strand: 'Algebra and Functions',
+    description: 'use functions in modelling, including consideration of limitations and refinements of the models',
+    isStatutory: true
+  },
+
+  // COORDINATE GEOMETRY - Advanced (CGE)
+  {
+    notation: 'UK.KS5.Y13.MA.CGE.1',
+    strand: 'Coordinate Geometry',
+    description: 'understand and use the parametric equations of curves and sketch parametric curves; use parametric equations in modelling in a variety of contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.CGE.2',
+    strand: 'Coordinate Geometry',
+    description: 'convert between Cartesian and parametric forms; understand the connection between the equation of a curve and its parametric form',
+    isStatutory: true
+  },
+
+  // SEQUENCES AND SERIES - Advanced (SEQ)
+  {
+    notation: 'UK.KS5.Y13.MA.SEQ.1',
+    strand: 'Sequences and Series',
+    description: 'understand and use the binomial expansion of (1 + x)ⁿ for rational n, including validity range |x| < 1',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.SEQ.2',
+    strand: 'Sequences and Series',
+    description: 'work with Maclaurin series and Taylor series; understand the relation between power series and functions',
+    isStatutory: true,
+    guidance: 'Introduction to advanced series expansions.'
+  },
+
+  // TRIGONOMETRY - Advanced (TRG)
+  {
+    notation: 'UK.KS5.Y13.MA.TRG.1',
+    strand: 'Trigonometry',
+    description: 'solve more complex trigonometric equations including those requiring the use of double angle and addition formulae',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.TRG.2',
+    strand: 'Trigonometry',
+    description: 'use trigonometric identities to prove results and solve problems in pure mathematics and applications',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.TRG.3',
+    strand: 'Trigonometry',
+    description: 'apply trigonometry in 3D contexts including finding angles between lines and planes',
+    isStatutory: true
+  },
+
+  // DIFFERENTIATION - Advanced (DIF)
+  {
+    notation: 'UK.KS5.Y13.MA.DIF.1',
+    strand: 'Differentiation',
+    description: 'differentiate parametric equations and implicit functions to find gradients, tangents and normals',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.DIF.2',
+    strand: 'Differentiation',
+    description: 'use second derivatives to classify stationary points and investigate concavity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.DIF.3',
+    strand: 'Differentiation',
+    description: 'apply differentiation to model and solve problems involving rates of change, optimisation and related rates',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.DIF.4',
+    strand: 'Differentiation',
+    description: 'construct differential equations and verify their solutions',
+    isStatutory: true
+  },
+
+  // INTEGRATION - Advanced (INT)
+  {
+    notation: 'UK.KS5.Y13.MA.INT.1',
+    strand: 'Integration',
+    description: 'integrate more complex functions using substitution, integration by parts and partial fractions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.INT.2',
+    strand: 'Integration',
+    description: 'use integration to find volumes of revolution about the x-axis and y-axis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.INT.3',
+    strand: 'Integration',
+    description: 'solve differential equations of the form dy/dx = f(x)g(y) and interpret solutions in context',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.INT.4',
+    strand: 'Integration',
+    description: 'evaluate improper integrals where either the integrand is undefined at a value in the range of integration, or the range of integration extends to infinity',
+    isStatutory: true,
+    guidance: 'Extension content for more able students.'
+  },
+
+  // NUMERICAL METHODS (NME)
+  {
+    notation: 'UK.KS5.Y13.MA.NME.1',
+    strand: 'Numerical Methods',
+    description: 'locate roots of f(x) = 0 by considering changes of sign of f(x) in an interval of x on which f(x) is sufficiently well-behaved',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.NME.2',
+    strand: 'Numerical Methods',
+    description: 'understand how change of sign methods can fail',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.NME.3',
+    strand: 'Numerical Methods',
+    description: 'solve equations approximately using simple iterative methods; be able to draw cobweb and staircase diagrams to illustrate and understand convergence, and the notation xₙ₊₁ = g(xₙ)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.NME.4',
+    strand: 'Numerical Methods',
+    description: 'solve equations using the Newton-Raphson method and other recurrence relations of the form xₙ₊₁ = g(xₙ)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.NME.5',
+    strand: 'Numerical Methods',
+    description: 'understand how such methods can fail',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.NME.6',
+    strand: 'Numerical Methods',
+    description: 'use numerical methods to solve problems in context',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.NME.7',
+    strand: 'Numerical Methods',
+    description: 'use the trapezium rule to estimate the value of a definite integral; use increasing number of strips to estimate accuracy',
+    isStatutory: true
+  },
+
+  // VECTORS - Advanced (VEC)
+  {
+    notation: 'UK.KS5.Y13.MA.VEC.1',
+    strand: 'Vectors',
+    description: 'use vectors in three dimensions; calculate the distance between two points in 3D space',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.VEC.2',
+    strand: 'Vectors',
+    description: 'understand and use the equation of a line in 3D in vector form r = a + tb',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.VEC.3',
+    strand: 'Vectors',
+    description: 'calculate the scalar product of two vectors; use the scalar product to find the angle between two vectors and to prove perpendicularity',
+    isStatutory: true
+  },
+
+  // STATISTICAL DISTRIBUTIONS - Advanced (SDI)
+  {
+    notation: 'UK.KS5.Y13.MA.SDI.1',
+    strand: 'Statistical Distributions',
+    description: 'use the Normal distribution as an approximation to the binomial distribution; understand when this is appropriate',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.SDI.2',
+    strand: 'Statistical Distributions',
+    description: 'apply continuity corrections when using Normal approximations',
+    isStatutory: true
+  },
+
+  // STATISTICAL HYPOTHESIS TESTING - Advanced (SHT)
+  {
+    notation: 'UK.KS5.Y13.MA.SHT.1',
+    strand: 'Statistical Hypothesis Testing',
+    description: 'conduct a statistical hypothesis test for the mean of a Normal distribution with known, given or assumed variance and interpret the results in context',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.SHT.2',
+    strand: 'Statistical Hypothesis Testing',
+    description: 'understand the terminology of hypothesis testing including Type I and Type II errors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.SHT.3',
+    strand: 'Statistical Hypothesis Testing',
+    description: 'conduct a statistical hypothesis test for the correlation coefficient for bivariate data and interpret the results in context',
+    isStatutory: true
+  },
+
+  // FORCES AND NEWTON'S LAWS - Advanced (FNL)
+  {
+    notation: 'UK.KS5.Y13.MA.FNL.1',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'understand and apply the principle of moments and solve problems involving parallel and non-parallel coplanar forces',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.FNL.2',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'resolve forces in 2 dimensions; apply equilibrium conditions for a particle and a rigid body',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.FNL.3',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'solve problems involving friction including the coefficient of friction and the limiting equilibrium',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.FNL.4',
+    strand: 'Forces and Newton\'s Laws',
+    description: 'apply Newton\'s laws to problems involving connected particles including those on inclined planes',
+    isStatutory: true
+  },
+
+  // MOMENTS (MOM)
+  {
+    notation: 'UK.KS5.Y13.MA.MOM.1',
+    strand: 'Moments',
+    description: 'understand and use moments in simple static contexts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.MOM.2',
+    strand: 'Moments',
+    description: 'understand and apply the principle of moments to solve problems involving equilibrium of rigid bodies',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.MOM.3',
+    strand: 'Moments',
+    description: 'solve problems involving centres of mass of symmetric uniform plane laminas and simple composite bodies',
+    isStatutory: true,
+    guidance: 'Extension to composite shapes and practical applications.'
+  },
+
+  // KINEMATICS - Advanced (KIN)
+  {
+    notation: 'UK.KS5.Y13.MA.KIN.1',
+    strand: 'Kinematics',
+    description: 'use calculus for kinematics in two and three dimensions with position, velocity and acceleration as vector functions of time',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.KIN.2',
+    strand: 'Kinematics',
+    description: 'solve problems involving projectile motion including finding range, maximum height and time of flight',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.MA.KIN.3',
+    strand: 'Kinematics',
+    description: 'solve problems involving variable acceleration using integration and differentiation',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
 // BRITISH NATIONAL CURRICULUM DATA EXPORT
 // =============================================================================
 
@@ -2187,7 +4101,7 @@ export const britishNCMathematics: BritishNCJurisdiction = {
   code: 'UK_NATIONAL_CURRICULUM',
   name: 'British National Curriculum',
   country: 'GB',
-  version: '2014 (verified 2025)',
+  version: '2014 + GCSE 2021 + A-Level 2017 (verified 2026)',
   sourceUrl: 'https://www.gov.uk/government/publications/national-curriculum-in-england-mathematics-programmes-of-study/national-curriculum-in-england-mathematics-programmes-of-study',
   years: [
     { year: 1, keyStage: 1, ageRangeMin: 5, ageRangeMax: 6, standards: year1Standards },
@@ -2198,7 +4112,11 @@ export const britishNCMathematics: BritishNCJurisdiction = {
     { year: 6, keyStage: 2, ageRangeMin: 10, ageRangeMax: 11, standards: year6Standards },
     { year: 7, keyStage: 3, ageRangeMin: 11, ageRangeMax: 12, standards: year7Standards },
     { year: 8, keyStage: 3, ageRangeMin: 12, ageRangeMax: 13, standards: year8Standards },
-    { year: 9, keyStage: 3, ageRangeMin: 13, ageRangeMax: 14, standards: year9Standards }
+    { year: 9, keyStage: 3, ageRangeMin: 13, ageRangeMax: 14, standards: year9Standards },
+    { year: 10, keyStage: 4, ageRangeMin: 14, ageRangeMax: 15, standards: year10Standards },
+    { year: 11, keyStage: 4, ageRangeMin: 15, ageRangeMax: 16, standards: year11Standards },
+    { year: 12, keyStage: 5, ageRangeMin: 16, ageRangeMax: 17, standards: year12Standards },
+    { year: 13, keyStage: 5, ageRangeMin: 17, ageRangeMax: 18, standards: year13Standards }
   ]
 };
 

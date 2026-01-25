@@ -1,16 +1,21 @@
 /**
  * British National Curriculum - Science Standards
- * Years 1-9 (Key Stages 1, 2, and 3)
+ * Years 1-13 (Key Stages 1, 2, 3, 4, and 5)
  *
- * Source: GOV.UK National Curriculum in England
- * https://www.gov.uk/government/publications/national-curriculum-in-england-science-programmes-of-study/national-curriculum-in-england-science-programmes-of-study
+ * Sources:
+ * - KS1-3: GOV.UK National Curriculum in England
+ *   https://www.gov.uk/government/publications/national-curriculum-in-england-science-programmes-of-study
+ * - KS4 (GCSE): DfE GCSE Combined Science Subject Content (2015)
+ *   https://www.gov.uk/government/publications/gcse-combined-science
+ * - KS5 (A-Level): DfE GCE AS and A Level Subject Content (2014)
+ *   https://www.gov.uk/government/publications/gce-as-and-a-level-for-science
  *
  * VERIFIED: 2025-01-15 against official GOV.UK documentation
  *
  * Notation System: UK.KS{keyStage}.Y{year}.SC.{strand}.{number}
  * - UK = United Kingdom
- * - KS = Key Stage (1, 2, or 3)
- * - Y = Year (1-9)
+ * - KS = Key Stage (1, 2, 3, 4, or 5)
+ * - Y = Year (1-13)
  * - SC = Science
  * - Strand codes:
  *   KS1/KS2:
@@ -60,6 +65,71 @@
  *   - WS.EI = Experimental Skills and Investigations
  *   - WS.AE = Analysis and Evaluation
  *   - WS.ME = Measurement
+ *   KS4 (GCSE Combined Science) Biology:
+ *   - BIO.CB = Cell Biology
+ *   - BIO.OR = Organisation
+ *   - BIO.IN = Infection and Response
+ *   - BIO.BI = Bioenergetics
+ *   - BIO.HO = Homeostasis and Response
+ *   - BIO.IH = Inheritance, Variation and Evolution
+ *   - BIO.EC = Ecology
+ *   KS4 (GCSE Combined Science) Chemistry:
+ *   - CHM.AS = Atomic Structure and the Periodic Table
+ *   - CHM.BS = Bonding, Structure and Properties of Matter
+ *   - CHM.QC = Quantitative Chemistry
+ *   - CHM.CC = Chemical Changes
+ *   - CHM.ER = Energy Changes
+ *   - CHM.RR = Rate and Extent of Chemical Change
+ *   - CHM.OC = Organic Chemistry
+ *   - CHM.CA = Chemical Analysis
+ *   - CHM.CU = Chemistry of the Atmosphere
+ *   - CHM.UR = Using Resources
+ *   KS4 (GCSE Combined Science) Physics:
+ *   - PHY.EN = Energy
+ *   - PHY.EL = Electricity
+ *   - PHY.PM = Particle Model of Matter
+ *   - PHY.AS = Atomic Structure
+ *   - PHY.FC = Forces
+ *   - PHY.WV = Waves
+ *   - PHY.MG = Magnetism and Electromagnetism
+ *   KS4 Working Scientifically:
+ *   - WS.DH = Development of Scientific Thinking
+ *   - WS.ES = Experimental Skills and Strategies
+ *   - WS.AE = Analysis and Evaluation
+ *   - WS.VC = Vocabulary, Units, Symbols and Nomenclature
+ *   KS5 (A-Level) Biology:
+ *   - BIO.BM = Biological Molecules
+ *   - BIO.CL = Cells
+ *   - BIO.OE = Organisms Exchange Substances
+ *   - BIO.GI = Genetic Information, Variation and Relationships
+ *   - BIO.ET = Energy Transfers
+ *   - BIO.RG = Response to Stimuli and Genes
+ *   - BIO.GE = Genetics, Populations and Ecosystems
+ *   - BIO.CN = Control of Gene Expression
+ *   KS5 (A-Level) Chemistry:
+ *   - CHM.PA = Physical Chemistry A (Atomic Structure, Bonding, Energetics, Kinetics, Equilibria)
+ *   - CHM.PB = Physical Chemistry B (Thermodynamics, Rate Equations, Equilibrium Constants, Electrochemistry)
+ *   - CHM.IA = Inorganic Chemistry A (Periodicity, Group 2, Group 17)
+ *   - CHM.IB = Inorganic Chemistry B (Period 3, Transition Metals, Ion Reactions)
+ *   - CHM.OA = Organic Chemistry A (Introduction, Alkanes, Halogenoalkanes, Alkenes, Alcohols)
+ *   - CHM.OB = Organic Chemistry B (Optical Isomerism, Aldehydes/Ketones, Carboxylic Acids, Aromatics, Amines, Polymers)
+ *   - CHM.AN = Analytical Techniques
+ *   KS5 (A-Level) Physics:
+ *   - PHY.MM = Measurements and their Errors
+ *   - PHY.PM = Particles and Radiation
+ *   - PHY.WO = Waves and Optics
+ *   - PHY.ME = Mechanics and Materials
+ *   - PHY.EL = Electricity
+ *   - PHY.FM = Further Mechanics and Thermal Physics
+ *   - PHY.FD = Fields and their Consequences
+ *   - PHY.NP = Nuclear Physics
+ *   - PHY.AP = Astrophysics (optional)
+ *   - PHY.MP = Medical Physics (optional)
+ *   - PHY.TP = Turning Points in Physics (optional)
+ *   KS5 Practical Skills:
+ *   - PS.DE = Development of Practical Skills
+ *   - PS.ES = Experimental Skills
+ *   - PS.AE = Analysis and Evaluation
  */
 
 export interface BritishNCScienceStandard {
@@ -1695,6 +1765,2244 @@ const year9Standards: BritishNCScienceStandard[] = [
 ];
 
 // =============================================================================
+// KEY STAGE 4: YEAR 10 - GCSE Combined Science (Ages 14-15)
+// =============================================================================
+
+const year10Standards: BritishNCScienceStandard[] = [
+  // WORKING SCIENTIFICALLY - Development of Scientific Thinking
+  {
+    notation: 'UK.KS4.Y10.SC.WS.DH.1',
+    strand: 'Working Scientifically - Development of Scientific Thinking',
+    description: 'understand how scientific methods and theories develop over time',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.DH.2',
+    strand: 'Working Scientifically - Development of Scientific Thinking',
+    description: 'use a variety of models such as representational, spatial, descriptive, computational and mathematical to solve problems, make predictions and to develop scientific explanations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.DH.3',
+    strand: 'Working Scientifically - Development of Scientific Thinking',
+    description: 'appreciate the power and limitations of science and consider ethical issues which may arise',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.DH.4',
+    strand: 'Working Scientifically - Development of Scientific Thinking',
+    description: 'explain everyday and technological applications of science; evaluate associated personal, social, economic and environmental implications',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.DH.5',
+    strand: 'Working Scientifically - Development of Scientific Thinking',
+    description: 'evaluate risks both in practical science and the wider societal context, including perception of risk in relation to data and consequences',
+    isStatutory: true
+  },
+  // WORKING SCIENTIFICALLY - Experimental Skills and Strategies
+  {
+    notation: 'UK.KS4.Y10.SC.WS.ES.1',
+    strand: 'Working Scientifically - Experimental Skills and Strategies',
+    description: 'use scientific theories and explanations to develop hypotheses',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.ES.2',
+    strand: 'Working Scientifically - Experimental Skills and Strategies',
+    description: 'plan experiments or devise procedures to make observations, produce or characterise a substance, test hypotheses, check data or explore phenomena',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.ES.3',
+    strand: 'Working Scientifically - Experimental Skills and Strategies',
+    description: 'apply a knowledge of a range of techniques, instruments, apparatus, and materials to select those appropriate to the experiment',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.ES.4',
+    strand: 'Working Scientifically - Experimental Skills and Strategies',
+    description: 'carry out experiments appropriately having due regard for the correct manipulation of apparatus, the accuracy of measurements and health and safety considerations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.ES.5',
+    strand: 'Working Scientifically - Experimental Skills and Strategies',
+    description: 'recognise when to apply a knowledge of sampling techniques to ensure any samples collected are representative',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.ES.6',
+    strand: 'Working Scientifically - Experimental Skills and Strategies',
+    description: 'make and record observations and measurements using a range of apparatus and methods',
+    isStatutory: true
+  },
+  // WORKING SCIENTIFICALLY - Analysis and Evaluation
+  {
+    notation: 'UK.KS4.Y10.SC.WS.AE.1',
+    strand: 'Working Scientifically - Analysis and Evaluation',
+    description: 'apply the cycle of collecting, presenting and analysing data, including using mathematical and statistical analysis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.AE.2',
+    strand: 'Working Scientifically - Analysis and Evaluation',
+    description: 'present observations and other data using appropriate methods',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.AE.3',
+    strand: 'Working Scientifically - Analysis and Evaluation',
+    description: 'translate data from one form to another',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.AE.4',
+    strand: 'Working Scientifically - Analysis and Evaluation',
+    description: 'carry out and represent mathematical and statistical analysis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.AE.5',
+    strand: 'Working Scientifically - Analysis and Evaluation',
+    description: 'interpret observations and other data, including identifying patterns and trends, making inferences and drawing conclusions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.AE.6',
+    strand: 'Working Scientifically - Analysis and Evaluation',
+    description: 'present reasoned explanations including relating data to hypotheses',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.WS.AE.7',
+    strand: 'Working Scientifically - Analysis and Evaluation',
+    description: 'be objective, evaluating data in terms of accuracy, precision, repeatability and reproducibility and identifying potential sources of random and systematic error',
+    isStatutory: true
+  },
+  // BIOLOGY - Cell Biology
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.1',
+    strand: 'Biology - Cell Biology',
+    description: 'explain how eukaryotic and prokaryotic cells can be distinguished on the basis of differences in their structure',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.2',
+    strand: 'Biology - Cell Biology',
+    description: 'describe the functions of subcellular structures including the nucleus, cell membrane, cell wall, chloroplasts, mitochondria, vacuole and ribosomes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.3',
+    strand: 'Biology - Cell Biology',
+    description: 'explain how the main sub-cellular structures of eukaryotic cells are related to their functions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.4',
+    strand: 'Biology - Cell Biology',
+    description: 'describe the role of DNA in determining cell function and protein synthesis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.5',
+    strand: 'Biology - Cell Biology',
+    description: 'explain how cells differentiate to become specialised; describe the importance of cell differentiation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.6',
+    strand: 'Biology - Cell Biology',
+    description: 'describe how mitosis produces two daughter cells that are identical',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.7',
+    strand: 'Biology - Cell Biology',
+    description: 'describe the stages of the cell cycle, including mitosis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.8',
+    strand: 'Biology - Cell Biology',
+    description: 'explain the importance of stem cells in embryonic and adult animals and meristems in plants',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.9',
+    strand: 'Biology - Cell Biology',
+    description: 'evaluate the practical risks and benefits in the use of stem cells in medical research and treatments',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.10',
+    strand: 'Biology - Cell Biology',
+    description: 'explain how diffusion, osmosis and active transport are used to transport materials in and out of cells',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.CB.11',
+    strand: 'Biology - Cell Biology',
+    description: 'explain the need for exchange surfaces and transport systems in multicellular organisms',
+    isStatutory: true
+  },
+  // BIOLOGY - Organisation
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.1',
+    strand: 'Biology - Organisation',
+    description: 'explain how cells are organised into tissues, organs and systems, with examples from the human body',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.2',
+    strand: 'Biology - Organisation',
+    description: 'describe the structure and function of the digestive system including enzymes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.3',
+    strand: 'Biology - Organisation',
+    description: 'explain the role of enzymes in digestion and describe how they work as biological catalysts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.4',
+    strand: 'Biology - Organisation',
+    description: 'describe the human circulatory system including the structure of the heart and blood vessels',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.5',
+    strand: 'Biology - Organisation',
+    description: 'explain how the heart is adapted to function as a pump',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.6',
+    strand: 'Biology - Organisation',
+    description: 'describe the composition of blood and the functions of its components',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.7',
+    strand: 'Biology - Organisation',
+    description: 'explain how the structure of blood vessels is adapted to their function',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.8',
+    strand: 'Biology - Organisation',
+    description: 'describe cardiovascular diseases and their treatment including coronary heart disease, statins and stents',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.9',
+    strand: 'Biology - Organisation',
+    description: 'describe the structure of plant tissue systems including transport tissues (xylem and phloem)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.OR.10',
+    strand: 'Biology - Organisation',
+    description: 'explain how substances are transported in plants via transpiration and translocation',
+    isStatutory: true
+  },
+  // BIOLOGY - Infection and Response
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.IN.1',
+    strand: 'Biology - Infection and Response',
+    description: 'describe how pathogens including bacteria, viruses, fungi and protists can cause communicable diseases in animals and plants',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.IN.2',
+    strand: 'Biology - Infection and Response',
+    description: 'explain how spread of diseases can be reduced or prevented',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.IN.3',
+    strand: 'Biology - Infection and Response',
+    description: 'describe the non-specific defence systems of the human body against pathogens',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.IN.4',
+    strand: 'Biology - Infection and Response',
+    description: 'explain the role of the immune system in defence against disease',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.IN.5',
+    strand: 'Biology - Infection and Response',
+    description: 'describe how vaccination prevents illness in an individual and contributes to herd immunity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.IN.6',
+    strand: 'Biology - Infection and Response',
+    description: 'explain how antibiotics and painkillers are used to treat disease; discuss antibiotic resistance',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.BIO.IN.7',
+    strand: 'Biology - Infection and Response',
+    description: 'describe the process of drug discovery, development and testing',
+    isStatutory: true
+  },
+  // CHEMISTRY - Atomic Structure and the Periodic Table
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.AS.1',
+    strand: 'Chemistry - Atomic Structure and the Periodic Table',
+    description: 'describe the structure of the atom including protons, neutrons and electrons',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.AS.2',
+    strand: 'Chemistry - Atomic Structure and the Periodic Table',
+    description: 'explain the meaning of atomic number, mass number, isotopes and relative atomic mass',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.AS.3',
+    strand: 'Chemistry - Atomic Structure and the Periodic Table',
+    description: 'describe the development of the periodic table from Mendeleev to the modern form',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.AS.4',
+    strand: 'Chemistry - Atomic Structure and the Periodic Table',
+    description: 'explain why elements in the same group in the periodic table have similar properties',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.AS.5',
+    strand: 'Chemistry - Atomic Structure and the Periodic Table',
+    description: 'describe the properties and reactions of Group 1 (alkali metals) and Group 7 (halogens)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.AS.6',
+    strand: 'Chemistry - Atomic Structure and the Periodic Table',
+    description: 'describe the properties of Group 0 (noble gases) and explain trends within the group',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.AS.7',
+    strand: 'Chemistry - Atomic Structure and the Periodic Table',
+    description: 'describe the properties of transition metals and their compounds',
+    isStatutory: true
+  },
+  // CHEMISTRY - Bonding, Structure and Properties of Matter
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.1',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'explain how ionic bonds are formed by the transfer of electrons',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.2',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'describe the structure of ionic compounds as a regular lattice and explain their properties',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.3',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'explain how covalent bonds are formed by the sharing of electrons',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.4',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'describe the properties of small molecules and explain them in terms of intermolecular forces',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.5',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'explain the properties of polymers and how their properties are related to their structure',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.6',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'describe the properties of giant covalent structures including diamond and graphite',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.7',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'describe the properties of metals and explain metallic bonding',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.BS.8',
+    strand: 'Chemistry - Bonding, Structure and Properties of Matter',
+    description: 'explain how the properties of alloys differ from pure metals',
+    isStatutory: true
+  },
+  // CHEMISTRY - Quantitative Chemistry
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.QC.1',
+    strand: 'Chemistry - Quantitative Chemistry',
+    description: 'apply the law of conservation of mass to chemical reactions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.QC.2',
+    strand: 'Chemistry - Quantitative Chemistry',
+    description: 'calculate relative formula mass from relative atomic masses',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.QC.3',
+    strand: 'Chemistry - Quantitative Chemistry',
+    description: 'explain the mole concept and use it in calculations involving mass, Mr and amount',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.QC.4',
+    strand: 'Chemistry - Quantitative Chemistry',
+    description: 'calculate the percentage mass of an element in a compound',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.QC.5',
+    strand: 'Chemistry - Quantitative Chemistry',
+    description: 'calculate reacting masses using balanced equations',
+    isStatutory: true
+  },
+  // CHEMISTRY - Chemical Changes
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.1',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'describe the reactions of metals with oxygen, water and dilute acids',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.2',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'explain the reactivity series of metals in terms of the tendency to form positive ions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.3',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'explain oxidation and reduction in terms of oxygen and electron transfer',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.4',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'describe methods of extracting metals from ores depending on reactivity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.5',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'explain electrolysis in terms of the movement and discharge of ions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.6',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'describe the reactions of acids with metals, metal oxides and metal carbonates',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.7',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'explain neutralisation reactions and the production of salts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.CHM.CC.8',
+    strand: 'Chemistry - Chemical Changes',
+    description: 'understand the pH scale and use indicators to determine pH',
+    isStatutory: true
+  },
+  // PHYSICS - Energy
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.1',
+    strand: 'Physics - Energy',
+    description: 'describe energy stores including kinetic, gravitational potential, elastic potential, thermal, chemical, magnetic, electrostatic and nuclear',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.2',
+    strand: 'Physics - Energy',
+    description: 'explain how energy is transferred between stores by heating, work done by forces, electrical work and wave transfers',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.3',
+    strand: 'Physics - Energy',
+    description: 'apply the conservation of energy principle to energy transfers',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.4',
+    strand: 'Physics - Energy',
+    description: 'calculate kinetic energy using Ek = ½mv² and gravitational potential energy using Ep = mgh',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.5',
+    strand: 'Physics - Energy',
+    description: 'describe power as the rate of energy transfer and calculate using P = E/t and P = W/t',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.6',
+    strand: 'Physics - Energy',
+    description: 'calculate efficiency of energy transfers and describe ways to reduce unwanted energy transfers',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.7',
+    strand: 'Physics - Energy',
+    description: 'describe the main energy resources including fossil fuels, nuclear fuel, bio-fuel, wind, hydroelectricity, geothermal, the tides, the Sun and water waves',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EN.8',
+    strand: 'Physics - Energy',
+    description: 'distinguish between renewable and non-renewable energy resources',
+    isStatutory: true
+  },
+  // PHYSICS - Electricity
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.1',
+    strand: 'Physics - Electricity',
+    description: 'describe electric current as the rate of flow of charge and calculate using Q = It',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.2',
+    strand: 'Physics - Electricity',
+    description: 'explain potential difference as the energy transferred per unit charge and calculate using V = W/Q',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.3',
+    strand: 'Physics - Electricity',
+    description: 'describe resistance and calculate using V = IR',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.4',
+    strand: 'Physics - Electricity',
+    description: 'investigate the relationship between current and potential difference for different components',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.5',
+    strand: 'Physics - Electricity',
+    description: 'explain how current and resistance are affected in series and parallel circuits',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.6',
+    strand: 'Physics - Electricity',
+    description: 'describe the use of thermistors and LDRs in sensing circuits',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.7',
+    strand: 'Physics - Electricity',
+    description: 'calculate electrical power using P = IV and P = I²R',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.8',
+    strand: 'Physics - Electricity',
+    description: 'calculate energy transferred using E = Pt and E = QV',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.9',
+    strand: 'Physics - Electricity',
+    description: 'explain the functions of the live, neutral and earth wires in the domestic supply',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.EL.10',
+    strand: 'Physics - Electricity',
+    description: 'describe the difference between direct and alternating current',
+    isStatutory: true
+  },
+  // PHYSICS - Particle Model of Matter
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.PM.1',
+    strand: 'Physics - Particle Model of Matter',
+    description: 'describe the three states of matter in terms of the arrangement, movement and energy of the particles',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.PM.2',
+    strand: 'Physics - Particle Model of Matter',
+    description: 'explain changes of state in terms of kinetic theory and energy changes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.PM.3',
+    strand: 'Physics - Particle Model of Matter',
+    description: 'explain internal energy as the total kinetic and potential energy of all particles',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.PM.4',
+    strand: 'Physics - Particle Model of Matter',
+    description: 'use the equation for specific heat capacity: E = mcΔθ',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.PM.5',
+    strand: 'Physics - Particle Model of Matter',
+    description: 'use the equation for specific latent heat: E = mL',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.PM.6',
+    strand: 'Physics - Particle Model of Matter',
+    description: 'explain how the pressure of a gas is related to temperature and volume',
+    isStatutory: true
+  },
+  // PHYSICS - Atomic Structure
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.AS.1',
+    strand: 'Physics - Atomic Structure',
+    description: 'describe the structure of the atom and how the model developed over time',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.AS.2',
+    strand: 'Physics - Atomic Structure',
+    description: 'explain radioactive decay as the emission of radiation from unstable nuclei',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.AS.3',
+    strand: 'Physics - Atomic Structure',
+    description: 'describe the properties and uses of alpha, beta and gamma radiation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.AS.4',
+    strand: 'Physics - Atomic Structure',
+    description: 'explain activity and half-life of radioactive substances',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.AS.5',
+    strand: 'Physics - Atomic Structure',
+    description: 'describe nuclear fission and nuclear fusion',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y10.SC.PHY.AS.6',
+    strand: 'Physics - Atomic Structure',
+    description: 'explain the hazards of ionising radiation and evaluate the risks and benefits of its uses',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
+// KEY STAGE 4: YEAR 11 - GCSE Combined Science (Ages 15-16)
+// =============================================================================
+
+const year11Standards: BritishNCScienceStandard[] = [
+  // BIOLOGY - Bioenergetics
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.BI.1',
+    strand: 'Biology - Bioenergetics',
+    description: 'describe photosynthesis as an endothermic reaction and write the word and symbol equations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.BI.2',
+    strand: 'Biology - Bioenergetics',
+    description: 'explain the effects of light intensity, carbon dioxide concentration and temperature on the rate of photosynthesis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.BI.3',
+    strand: 'Biology - Bioenergetics',
+    description: 'describe limiting factors affecting photosynthesis and interpret graphs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.BI.4',
+    strand: 'Biology - Bioenergetics',
+    description: 'describe aerobic and anaerobic respiration and compare their products',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.BI.5',
+    strand: 'Biology - Bioenergetics',
+    description: 'explain why the body needs to supply muscles with extra oxygen during exercise',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.BI.6',
+    strand: 'Biology - Bioenergetics',
+    description: 'explain the concept of oxygen debt and recovery after exercise',
+    isStatutory: true
+  },
+  // BIOLOGY - Homeostasis and Response
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.1',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'explain the importance of homeostasis in maintaining optimal conditions for enzyme action',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.2',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'describe the structure and function of the nervous system including receptors, coordinators and effectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.3',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'describe the reflex arc and explain its importance in rapid responses',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.4',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'describe the structure and function of the brain and spinal cord',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.5',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'explain how hormones control metabolic processes and maintain homeostasis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.6',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'describe the control of blood glucose concentration by insulin and glucagon',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.7',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'explain Type 1 and Type 2 diabetes and how they can be treated',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.8',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'describe the role of the kidneys in osmoregulation and excretion',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.9',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'describe hormonal control of the menstrual cycle and fertility',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.HO.10',
+    strand: 'Biology - Homeostasis and Response',
+    description: 'explain how plant hormones control and coordinate growth and responses to light and gravity',
+    isStatutory: true
+  },
+  // BIOLOGY - Inheritance, Variation and Evolution
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.1',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe sexual and asexual reproduction and their advantages',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.2',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'explain DNA structure and its role in coding for proteins',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.3',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe meiosis and how it produces gametes with half the chromosome number',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.4',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'use genetic diagrams to predict the outcomes of monohybrid crosses',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.5',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe inherited disorders including cystic fibrosis and polydactyly',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.6',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'explain how sex is determined in humans and use genetic diagrams',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.7',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe variation as the result of genetic and environmental causes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.8',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'explain Darwin\'s theory of evolution by natural selection',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.9',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe the development of antibiotic-resistant bacteria as evidence for evolution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.10',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe selective breeding and genetic engineering and evaluate their implications',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.11',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe the evidence for evolution including fossils and the development of antibiotic resistance',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.IH.12',
+    strand: 'Biology - Inheritance, Variation and Evolution',
+    description: 'describe classification systems and explain how they have changed over time',
+    isStatutory: true
+  },
+  // BIOLOGY - Ecology
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.1',
+    strand: 'Biology - Ecology',
+    description: 'describe the levels of organisation within an ecosystem from organism to ecosystem',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.2',
+    strand: 'Biology - Ecology',
+    description: 'explain how communities are affected by abiotic and biotic factors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.3',
+    strand: 'Biology - Ecology',
+    description: 'describe adaptations of organisms to their environment',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.4',
+    strand: 'Biology - Ecology',
+    description: 'explain how organisms are interdependent within food chains and food webs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.5',
+    strand: 'Biology - Ecology',
+    description: 'describe the cycling of materials including carbon and water cycles',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.6',
+    strand: 'Biology - Ecology',
+    description: 'explain the role of microorganisms in decomposition',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.7',
+    strand: 'Biology - Ecology',
+    description: 'describe human impacts on biodiversity and ecosystems',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.BIO.EC.8',
+    strand: 'Biology - Ecology',
+    description: 'describe the importance of biodiversity and methods to maintain it',
+    isStatutory: true
+  },
+  // CHEMISTRY - Energy Changes
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.ER.1',
+    strand: 'Chemistry - Energy Changes',
+    description: 'describe exothermic and endothermic reactions in terms of energy transfer',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.ER.2',
+    strand: 'Chemistry - Energy Changes',
+    description: 'explain reaction profiles for exothermic and endothermic reactions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.ER.3',
+    strand: 'Chemistry - Energy Changes',
+    description: 'describe the energy changes during bond breaking and bond making',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.ER.4',
+    strand: 'Chemistry - Energy Changes',
+    description: 'calculate energy changes using bond energies',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.ER.5',
+    strand: 'Chemistry - Energy Changes',
+    description: 'describe cells and batteries as energy sources and explain how they work',
+    isStatutory: true
+  },
+  // CHEMISTRY - Rate and Extent of Chemical Change
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.RR.1',
+    strand: 'Chemistry - Rate and Extent of Chemical Change',
+    description: 'describe factors affecting the rate of chemical reactions including temperature, concentration, pressure and catalysts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.RR.2',
+    strand: 'Chemistry - Rate and Extent of Chemical Change',
+    description: 'explain collision theory and activation energy',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.RR.3',
+    strand: 'Chemistry - Rate and Extent of Chemical Change',
+    description: 'calculate rates of reaction from graphs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.RR.4',
+    strand: 'Chemistry - Rate and Extent of Chemical Change',
+    description: 'explain reversible reactions and dynamic equilibrium',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.RR.5',
+    strand: 'Chemistry - Rate and Extent of Chemical Change',
+    description: 'predict the effect of changing conditions on equilibrium position',
+    isStatutory: true
+  },
+  // CHEMISTRY - Organic Chemistry
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.OC.1',
+    strand: 'Chemistry - Organic Chemistry',
+    description: 'describe crude oil as a finite resource and the process of fractional distillation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.OC.2',
+    strand: 'Chemistry - Organic Chemistry',
+    description: 'describe the structure and properties of alkanes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.OC.3',
+    strand: 'Chemistry - Organic Chemistry',
+    description: 'describe cracking and the production of alkenes and hydrogen',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.OC.4',
+    strand: 'Chemistry - Organic Chemistry',
+    description: 'describe the structure and reactions of alkenes including combustion and addition reactions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.OC.5',
+    strand: 'Chemistry - Organic Chemistry',
+    description: 'describe alcohols and their reactions including combustion and oxidation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.OC.6',
+    strand: 'Chemistry - Organic Chemistry',
+    description: 'describe carboxylic acids and their reactions',
+    isStatutory: true
+  },
+  // CHEMISTRY - Chemical Analysis
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CA.1',
+    strand: 'Chemistry - Chemical Analysis',
+    description: 'describe the difference between pure substances and mixtures',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CA.2',
+    strand: 'Chemistry - Chemical Analysis',
+    description: 'describe methods of separation including chromatography, filtration, crystallisation and distillation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CA.3',
+    strand: 'Chemistry - Chemical Analysis',
+    description: 'interpret chromatograms and calculate Rf values',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CA.4',
+    strand: 'Chemistry - Chemical Analysis',
+    description: 'describe tests for gases including hydrogen, oxygen, carbon dioxide and chlorine',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CA.5',
+    strand: 'Chemistry - Chemical Analysis',
+    description: 'describe flame tests and tests for carbonates, halides and sulfates',
+    isStatutory: true
+  },
+  // CHEMISTRY - Chemistry of the Atmosphere
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CU.1',
+    strand: 'Chemistry - Chemistry of the Atmosphere',
+    description: 'describe the proportions of gases in the atmosphere and how they have changed over time',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CU.2',
+    strand: 'Chemistry - Chemistry of the Atmosphere',
+    description: 'describe theories about how the atmosphere was formed',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CU.3',
+    strand: 'Chemistry - Chemistry of the Atmosphere',
+    description: 'explain the greenhouse effect and the impact of human activities on climate',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CU.4',
+    strand: 'Chemistry - Chemistry of the Atmosphere',
+    description: 'describe the carbon footprint and ways to reduce it',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.CU.5',
+    strand: 'Chemistry - Chemistry of the Atmosphere',
+    description: 'describe atmospheric pollutants from fuels and their effects',
+    isStatutory: true
+  },
+  // CHEMISTRY - Using Resources
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.UR.1',
+    strand: 'Chemistry - Using Resources',
+    description: 'describe the use of Earth\'s resources and sustainable development',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.UR.2',
+    strand: 'Chemistry - Using Resources',
+    description: 'describe potable water and how it is produced from ground water and salt water',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.UR.3',
+    strand: 'Chemistry - Using Resources',
+    description: 'describe waste water treatment',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.UR.4',
+    strand: 'Chemistry - Using Resources',
+    description: 'describe the life cycle assessment of products and their environmental impacts',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.CHM.UR.5',
+    strand: 'Chemistry - Using Resources',
+    description: 'describe ways of reducing the use of resources including reduce, reuse and recycle',
+    isStatutory: true
+  },
+  // PHYSICS - Forces
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.1',
+    strand: 'Physics - Forces',
+    description: 'describe scalar and vector quantities and give examples',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.2',
+    strand: 'Physics - Forces',
+    description: 'calculate the resultant of two forces acting in one dimension',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.3',
+    strand: 'Physics - Forces',
+    description: 'describe work done when a force causes an object to move and calculate using W = Fs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.4',
+    strand: 'Physics - Forces',
+    description: 'describe the relationship between force, spring constant and extension using F = ke',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.5',
+    strand: 'Physics - Forces',
+    description: 'explain the relationship between distance, speed, velocity and acceleration',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.6',
+    strand: 'Physics - Forces',
+    description: 'interpret and draw distance-time and velocity-time graphs',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.7',
+    strand: 'Physics - Forces',
+    description: 'apply Newton\'s first law to explain forces and motion',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.8',
+    strand: 'Physics - Forces',
+    description: 'apply Newton\'s second law and calculate using F = ma',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.9',
+    strand: 'Physics - Forces',
+    description: 'explain inertia and Newton\'s third law',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.10',
+    strand: 'Physics - Forces',
+    description: 'describe stopping distance and factors affecting it',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.11',
+    strand: 'Physics - Forces',
+    description: 'explain momentum and calculate using p = mv',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.FC.12',
+    strand: 'Physics - Forces',
+    description: 'apply conservation of momentum to collisions and explosions',
+    isStatutory: true
+  },
+  // PHYSICS - Waves
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.1',
+    strand: 'Physics - Waves',
+    description: 'describe waves in terms of amplitude, wavelength, frequency and period',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.2',
+    strand: 'Physics - Waves',
+    description: 'calculate wave speed using v = fλ',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.3',
+    strand: 'Physics - Waves',
+    description: 'describe the difference between transverse and longitudinal waves',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.4',
+    strand: 'Physics - Waves',
+    description: 'explain reflection, refraction and transmission of waves at boundaries',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.5',
+    strand: 'Physics - Waves',
+    description: 'describe the electromagnetic spectrum and its applications',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.6',
+    strand: 'Physics - Waves',
+    description: 'explain the hazards of electromagnetic radiation and how they depend on frequency',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.7',
+    strand: 'Physics - Waves',
+    description: 'describe properties and uses of sound waves including ultrasound',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.WV.8',
+    strand: 'Physics - Waves',
+    description: 'describe seismic waves and what they tell us about Earth\'s structure',
+    isStatutory: true
+  },
+  // PHYSICS - Magnetism and Electromagnetism
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.1',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'describe the properties of magnets and magnetic materials',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.2',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'describe magnetic fields and represent them using field lines',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.3',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'explain how a current-carrying wire produces a magnetic field',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.4',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'describe electromagnets and their uses',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.5',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'explain the motor effect and calculate force using F = BIl',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.6',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'describe how a simple dc motor works',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.7',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'explain electromagnetic induction and how it is used in generators and transformers',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS4.Y11.SC.PHY.MG.8',
+    strand: 'Physics - Magnetism and Electromagnetism',
+    description: 'describe the structure and function of a transformer and calculate voltage ratios',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
+// KEY STAGE 5: YEAR 12 - A-Level Sciences (Ages 16-17)
+// =============================================================================
+
+const year12Standards: BritishNCScienceStandard[] = [
+  // PRACTICAL SKILLS
+  {
+    notation: 'UK.KS5.Y12.SC.PS.DE.1',
+    strand: 'Practical Skills - Development',
+    description: 'independently apply investigative approaches and methods to practical work',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.DE.2',
+    strand: 'Practical Skills - Development',
+    description: 'safely and correctly use a range of practical equipment and materials',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.DE.3',
+    strand: 'Practical Skills - Development',
+    description: 'follow written procedures and evaluate them critically',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.ES.1',
+    strand: 'Practical Skills - Experimental',
+    description: 'make and record observations and measurements with appropriate precision and accuracy',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.ES.2',
+    strand: 'Practical Skills - Experimental',
+    description: 'keep appropriate records of experimental activities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.ES.3',
+    strand: 'Practical Skills - Experimental',
+    description: 'present data in appropriate ways including using graphs and tables',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.AE.1',
+    strand: 'Practical Skills - Analysis and Evaluation',
+    description: 'process, analyse and interpret qualitative and quantitative experimental results',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.AE.2',
+    strand: 'Practical Skills - Analysis and Evaluation',
+    description: 'use scientific knowledge and understanding to draw conclusions from data',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PS.AE.3',
+    strand: 'Practical Skills - Analysis and Evaluation',
+    description: 'identify anomalous results and evaluate the reliability of data',
+    isStatutory: true
+  },
+  // A-LEVEL BIOLOGY - Biological Molecules
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.1',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe the structure and properties of monomers and polymers',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.2',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe the structure and functions of carbohydrates including monosaccharides, disaccharides and polysaccharides',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.3',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe the structure and properties of lipids including triglycerides and phospholipids',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.4',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe the structure and function of proteins including amino acids and polypeptides',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.5',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'explain the relationship between protein structure and function',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.6',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe enzyme action and factors affecting enzyme activity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.7',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe the structure of DNA and RNA nucleotides',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.8',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe DNA replication and the role of ATP in cellular processes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.BM.9',
+    strand: 'A-Level Biology - Biological Molecules',
+    description: 'describe the role of water and inorganic ions in biological processes',
+    isStatutory: true
+  },
+  // A-LEVEL BIOLOGY - Cells
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.CL.1',
+    strand: 'A-Level Biology - Cells',
+    description: 'describe cell structure using light microscopy and electron microscopy',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.CL.2',
+    strand: 'A-Level Biology - Cells',
+    description: 'explain the structure and function of organelles including nucleus, mitochondria, chloroplasts and ribosomes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.CL.3',
+    strand: 'A-Level Biology - Cells',
+    description: 'describe the fluid mosaic model of membrane structure',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.CL.4',
+    strand: 'A-Level Biology - Cells',
+    description: 'explain cell transport mechanisms including diffusion, facilitated diffusion, osmosis and active transport',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.CL.5',
+    strand: 'A-Level Biology - Cells',
+    description: 'describe the cell cycle and its regulation including mitosis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.CL.6',
+    strand: 'A-Level Biology - Cells',
+    description: 'explain the immune response including phagocytosis and the role of T and B lymphocytes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.CL.7',
+    strand: 'A-Level Biology - Cells',
+    description: 'describe the principles of vaccination and the ethical issues surrounding it',
+    isStatutory: true
+  },
+  // A-LEVEL BIOLOGY - Organisms Exchange Substances
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.1',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'explain surface area to volume ratio and its importance in gas exchange',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.2',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'describe gas exchange in fish and insects',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.3',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'describe the structure and function of the mammalian gas exchange system',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.4',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'explain oxygen dissociation curves and factors affecting oxygen affinity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.5',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'describe the structure and function of the mammalian heart',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.6',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'describe the cardiac cycle and its control',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.7',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'describe the structure and function of blood vessels',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.OE.8',
+    strand: 'A-Level Biology - Organisms Exchange Substances',
+    description: 'describe mass transport in plants including transpiration and translocation',
+    isStatutory: true
+  },
+  // A-LEVEL BIOLOGY - Genetic Information
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.1',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'describe the relationship between genes, DNA and chromosomes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.2',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'describe the genetic code and its features',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.3',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'describe transcription and translation in protein synthesis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.4',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'describe meiosis and the sources of genetic variation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.5',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'describe genetic diversity within and between species',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.6',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'describe investigation of genetic diversity using DNA technology',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.7',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'explain natural selection and speciation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.BIO.GI.8',
+    strand: 'A-Level Biology - Genetic Information',
+    description: 'describe biodiversity within communities and methods of measuring it',
+    isStatutory: true
+  },
+  // A-LEVEL CHEMISTRY - Physical Chemistry A
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.1',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'describe atomic structure including isotopes and mass spectrometry',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.2',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'explain electron configuration and ionisation energy',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.3',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'calculate amounts of substance using moles, molar mass and Avogadro constant',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.4',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'use the ideal gas equation pV = nRT',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.5',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'describe ionic, covalent and metallic bonding and their properties',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.6',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'explain shapes of molecules using VSEPR theory',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.7',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'describe intermolecular forces including van der Waals, dipole-dipole and hydrogen bonding',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.8',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'describe enthalpy changes and calculate enthalpy using Hess\'s Law',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.9',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'explain collision theory and the effect of conditions on reaction rate',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.10',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'describe chemical equilibrium and Le Chatelier\'s principle',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.PA.11',
+    strand: 'A-Level Chemistry - Physical Chemistry A',
+    description: 'describe oxidation states and redox equations',
+    isStatutory: true
+  },
+  // A-LEVEL CHEMISTRY - Inorganic Chemistry A
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.IA.1',
+    strand: 'A-Level Chemistry - Inorganic Chemistry A',
+    description: 'describe periodicity and trends in the periodic table',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.IA.2',
+    strand: 'A-Level Chemistry - Inorganic Chemistry A',
+    description: 'describe the properties and reactions of Group 2 elements',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.IA.3',
+    strand: 'A-Level Chemistry - Inorganic Chemistry A',
+    description: 'describe the properties and reactions of Group 17 (halogens)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.IA.4',
+    strand: 'A-Level Chemistry - Inorganic Chemistry A',
+    description: 'describe reactions of halide ions and displacement reactions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.IA.5',
+    strand: 'A-Level Chemistry - Inorganic Chemistry A',
+    description: 'describe tests for halide ions using silver nitrate',
+    isStatutory: true
+  },
+  // A-LEVEL CHEMISTRY - Organic Chemistry A
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.OA.1',
+    strand: 'A-Level Chemistry - Organic Chemistry A',
+    description: 'describe IUPAC nomenclature for organic compounds',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.OA.2',
+    strand: 'A-Level Chemistry - Organic Chemistry A',
+    description: 'describe reaction mechanisms using curly arrows',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.OA.3',
+    strand: 'A-Level Chemistry - Organic Chemistry A',
+    description: 'describe the structure and reactions of alkanes including combustion and halogenation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.OA.4',
+    strand: 'A-Level Chemistry - Organic Chemistry A',
+    description: 'describe the structure and reactions of halogenoalkanes including nucleophilic substitution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.OA.5',
+    strand: 'A-Level Chemistry - Organic Chemistry A',
+    description: 'describe the structure and reactions of alkenes including electrophilic addition',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.OA.6',
+    strand: 'A-Level Chemistry - Organic Chemistry A',
+    description: 'describe the structure and reactions of alcohols including oxidation and dehydration',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.CHM.OA.7',
+    strand: 'A-Level Chemistry - Organic Chemistry A',
+    description: 'describe organic analysis including mass spectrometry and infrared spectroscopy',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Measurements and Errors
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.MM.1',
+    strand: 'A-Level Physics - Measurements and Errors',
+    description: 'use SI units and their prefixes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.MM.2',
+    strand: 'A-Level Physics - Measurements and Errors',
+    description: 'understand limitations of physical measurements',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.MM.3',
+    strand: 'A-Level Physics - Measurements and Errors',
+    description: 'estimate physical quantities using orders of magnitude',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.MM.4',
+    strand: 'A-Level Physics - Measurements and Errors',
+    description: 'calculate percentage uncertainty and combine uncertainties',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Particles and Radiation
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.1',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'describe constituents of the atom and the standard model of particle physics',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.2',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'describe stable and unstable nuclei and nuclear reactions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.3',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'describe particles, antiparticles and photon interactions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.4',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'explain particle interactions and exchange particles',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.5',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'classify hadrons and leptons and describe their properties',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.6',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'describe quarks and the quark model of hadrons',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.7',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'explain the photoelectric effect and photon energy E = hf',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.PM.8',
+    strand: 'A-Level Physics - Particles and Radiation',
+    description: 'describe wave-particle duality and the de Broglie wavelength',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Waves and Optics
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.1',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'describe progressive waves and their properties',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.2',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'distinguish between longitudinal and transverse waves',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.3',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'describe and explain polarisation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.4',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'explain refraction, reflection and total internal reflection',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.5',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'describe superposition and stationary waves',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.6',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'explain interference and diffraction',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.7',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'describe Young\'s double-slit experiment and calculate fringe spacing',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.WO.8',
+    strand: 'A-Level Physics - Waves and Optics',
+    description: 'describe diffraction gratings and their applications',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Mechanics and Materials
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.1',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'describe scalars and vectors and resolve vectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.2',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'describe moments and couples and apply conditions for equilibrium',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.3',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'describe motion using equations of uniform acceleration (SUVAT)',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.4',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'describe projectile motion',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.5',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'explain Newton\'s laws of motion and apply to problems',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.6',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'explain momentum and impulse and apply conservation of momentum',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.7',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'describe work, energy and power and apply the principle of conservation of energy',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.8',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'describe stress, strain and Young modulus',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.ME.9',
+    strand: 'A-Level Physics - Mechanics and Materials',
+    description: 'describe elastic and plastic deformation',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Electricity
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.EL.1',
+    strand: 'A-Level Physics - Electricity',
+    description: 'describe current, charge and potential difference',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.EL.2',
+    strand: 'A-Level Physics - Electricity',
+    description: 'describe resistance and resistivity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.EL.3',
+    strand: 'A-Level Physics - Electricity',
+    description: 'describe circuits in series and parallel and apply Kirchhoff\'s laws',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.EL.4',
+    strand: 'A-Level Physics - Electricity',
+    description: 'describe internal resistance and EMF',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.EL.5',
+    strand: 'A-Level Physics - Electricity',
+    description: 'describe potential dividers and their applications',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y12.SC.PHY.EL.6',
+    strand: 'A-Level Physics - Electricity',
+    description: 'explain the use of oscilloscopes to display waveforms',
+    isStatutory: true
+  }
+];
+
+// =============================================================================
+// KEY STAGE 5: YEAR 13 - A-Level Sciences (Ages 17-18)
+// =============================================================================
+
+const year13Standards: BritishNCScienceStandard[] = [
+  // A-LEVEL BIOLOGY - Energy Transfers
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.ET.1',
+    strand: 'A-Level Biology - Energy Transfers',
+    description: 'describe photosynthesis including light-dependent and light-independent reactions',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.ET.2',
+    strand: 'A-Level Biology - Energy Transfers',
+    description: 'describe respiration including glycolysis, Krebs cycle and oxidative phosphorylation',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.ET.3',
+    strand: 'A-Level Biology - Energy Transfers',
+    description: 'explain energy transfer through ecosystems',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.ET.4',
+    strand: 'A-Level Biology - Energy Transfers',
+    description: 'describe the nitrogen cycle and the role of microorganisms',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.ET.5',
+    strand: 'A-Level Biology - Energy Transfers',
+    description: 'describe nutrient cycles and their importance',
+    isStatutory: true
+  },
+  // A-LEVEL BIOLOGY - Response to Stimuli and Genes
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.RG.1',
+    strand: 'A-Level Biology - Response to Stimuli and Genes',
+    description: 'describe stimuli, receptors and effectors',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.RG.2',
+    strand: 'A-Level Biology - Response to Stimuli and Genes',
+    description: 'describe the nerve impulse and its transmission across synapses',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.RG.3',
+    strand: 'A-Level Biology - Response to Stimuli and Genes',
+    description: 'describe skeletal muscle structure and sliding filament theory',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.RG.4',
+    strand: 'A-Level Biology - Response to Stimuli and Genes',
+    description: 'describe homeostatic control including negative feedback',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.RG.5',
+    strand: 'A-Level Biology - Response to Stimuli and Genes',
+    description: 'describe hormonal communication and the endocrine system',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.RG.6',
+    strand: 'A-Level Biology - Response to Stimuli and Genes',
+    description: 'explain the control of blood glucose concentration',
+    isStatutory: true
+  },
+  // A-LEVEL BIOLOGY - Genetics, Populations and Ecosystems
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.GE.1',
+    strand: 'A-Level Biology - Genetics, Populations and Ecosystems',
+    description: 'describe inheritance patterns including dihybrid crosses and epistasis',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.GE.2',
+    strand: 'A-Level Biology - Genetics, Populations and Ecosystems',
+    description: 'explain population genetics and the Hardy-Weinberg principle',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.GE.3',
+    strand: 'A-Level Biology - Genetics, Populations and Ecosystems',
+    description: 'describe the effects of selection on allele frequencies',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.GE.4',
+    strand: 'A-Level Biology - Genetics, Populations and Ecosystems',
+    description: 'describe succession and the development of climax communities',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.GE.5',
+    strand: 'A-Level Biology - Genetics, Populations and Ecosystems',
+    description: 'describe conservation of species and ecosystems',
+    isStatutory: true
+  },
+  // A-LEVEL BIOLOGY - Control of Gene Expression
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.CN.1',
+    strand: 'A-Level Biology - Control of Gene Expression',
+    description: 'describe mutations and their effects on gene expression',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.CN.2',
+    strand: 'A-Level Biology - Control of Gene Expression',
+    description: 'describe gene expression control in prokaryotes and eukaryotes',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.CN.3',
+    strand: 'A-Level Biology - Control of Gene Expression',
+    description: 'describe epigenetics and its role in gene expression',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.CN.4',
+    strand: 'A-Level Biology - Control of Gene Expression',
+    description: 'describe recombinant DNA technology and its applications',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.BIO.CN.5',
+    strand: 'A-Level Biology - Control of Gene Expression',
+    description: 'describe gene therapy and evaluate ethical issues',
+    isStatutory: true
+  },
+  // A-LEVEL CHEMISTRY - Physical Chemistry B
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.PB.1',
+    strand: 'A-Level Chemistry - Physical Chemistry B',
+    description: 'describe thermodynamics including entropy and Gibbs free energy',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.PB.2',
+    strand: 'A-Level Chemistry - Physical Chemistry B',
+    description: 'describe rate equations and determine order of reaction',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.PB.3',
+    strand: 'A-Level Chemistry - Physical Chemistry B',
+    description: 'calculate and use equilibrium constants Kp and Kc',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.PB.4',
+    strand: 'A-Level Chemistry - Physical Chemistry B',
+    description: 'describe acids, bases and buffers including pH calculations',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.PB.5',
+    strand: 'A-Level Chemistry - Physical Chemistry B',
+    description: 'describe electrochemistry including electrode potentials and electrochemical cells',
+    isStatutory: true
+  },
+  // A-LEVEL CHEMISTRY - Inorganic Chemistry B
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.IB.1',
+    strand: 'A-Level Chemistry - Inorganic Chemistry B',
+    description: 'describe properties of Period 3 elements and their oxides',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.IB.2',
+    strand: 'A-Level Chemistry - Inorganic Chemistry B',
+    description: 'describe properties and reactions of transition metals',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.IB.3',
+    strand: 'A-Level Chemistry - Inorganic Chemistry B',
+    description: 'explain complex ion formation and ligand substitution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.IB.4',
+    strand: 'A-Level Chemistry - Inorganic Chemistry B',
+    description: 'describe reactions of metal aqua ions',
+    isStatutory: true
+  },
+  // A-LEVEL CHEMISTRY - Organic Chemistry B
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.1',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe optical isomerism and stereochemistry',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.2',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe the chemistry of aldehydes and ketones',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.3',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe the chemistry of carboxylic acids and their derivatives',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.4',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe the chemistry of aromatics including electrophilic substitution',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.5',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe the chemistry of amines',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.6',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe polymers including condensation polymers and their properties',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.7',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe amino acids, proteins and DNA structure',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.OB.8',
+    strand: 'A-Level Chemistry - Organic Chemistry B',
+    description: 'describe organic synthesis pathways and retrosynthetic analysis',
+    isStatutory: true
+  },
+  // A-LEVEL CHEMISTRY - Analytical Techniques
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.AN.1',
+    strand: 'A-Level Chemistry - Analytical Techniques',
+    description: 'describe NMR spectroscopy including chemical shift and spin-spin coupling',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.AN.2',
+    strand: 'A-Level Chemistry - Analytical Techniques',
+    description: 'interpret spectra to deduce molecular structure',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.CHM.AN.3',
+    strand: 'A-Level Chemistry - Analytical Techniques',
+    description: 'describe chromatographic techniques including gas chromatography',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Further Mechanics and Thermal Physics
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FM.1',
+    strand: 'A-Level Physics - Further Mechanics and Thermal Physics',
+    description: 'describe circular motion and calculate centripetal force and acceleration',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FM.2',
+    strand: 'A-Level Physics - Further Mechanics and Thermal Physics',
+    description: 'describe simple harmonic motion and its characteristics',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FM.3',
+    strand: 'A-Level Physics - Further Mechanics and Thermal Physics',
+    description: 'describe forced vibrations and resonance',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FM.4',
+    strand: 'A-Level Physics - Further Mechanics and Thermal Physics',
+    description: 'describe thermal energy transfer and specific heat capacity',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FM.5',
+    strand: 'A-Level Physics - Further Mechanics and Thermal Physics',
+    description: 'describe the ideal gas laws and molecular kinetic theory',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Fields and their Consequences
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FD.1',
+    strand: 'A-Level Physics - Fields and their Consequences',
+    description: 'describe gravitational fields and calculate gravitational field strength',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FD.2',
+    strand: 'A-Level Physics - Fields and their Consequences',
+    description: 'describe gravitational potential and calculate orbital mechanics',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FD.3',
+    strand: 'A-Level Physics - Fields and their Consequences',
+    description: 'describe electric fields and calculate electric field strength',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FD.4',
+    strand: 'A-Level Physics - Fields and their Consequences',
+    description: 'describe electric potential and capacitance',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FD.5',
+    strand: 'A-Level Physics - Fields and their Consequences',
+    description: 'describe magnetic fields and calculate magnetic flux density',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FD.6',
+    strand: 'A-Level Physics - Fields and their Consequences',
+    description: 'explain electromagnetic induction and Faraday\'s law',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.FD.7',
+    strand: 'A-Level Physics - Fields and their Consequences',
+    description: 'describe alternating currents and transformers',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Nuclear Physics
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.NP.1',
+    strand: 'A-Level Physics - Nuclear Physics',
+    description: 'describe radioactive decay and calculate activity and half-life',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.NP.2',
+    strand: 'A-Level Physics - Nuclear Physics',
+    description: 'describe nuclear instability and binding energy',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.NP.3',
+    strand: 'A-Level Physics - Nuclear Physics',
+    description: 'describe nuclear fission and fusion',
+    isStatutory: true
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.NP.4',
+    strand: 'A-Level Physics - Nuclear Physics',
+    description: 'explain mass-energy equivalence using E = mc²',
+    isStatutory: true
+  },
+  // A-LEVEL PHYSICS - Optional: Astrophysics
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.AP.1',
+    strand: 'A-Level Physics - Astrophysics (optional)',
+    description: 'describe telescopes and their properties',
+    isStatutory: false,
+    guidance: 'Optional topic - Astrophysics'
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.AP.2',
+    strand: 'A-Level Physics - Astrophysics (optional)',
+    description: 'describe stellar classification and Hertzsprung-Russell diagrams',
+    isStatutory: false,
+    guidance: 'Optional topic - Astrophysics'
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.AP.3',
+    strand: 'A-Level Physics - Astrophysics (optional)',
+    description: 'describe cosmology including the Big Bang and evidence for it',
+    isStatutory: false,
+    guidance: 'Optional topic - Astrophysics'
+  },
+  {
+    notation: 'UK.KS5.Y13.SC.PHY.AP.4',
+    strand: 'A-Level Physics - Astrophysics (optional)',
+    description: 'describe Hubble\'s law and the expansion of the universe',
+    isStatutory: false,
+    guidance: 'Optional topic - Astrophysics'
+  }
+];
+
+// =============================================================================
 // BRITISH NATIONAL CURRICULUM SCIENCE DATA EXPORT
 // =============================================================================
 
@@ -1713,7 +4021,11 @@ export const britishNCScience: BritishNCScienceJurisdiction = {
     { year: 6, keyStage: 2, ageRangeMin: 10, ageRangeMax: 11, standards: year6Standards },
     { year: 7, keyStage: 3, ageRangeMin: 11, ageRangeMax: 12, standards: year7Standards },
     { year: 8, keyStage: 3, ageRangeMin: 12, ageRangeMax: 13, standards: year8Standards },
-    { year: 9, keyStage: 3, ageRangeMin: 13, ageRangeMax: 14, standards: year9Standards }
+    { year: 9, keyStage: 3, ageRangeMin: 13, ageRangeMax: 14, standards: year9Standards },
+    { year: 10, keyStage: 4, ageRangeMin: 14, ageRangeMax: 15, standards: year10Standards },
+    { year: 11, keyStage: 4, ageRangeMin: 15, ageRangeMax: 16, standards: year11Standards },
+    { year: 12, keyStage: 5, ageRangeMin: 16, ageRangeMax: 17, standards: year12Standards },
+    { year: 13, keyStage: 5, ageRangeMin: 17, ageRangeMax: 18, standards: year13Standards }
   ]
 };
 

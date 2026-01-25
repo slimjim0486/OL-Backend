@@ -1,10 +1,14 @@
 /**
  * CBSE (Central Board of Secondary Education) - English Standards
- * Classes 1-8 (Primary and Middle School)
+ * Classes 1-12 (Primary through Senior Secondary)
  *
  * These are skill-based learning objectives aligned with the CBSE/NCERT
  * curriculum framework. Standards focus on measurable learning outcomes
  * rather than specific textbook chapters.
+ *
+ * Classes 1-8: Primary and Middle School
+ * Classes 9-10: Secondary (English Language and Literature - Board Examination)
+ * Classes 11-12: Senior Secondary (English Core / English Elective)
  *
  * NOTE: Chapter mapping to NEP 2020 textbooks (2024-25 onwards) is pending.
  * New NCERT English textbooks may have updated literature selections.
@@ -12,15 +16,22 @@
  * Notation System: IN.CBSE.C{class}.EN.{strand}.{number}
  * - IN = India
  * - CBSE = Central Board of Secondary Education
- * - C = Class (1-8)
+ * - C = Class (1-12)
  * - EN = English
  * - Strand codes:
+ *   Classes 1-10:
  *   - RC = Reading Comprehension
  *   - WR = Writing
  *   - GR = Grammar
  *   - VC = Vocabulary
  *   - LS = Listening and Speaking
  *   - LT = Literature
+ *   Classes 11-12 (Additional):
+ *   - PR = Prose (Fiction and Non-fiction)
+ *   - PO = Poetry
+ *   - DR = Drama
+ *   - CW = Creative Writing
+ *   - AC = Academic Writing
  */
 
 export interface CBSEEnglishStandard {
@@ -1175,6 +1186,983 @@ const class8Standards: CBSEEnglishStandard[] = [
 ];
 
 // =============================================================================
+// CLASS 9 (Ages 14-15)
+// NCERT: Beehive (Main Reader), Moments (Supplementary Reader)
+// Secondary Education - Board Exam Preparation
+// =============================================================================
+
+const class9Standards: CBSEEnglishStandard[] = [
+  // READING COMPREHENSION
+  {
+    notation: 'IN.CBSE.C9.EN.RC.1',
+    strand: 'Reading Comprehension',
+    description: 'read and comprehend unseen passages factual and discursive',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.RC.2',
+    strand: 'Reading Comprehension',
+    description: 'identify main ideas, supporting details, and inferences',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.RC.3',
+    strand: 'Reading Comprehension',
+    description: 'analyze author\'s purpose and point of view',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.RC.4',
+    strand: 'Reading Comprehension',
+    description: 'interpret visual texts: graphs, charts, and diagrams',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.RC.5',
+    strand: 'Reading Comprehension',
+    description: 'identify literary devices in prose and poetry',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.RC.6',
+    strand: 'Reading Comprehension',
+    description: 'apply critical reading strategies to texts',
+  },
+
+  // WRITING
+  {
+    notation: 'IN.CBSE.C9.EN.WR.1',
+    strand: 'Writing',
+    description: 'write formal and informal letters following format',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.WR.2',
+    strand: 'Writing',
+    description: 'write diary entries and biographical sketches',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.WR.3',
+    strand: 'Writing',
+    description: 'write descriptive paragraphs with sensory details',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.WR.4',
+    strand: 'Writing',
+    description: 'write short stories with plot development',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.WR.5',
+    strand: 'Writing',
+    description: 'complete stories based on given outlines or beginnings',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.WR.6',
+    strand: 'Writing',
+    description: 'write analytical paragraphs based on data interpretation',
+  },
+
+  // GRAMMAR
+  {
+    notation: 'IN.CBSE.C9.EN.GR.1',
+    strand: 'Grammar',
+    description: 'use tenses correctly: present, past, future and their forms',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.GR.2',
+    strand: 'Grammar',
+    description: 'use modals for various functions: advice, obligation, permission',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.GR.3',
+    strand: 'Grammar',
+    description: 'transform sentences: active to passive voice',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.GR.4',
+    strand: 'Grammar',
+    description: 'convert direct speech to reported speech',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.GR.5',
+    strand: 'Grammar',
+    description: 'use subject-verb agreement with complex subjects',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.GR.6',
+    strand: 'Grammar',
+    description: 'identify and correct errors in sentences',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.GR.7',
+    strand: 'Grammar',
+    description: 'rearrange jumbled sentences into coherent paragraphs',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.GR.8',
+    strand: 'Grammar',
+    description: 'use clauses: noun, adjective, and adverb clauses',
+  },
+
+  // VOCABULARY
+  {
+    notation: 'IN.CBSE.C9.EN.VC.1',
+    strand: 'Vocabulary',
+    description: 'understand and use idioms and phrases in context',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.VC.2',
+    strand: 'Vocabulary',
+    description: 'use one-word substitutions appropriately',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.VC.3',
+    strand: 'Vocabulary',
+    description: 'use collocations correctly in writing',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.VC.4',
+    strand: 'Vocabulary',
+    description: 'understand homophones and homonyms',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.VC.5',
+    strand: 'Vocabulary',
+    description: 'use contextual vocabulary from prescribed texts',
+  },
+
+  // LITERATURE - PROSE
+  {
+    notation: 'IN.CBSE.C9.EN.LT.1',
+    strand: 'Literature',
+    description: 'analyze themes and central ideas in prose texts',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LT.2',
+    strand: 'Literature',
+    description: 'analyze character development and motivation',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LT.3',
+    strand: 'Literature',
+    description: 'understand narrative techniques and point of view',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LT.4',
+    strand: 'Literature',
+    description: 'write short and long answers on prose texts',
+  },
+
+  // LITERATURE - POETRY
+  {
+    notation: 'IN.CBSE.C9.EN.LT.5',
+    strand: 'Literature',
+    description: 'analyze poetic devices: metaphor, simile, personification',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LT.6',
+    strand: 'Literature',
+    description: 'understand rhythm, rhyme scheme, and meter in poetry',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LT.7',
+    strand: 'Literature',
+    description: 'interpret themes and emotions in poems',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LT.8',
+    strand: 'Literature',
+    description: 'write reference to context explanations for poetry',
+  },
+
+  // LITERATURE - SUPPLEMENTARY
+  {
+    notation: 'IN.CBSE.C9.EN.LT.9',
+    strand: 'Literature',
+    description: 'summarize and analyze supplementary reader stories',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LT.10',
+    strand: 'Literature',
+    description: 'draw comparisons between characters and themes',
+  },
+
+  // LISTENING AND SPEAKING
+  {
+    notation: 'IN.CBSE.C9.EN.LS.1',
+    strand: 'Listening and Speaking',
+    description: 'participate in formal debates following rules',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LS.2',
+    strand: 'Listening and Speaking',
+    description: 'deliver speeches on given topics',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LS.3',
+    strand: 'Listening and Speaking',
+    description: 'conduct and participate in group discussions',
+  },
+  {
+    notation: 'IN.CBSE.C9.EN.LS.4',
+    strand: 'Listening and Speaking',
+    description: 'present book reviews and character analyses',
+  }
+];
+
+// =============================================================================
+// CLASS 10 (Ages 15-16)
+// NCERT: First Flight (Main Reader), Footprints Without Feet (Supplementary)
+// Secondary Education - Board Examination Year
+// =============================================================================
+
+const class10Standards: CBSEEnglishStandard[] = [
+  // READING COMPREHENSION
+  {
+    notation: 'IN.CBSE.C10.EN.RC.1',
+    strand: 'Reading Comprehension',
+    description: 'comprehend unseen passages with complex vocabulary',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.RC.2',
+    strand: 'Reading Comprehension',
+    description: 'analyze case-based passages and answer questions',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.RC.3',
+    strand: 'Reading Comprehension',
+    description: 'identify tone, mood, and author\'s perspective',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.RC.4',
+    strand: 'Reading Comprehension',
+    description: 'make inferences and draw conclusions from texts',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.RC.5',
+    strand: 'Reading Comprehension',
+    description: 'analyze data-based passages with statistical information',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.RC.6',
+    strand: 'Reading Comprehension',
+    description: 'evaluate arguments and identify bias in texts',
+  },
+
+  // WRITING
+  {
+    notation: 'IN.CBSE.C10.EN.WR.1',
+    strand: 'Writing',
+    description: 'write formal letters: complaint, inquiry, order',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.WR.2',
+    strand: 'Writing',
+    description: 'write letters to editors on social issues',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.WR.3',
+    strand: 'Writing',
+    description: 'write analytical paragraphs from charts, graphs, data',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.WR.4',
+    strand: 'Writing',
+    description: 'write argumentative essays with thesis and evidence',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.WR.5',
+    strand: 'Writing',
+    description: 'write stories with climax and resolution',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.WR.6',
+    strand: 'Writing',
+    description: 'write reports on events and activities',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.WR.7',
+    strand: 'Writing',
+    description: 'write notices, messages, and emails',
+  },
+
+  // GRAMMAR
+  {
+    notation: 'IN.CBSE.C10.EN.GR.1',
+    strand: 'Grammar',
+    description: 'apply advanced tense usage in context',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.GR.2',
+    strand: 'Grammar',
+    description: 'use conditionals: zero, first, second, third',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.GR.3',
+    strand: 'Grammar',
+    description: 'transform complex sentences using clauses',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.GR.4',
+    strand: 'Grammar',
+    description: 'edit paragraphs for grammatical accuracy',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.GR.5',
+    strand: 'Grammar',
+    description: 'fill blanks with appropriate forms of words',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.GR.6',
+    strand: 'Grammar',
+    description: 'use determiners and prepositions correctly',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.GR.7',
+    strand: 'Grammar',
+    description: 'transform sentences maintaining meaning',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.GR.8',
+    strand: 'Grammar',
+    description: 'use connectors and transitional devices',
+  },
+
+  // VOCABULARY
+  {
+    notation: 'IN.CBSE.C10.EN.VC.1',
+    strand: 'Vocabulary',
+    description: 'use phrasal verbs accurately in context',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.VC.2',
+    strand: 'Vocabulary',
+    description: 'understand nuances and connotations of words',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.VC.3',
+    strand: 'Vocabulary',
+    description: 'use formal and informal register appropriately',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.VC.4',
+    strand: 'Vocabulary',
+    description: 'understand domain-specific vocabulary from texts',
+  },
+
+  // LITERATURE - PROSE
+  {
+    notation: 'IN.CBSE.C10.EN.LT.1',
+    strand: 'Literature',
+    description: 'analyze complex themes in prose: identity, conflict, justice',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.2',
+    strand: 'Literature',
+    description: 'analyze characterization techniques and dialogue',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.3',
+    strand: 'Literature',
+    description: 'understand setting and its significance in narratives',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.4',
+    strand: 'Literature',
+    description: 'write extract-based answers on prose',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.5',
+    strand: 'Literature',
+    description: 'write long answers analyzing prose texts',
+  },
+
+  // LITERATURE - POETRY
+  {
+    notation: 'IN.CBSE.C10.EN.LT.6',
+    strand: 'Literature',
+    description: 'analyze advanced poetic devices: imagery, symbolism, irony',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.7',
+    strand: 'Literature',
+    description: 'interpret deeper meanings and universal themes in poetry',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.8',
+    strand: 'Literature',
+    description: 'write extract-based answers on poems',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.9',
+    strand: 'Literature',
+    description: 'compare and contrast poems thematically',
+  },
+
+  // LITERATURE - DRAMA (if applicable)
+  {
+    notation: 'IN.CBSE.C10.EN.LT.10',
+    strand: 'Literature',
+    description: 'analyze dramatic elements: dialogue, stage directions',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.11',
+    strand: 'Literature',
+    description: 'understand character motivation in plays',
+  },
+
+  // LITERATURE - SUPPLEMENTARY
+  {
+    notation: 'IN.CBSE.C10.EN.LT.12',
+    strand: 'Literature',
+    description: 'analyze themes in supplementary reader stories',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LT.13',
+    strand: 'Literature',
+    description: 'write value-based answers connecting texts to life',
+  },
+
+  // LISTENING AND SPEAKING
+  {
+    notation: 'IN.CBSE.C10.EN.LS.1',
+    strand: 'Listening and Speaking',
+    description: 'participate in formal debates with rebuttals',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LS.2',
+    strand: 'Listening and Speaking',
+    description: 'conduct interviews and report findings',
+  },
+  {
+    notation: 'IN.CBSE.C10.EN.LS.3',
+    strand: 'Listening and Speaking',
+    description: 'present research-based topics with evidence',
+  }
+];
+
+// =============================================================================
+// CLASS 11 (Ages 16-17)
+// NCERT: Hornbill (Prose), Snapshots (Supplementary), The Canterville Ghost
+// Senior Secondary Education - English Core
+// =============================================================================
+
+const class11Standards: CBSEEnglishStandard[] = [
+  // READING COMPREHENSION
+  {
+    notation: 'IN.CBSE.C11.EN.RC.1',
+    strand: 'Reading Comprehension',
+    description: 'comprehend unseen literary and factual passages',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.RC.2',
+    strand: 'Reading Comprehension',
+    description: 'analyze argumentative and persuasive texts',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.RC.3',
+    strand: 'Reading Comprehension',
+    description: 'interpret texts with multiple layers of meaning',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.RC.4',
+    strand: 'Reading Comprehension',
+    description: 'identify rhetorical devices in texts',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.RC.5',
+    strand: 'Reading Comprehension',
+    description: 'synthesize information from multiple sources',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.RC.6',
+    strand: 'Reading Comprehension',
+    description: 'analyze text structure and organization',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.RC.7',
+    strand: 'Reading Comprehension',
+    description: 'comprehend note-making and summarization techniques',
+  },
+
+  // WRITING
+  {
+    notation: 'IN.CBSE.C11.EN.WR.1',
+    strand: 'Writing',
+    description: 'write notices, advertisements, and posters',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.2',
+    strand: 'Writing',
+    description: 'write classified advertisements for various purposes',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.3',
+    strand: 'Writing',
+    description: 'write invitations and replies: formal and informal',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.4',
+    strand: 'Writing',
+    description: 'write job application letters with bio-data',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.5',
+    strand: 'Writing',
+    description: 'write discursive essays presenting multiple perspectives',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.6',
+    strand: 'Writing',
+    description: 'write articles for newspapers and magazines',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.7',
+    strand: 'Writing',
+    description: 'write speech scripts for formal occasions',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.8',
+    strand: 'Writing',
+    description: 'write debate scripts with arguments and counter-arguments',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.WR.9',
+    strand: 'Writing',
+    description: 'write reports on events, surveys, and investigations',
+  },
+
+  // GRAMMAR
+  {
+    notation: 'IN.CBSE.C11.EN.GR.1',
+    strand: 'Grammar',
+    description: 'use advanced punctuation: semicolons, colons, dashes',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.GR.2',
+    strand: 'Grammar',
+    description: 'apply advanced sentence structures in writing',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.GR.3',
+    strand: 'Grammar',
+    description: 'use subjunctive mood and conditional structures',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.GR.4',
+    strand: 'Grammar',
+    description: 'maintain parallel structure in sentences',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.GR.5',
+    strand: 'Grammar',
+    description: 'use modifiers correctly avoiding dangling and misplaced modifiers',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.GR.6',
+    strand: 'Grammar',
+    description: 'maintain consistency in tense and voice throughout texts',
+  },
+
+  // VOCABULARY
+  {
+    notation: 'IN.CBSE.C11.EN.VC.1',
+    strand: 'Vocabulary',
+    description: 'use academic vocabulary in formal writing',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.VC.2',
+    strand: 'Vocabulary',
+    description: 'understand and use literary terminology',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.VC.3',
+    strand: 'Vocabulary',
+    description: 'use figurative language effectively in writing',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.VC.4',
+    strand: 'Vocabulary',
+    description: 'expand vocabulary through wide reading',
+  },
+
+  // LITERATURE - PROSE
+  {
+    notation: 'IN.CBSE.C11.EN.PR.1',
+    strand: 'Prose',
+    description: 'analyze narrative techniques in prose works',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PR.2',
+    strand: 'Prose',
+    description: 'understand author\'s style and voice',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PR.3',
+    strand: 'Prose',
+    description: 'analyze social and cultural themes in texts',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PR.4',
+    strand: 'Prose',
+    description: 'write critical appreciation of prose passages',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PR.5',
+    strand: 'Prose',
+    description: 'connect texts to historical and cultural contexts',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PR.6',
+    strand: 'Prose',
+    description: 'analyze essays and non-fiction prose',
+  },
+
+  // LITERATURE - POETRY
+  {
+    notation: 'IN.CBSE.C11.EN.PO.1',
+    strand: 'Poetry',
+    description: 'analyze structure and form in poetry',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PO.2',
+    strand: 'Poetry',
+    description: 'interpret symbolism and extended metaphors',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PO.3',
+    strand: 'Poetry',
+    description: 'analyze sound devices: alliteration, assonance, onomatopoeia',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PO.4',
+    strand: 'Poetry',
+    description: 'write critical appreciation of poems',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.PO.5',
+    strand: 'Poetry',
+    description: 'compare poets and poetic movements',
+  },
+
+  // LITERATURE - DRAMA
+  {
+    notation: 'IN.CBSE.C11.EN.DR.1',
+    strand: 'Drama',
+    description: 'analyze dramatic structure and conventions',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.DR.2',
+    strand: 'Drama',
+    description: 'understand dramatic irony and foreshadowing',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.DR.3',
+    strand: 'Drama',
+    description: 'analyze character development in plays',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.DR.4',
+    strand: 'Drama',
+    description: 'understand the role of setting in drama',
+  },
+
+  // SUPPLEMENTARY READER
+  {
+    notation: 'IN.CBSE.C11.EN.LT.1',
+    strand: 'Literature',
+    description: 'analyze narrative techniques in supplementary texts',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.LT.2',
+    strand: 'Literature',
+    description: 'write long answers connecting themes across texts',
+  },
+
+  // LISTENING AND SPEAKING
+  {
+    notation: 'IN.CBSE.C11.EN.LS.1',
+    strand: 'Listening and Speaking',
+    description: 'participate in academic discussions and seminars',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.LS.2',
+    strand: 'Listening and Speaking',
+    description: 'deliver persuasive speeches',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.LS.3',
+    strand: 'Listening and Speaking',
+    description: 'present literary analyses orally',
+  },
+  {
+    notation: 'IN.CBSE.C11.EN.LS.4',
+    strand: 'Listening and Speaking',
+    description: 'participate in mock interviews',
+  }
+];
+
+// =============================================================================
+// CLASS 12 (Ages 17-18)
+// NCERT: Flamingo (Prose), Vistas (Supplementary)
+// Senior Secondary Education - Board Examination Year
+// =============================================================================
+
+const class12Standards: CBSEEnglishStandard[] = [
+  // READING COMPREHENSION
+  {
+    notation: 'IN.CBSE.C12.EN.RC.1',
+    strand: 'Reading Comprehension',
+    description: 'comprehend complex unseen passages with advanced vocabulary',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.RC.2',
+    strand: 'Reading Comprehension',
+    description: 'analyze case-based integrated passages',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.RC.3',
+    strand: 'Reading Comprehension',
+    description: 'evaluate arguments, evidence, and reasoning in texts',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.RC.4',
+    strand: 'Reading Comprehension',
+    description: 'identify underlying assumptions and implications',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.RC.5',
+    strand: 'Reading Comprehension',
+    description: 'summarize and create notes from complex texts',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.RC.6',
+    strand: 'Reading Comprehension',
+    description: 'analyze literary and non-literary texts critically',
+  },
+
+  // WRITING - CREATIVE
+  {
+    notation: 'IN.CBSE.C12.EN.CW.1',
+    strand: 'Creative Writing',
+    description: 'write notices for various purposes and audiences',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.2',
+    strand: 'Creative Writing',
+    description: 'design advertisements for products and services',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.3',
+    strand: 'Creative Writing',
+    description: 'write invitations and replies with appropriate formats',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.4',
+    strand: 'Creative Writing',
+    description: 'write letters to editors on contemporary issues',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.5',
+    strand: 'Creative Writing',
+    description: 'write job applications with impressive cover letters',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.6',
+    strand: 'Creative Writing',
+    description: 'write articles presenting balanced viewpoints',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.7',
+    strand: 'Creative Writing',
+    description: 'write speeches for formal and informal occasions',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.8',
+    strand: 'Creative Writing',
+    description: 'write debates with logical arguments and evidence',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.CW.9',
+    strand: 'Creative Writing',
+    description: 'write reports with proper format and content',
+  },
+
+  // WRITING - ACADEMIC
+  {
+    notation: 'IN.CBSE.C12.EN.AC.1',
+    strand: 'Academic Writing',
+    description: 'write thesis statements and topic sentences',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.AC.2',
+    strand: 'Academic Writing',
+    description: 'use evidence and citations effectively',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.AC.3',
+    strand: 'Academic Writing',
+    description: 'write coherent paragraphs with transitions',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.AC.4',
+    strand: 'Academic Writing',
+    description: 'write research-based analytical essays',
+  },
+
+  // GRAMMAR
+  {
+    notation: 'IN.CBSE.C12.EN.GR.1',
+    strand: 'Grammar',
+    description: 'master complex grammatical structures for board exams',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.GR.2',
+    strand: 'Grammar',
+    description: 'apply gap-filling and editing techniques accurately',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.GR.3',
+    strand: 'Grammar',
+    description: 'transform sentences with varied structures',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.GR.4',
+    strand: 'Grammar',
+    description: 'use advanced clause structures effectively',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.GR.5',
+    strand: 'Grammar',
+    description: 'edit paragraphs for grammatical errors systematically',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.GR.6',
+    strand: 'Grammar',
+    description: 'rearrange sentences into coherent paragraphs',
+  },
+
+  // VOCABULARY
+  {
+    notation: 'IN.CBSE.C12.EN.VC.1',
+    strand: 'Vocabulary',
+    description: 'use sophisticated vocabulary appropriate to context',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.VC.2',
+    strand: 'Vocabulary',
+    description: 'understand and use literary and critical terminology',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.VC.3',
+    strand: 'Vocabulary',
+    description: 'use precise language for nuanced expression',
+  },
+
+  // LITERATURE - PROSE
+  {
+    notation: 'IN.CBSE.C12.EN.PR.1',
+    strand: 'Prose',
+    description: 'analyze complex narrative structures and techniques',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PR.2',
+    strand: 'Prose',
+    description: 'understand symbolism and allegory in prose',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PR.3',
+    strand: 'Prose',
+    description: 'analyze themes of human experience: love, loss, identity',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PR.4',
+    strand: 'Prose',
+    description: 'write extract-based answers demonstrating comprehension',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PR.5',
+    strand: 'Prose',
+    description: 'write long answers with textual evidence',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PR.6',
+    strand: 'Prose',
+    description: 'analyze prose texts from diverse cultural perspectives',
+  },
+
+  // LITERATURE - POETRY
+  {
+    notation: 'IN.CBSE.C12.EN.PO.1',
+    strand: 'Poetry',
+    description: 'analyze complex poetic forms and structures',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PO.2',
+    strand: 'Poetry',
+    description: 'interpret layered meanings and ambiguity in poetry',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PO.3',
+    strand: 'Poetry',
+    description: 'analyze poet\'s use of imagery and sensory language',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PO.4',
+    strand: 'Poetry',
+    description: 'write extract-based answers on poems',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PO.5',
+    strand: 'Poetry',
+    description: 'write critical appreciation comparing multiple poems',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.PO.6',
+    strand: 'Poetry',
+    description: 'understand historical and biographical context of poetry',
+  },
+
+  // SUPPLEMENTARY READER
+  {
+    notation: 'IN.CBSE.C12.EN.LT.1',
+    strand: 'Literature',
+    description: 'analyze themes and character development in supplementary texts',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.LT.2',
+    strand: 'Literature',
+    description: 'write long answers on supplementary reader texts',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.LT.3',
+    strand: 'Literature',
+    description: 'compare and contrast texts from different genres',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.LT.4',
+    strand: 'Literature',
+    description: 'apply literary criticism approaches to texts',
+  },
+
+  // LISTENING AND SPEAKING
+  {
+    notation: 'IN.CBSE.C12.EN.LS.1',
+    strand: 'Listening and Speaking',
+    description: 'deliver academic presentations with supporting materials',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.LS.2',
+    strand: 'Listening and Speaking',
+    description: 'participate in formal discussions and symposiums',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.LS.3',
+    strand: 'Listening and Speaking',
+    description: 'conduct and respond effectively in interviews',
+  },
+  {
+    notation: 'IN.CBSE.C12.EN.LS.4',
+    strand: 'Listening and Speaking',
+    description: 'present literary critiques and analyses',
+  }
+];
+
+// =============================================================================
 // EXPORT CBSE ENGLISH CURRICULUM
 // =============================================================================
 
@@ -1193,7 +2181,11 @@ export const cbseEnglishCurriculum: CBSEEnglishCurriculum = {
     { class: 5, ageRangeMin: 10, ageRangeMax: 11, standards: class5Standards },
     { class: 6, ageRangeMin: 11, ageRangeMax: 12, standards: class6Standards },
     { class: 7, ageRangeMin: 12, ageRangeMax: 13, standards: class7Standards },
-    { class: 8, ageRangeMin: 13, ageRangeMax: 14, standards: class8Standards }
+    { class: 8, ageRangeMin: 13, ageRangeMax: 14, standards: class8Standards },
+    { class: 9, ageRangeMin: 14, ageRangeMax: 15, standards: class9Standards },
+    { class: 10, ageRangeMin: 15, ageRangeMax: 16, standards: class10Standards },
+    { class: 11, ageRangeMin: 16, ageRangeMax: 17, standards: class11Standards },
+    { class: 12, ageRangeMin: 17, ageRangeMax: 18, standards: class12Standards }
   ]
 };
 

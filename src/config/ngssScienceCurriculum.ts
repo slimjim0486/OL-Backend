@@ -1,6 +1,6 @@
 /**
  * US Next Generation Science Standards (NGSS)
- * Grades K-8
+ * Grades K-12
  *
  * Official Source: https://www.nextgenscience.org/ (Public Domain)
  *
@@ -11,7 +11,7 @@
  * Notation System: US.NGSS.{grade}.SC.{DCI}.{number}
  * - US = United States
  * - NGSS = Next Generation Science Standards
- * - Grade: K, 1, 2, 3, 4, 5, MS (Middle School for grades 6-8)
+ * - Grade: K, 1, 2, 3, 4, 5, MS (Middle School for grades 6-8), 9, 10, 11, 12
  * - SC = Science
  * - DCI (Disciplinary Core Idea) codes:
  *   - PS = Physical Sciences
@@ -31,6 +31,12 @@
  *   - ETS = Engineering, Technology, and Applications of Science
  *     - ETS1 = Engineering Design
  *
+ * High School Course Mapping:
+ *   - Grade 9: Biology (LS standards) + Earth Science intro (ESS1, ESS2)
+ *   - Grade 10: Chemistry (PS1, PS3) + Advanced Biology (LS2, LS3, LS4)
+ *   - Grade 11: Physics (PS2, PS4) + Chemistry advanced (PS1, PS3)
+ *   - Grade 12: Advanced Physics + Earth & Space Science (ESS) + Engineering (ETS1)
+ *
  * Verified against official NGSS documentation: 2025-01-20
  */
 
@@ -45,7 +51,7 @@ export interface NGSSScienceStandard {
 }
 
 export interface NGSSScienceGrade {
-  grade: number; // 0 = K, 1-5 = Grades 1-5, 6 = MS (representing 6-8)
+  grade: number; // 0 = K, 1-5 = Grades 1-5, 6 = MS (6-8), 9-12 = High School
   gradeLabel: string;
   ageRangeMin: number;
   ageRangeMax: number;
@@ -1337,6 +1343,674 @@ const middleSchoolStandards: NGSSScienceStandard[] = [
 ];
 
 // =============================================================================
+// GRADE 9 - Biology Focus (Ages 14-15)
+// Primary: Life Sciences (LS1, LS2, LS3, LS4)
+// =============================================================================
+
+const grade9Standards: NGSSScienceStandard[] = [
+  // LS1: From Molecules to Organisms: Structures and Processes
+  {
+    notation: 'US.NGSS.9.SC.LS1.1',
+    officialCode: 'HS-LS1-1',
+    dci: 'Life Sciences',
+    topic: 'From Molecules to Organisms: Structures and Processes',
+    description: 'Construct an explanation based on evidence for how the structure of DNA determines the structure of proteins which carry out the essential functions of life through systems of specialized cells.',
+    clarification: 'Examples of systems to study could include nerve cells that transmit electrical signals, muscle cells that contract, blood cells that distribute oxygen, and sperm and egg cells that transmit genetic information.',
+    assessmentBoundary: 'Assessment does not include identification of specific cell or tissue types, whole body systems, specific protein structures and functions, or the biochemistry of protein synthesis.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS1.2',
+    officialCode: 'HS-LS1-2',
+    dci: 'Life Sciences',
+    topic: 'From Molecules to Organisms: Structures and Processes',
+    description: 'Develop and use a model to illustrate the hierarchical organization of interacting systems that provide specific functions within multicellular organisms.',
+    clarification: 'Emphasis is on functions at the organism system level such as nutrient uptake, water delivery, and organism movement in response to neural stimuli.',
+    assessmentBoundary: 'Assessment does not include interactions and functions at the molecular or chemical reaction level.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS1.3',
+    officialCode: 'HS-LS1-3',
+    dci: 'Life Sciences',
+    topic: 'From Molecules to Organisms: Structures and Processes',
+    description: 'Plan and conduct an investigation to provide evidence that feedback mechanisms maintain homeostasis.',
+    clarification: 'Examples of investigations could include heart rate response to exercise, stomata response to moisture and temperature, and root development in response to water levels.',
+    assessmentBoundary: 'Assessment does not include the cellular processes involved in the feedback mechanism.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS1.4',
+    officialCode: 'HS-LS1-4',
+    dci: 'Life Sciences',
+    topic: 'From Molecules to Organisms: Structures and Processes',
+    description: 'Use a model to illustrate the role of cellular division (mitosis) and differentiation in producing and maintaining complex organisms.',
+    assessmentBoundary: 'Assessment does not include specific gene control mechanisms or rote memorization of the steps of mitosis.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS1.5',
+    officialCode: 'HS-LS1-5',
+    dci: 'Life Sciences',
+    topic: 'From Molecules to Organisms: Structures and Processes',
+    description: 'Use a model to illustrate how photosynthesis transforms light energy into stored chemical energy.',
+    clarification: 'Emphasis is on illustrating inputs and outputs of matter and the transfer and transformation of energy in photosynthesis by plants and other photosynthesizing organisms.',
+    assessmentBoundary: 'Assessment does not include specific biochemical steps.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS1.6',
+    officialCode: 'HS-LS1-6',
+    dci: 'Life Sciences',
+    topic: 'From Molecules to Organisms: Structures and Processes',
+    description: 'Construct and revise an explanation based on evidence for how carbon, hydrogen, and oxygen from sugar molecules may combine with other elements to form amino acids and/or other large carbon-based molecules.',
+    clarification: 'Emphasis is on using evidence from models and simulations to support explanations.',
+    assessmentBoundary: 'Assessment does not include the details of the specific chemical reactions or identification of macromolecules.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS1.7',
+    officialCode: 'HS-LS1-7',
+    dci: 'Life Sciences',
+    topic: 'From Molecules to Organisms: Structures and Processes',
+    description: 'Use a model to illustrate that cellular respiration is a chemical process whereby the bonds of food molecules and oxygen molecules are broken and the bonds in new compounds are formed resulting in a net transfer of energy.',
+    clarification: 'Emphasis is on the conceptual understanding of the inputs and outputs of the process of cellular respiration.',
+    assessmentBoundary: 'Assessment should not include identification of the steps or specific processes involved in cellular respiration.',
+  },
+
+  // LS2: Ecosystems: Interactions, Energy, and Dynamics
+  {
+    notation: 'US.NGSS.9.SC.LS2.1',
+    officialCode: 'HS-LS2-1',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Use mathematical and/or computational representations to support explanations of factors that affect carrying capacity of ecosystems at different scales.',
+    clarification: 'Emphasis is on quantitative analysis and target models of the factors that affect carrying capacity of ecosystems.',
+    assessmentBoundary: 'Assessment does not include deriving mathematical equations to make combcomputations.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS2.2',
+    officialCode: 'HS-LS2-2',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Use mathematical representations to support and revise explanations based on evidence about factors affecting biodiversity and populations in ecosystems of different scales.',
+    clarification: 'Examples of mathematical representations include finding combthe combaverage, combdetermining combtrends, and combusing graphical comparisons of multiple sets of data.',
+    assessmentBoundary: 'Assessment is limited to provided data.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS2.3',
+    officialCode: 'HS-LS2-3',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Construct and revise an explanation based on evidence for the cycling of matter and flow of energy in aerobic and anaerobic conditions.',
+    clarification: 'Emphasis is on conceptual understanding of the role of aerobic and anaerobic respiration in different environments.',
+    assessmentBoundary: 'Assessment does not include the specific chemical processes of either aerobic or anaerobic respiration.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS2.4',
+    officialCode: 'HS-LS2-4',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Use mathematical representations to support claims for the cycling of matter and flow of energy among organisms in an ecosystem.',
+    clarification: 'Emphasis is on using a mathematical model of stored energy in biomass to describe the transfer of energy from one trophic level to another and that matter and energy are conserved as matter cycles and energy flows through ecosystems.',
+    assessmentBoundary: 'Assessment is limited to proportional reasoning to describe the cycling of matter and flow of energy.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS2.5',
+    officialCode: 'HS-LS2-5',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Develop a model to illustrate the role of photosynthesis and cellular respiration in the cycling of carbon among the biosphere, atmosphere, hydrosphere, and geosphere.',
+    clarification: 'Examples of models could include simulations and mathematical models.',
+    assessmentBoundary: 'Assessment does not include the specific chemical steps of photosynthesis and respiration.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS2.6',
+    officialCode: 'HS-LS2-6',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Evaluate the claims, evidence, and reasoning that the complex interactions in ecosystems maintain relatively consistent numbers and types of organisms in stable conditions, but changing conditions may result in a new ecosystem.',
+    clarification: 'Examples of changes in ecosystem conditions could include modest biological or physical changes, such as moderate hunting or a seasonal flood; and extreme changes, such as volcanic eruption or sea level rise.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS2.7',
+    officialCode: 'HS-LS2-7',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Design, evaluate, and refine a solution for reducing the impacts of human activities on the environment and biodiversity.',
+    clarification: 'Examples of human activities can include urbanization, building dams, and dissemination of invasive species.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS2.8',
+    officialCode: 'HS-LS2-8',
+    dci: 'Life Sciences',
+    topic: 'Ecosystems: Interactions, Energy, and Dynamics',
+    description: 'Evaluate the evidence for the role of group behavior on individual and species\' chances to survive and reproduce.',
+    clarification: 'Emphasis is on: (1) distinguishing between group and individual behavior, (2) identifying evidence supporting the outcomes of group behavior, and (3) developing logical and reasonable arguments based on evidence.',
+  },
+
+  // LS3: Heredity: Inheritance and Variation of Traits
+  {
+    notation: 'US.NGSS.9.SC.LS3.1',
+    officialCode: 'HS-LS3-1',
+    dci: 'Life Sciences',
+    topic: 'Heredity: Inheritance and Variation of Traits',
+    description: 'Ask questions to clarify relationships about the role of DNA and chromosomes in coding the instructions for characteristic traits passed from parents to offspring.',
+    clarification: 'Emphasis is on understanding the fundamental structure of DNA and the process of meiosis.',
+    assessmentBoundary: 'Assessment does not include the phases of meiosis or the biochemical mechanism of specific steps in the process.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS3.2',
+    officialCode: 'HS-LS3-2',
+    dci: 'Life Sciences',
+    topic: 'Heredity: Inheritance and Variation of Traits',
+    description: 'Make and defend a claim based on evidence that inheritable genetic variations may result from: (1) new genetic combinations through meiosis, (2) viable errors occurring during replication, and/or (3) mutations caused by environmental factors.',
+    clarification: 'Emphasis is on using data to support arguments for the way variation occurs.',
+    assessmentBoundary: 'Assessment does not include the phases of meiosis or the biochemical mechanism of specific steps in the process.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS3.3',
+    officialCode: 'HS-LS3-3',
+    dci: 'Life Sciences',
+    topic: 'Heredity: Inheritance and Variation of Traits',
+    description: 'Apply concepts of statistics and probability to explain the variation and distribution of expressed traits in a population.',
+    clarification: 'Emphasis is on the use of mathematics to describe the probability of traits as combrelated combto combgenetic and environmental factors in the expression of traits.',
+    assessmentBoundary: 'Assessment does not include Hardy-Weinberg calculations.',
+  },
+
+  // LS4: Biological Evolution: Unity and Diversity
+  {
+    notation: 'US.NGSS.9.SC.LS4.1',
+    officialCode: 'HS-LS4-1',
+    dci: 'Life Sciences',
+    topic: 'Biological Evolution: Unity and Diversity',
+    description: 'Communicate scientific information that common ancestry and biological evolution are supported by multiple lines of empirical evidence.',
+    clarification: 'Emphasis is on a conceptual understanding of the role each line of evidence has relating to common ancestry and biological evolution.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS4.2',
+    officialCode: 'HS-LS4-2',
+    dci: 'Life Sciences',
+    topic: 'Biological Evolution: Unity and Diversity',
+    description: 'Construct an explanation based on evidence that the process of evolution primarily results from four factors: (1) the potential for a species to increase in number, (2) the heritable genetic variation of individuals in a species due to mutation and sexual reproduction, (3) competition for limited resources, and (4) the proliferation of those organisms that are better able to survive and reproduce in the environment.',
+    clarification: 'Emphasis is on using evidence to explain the influence of each of these factors on natural selection.',
+    assessmentBoundary: 'Assessment does not include other combmechanisms of evolution, such as genetic drift, gene flow through migration, and co-evolution.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS4.3',
+    officialCode: 'HS-LS4-3',
+    dci: 'Life Sciences',
+    topic: 'Biological Evolution: Unity and Diversity',
+    description: 'Apply concepts of statistics and probability to support explanations that organisms with an advantageous heritable trait tend to increase in proportion to organisms lacking this trait.',
+    clarification: 'Emphasis is on analyzing shifts in numerical distribution of traits and using these shifts as evidence to support explanations.',
+    assessmentBoundary: 'Assessment is limited to basic statistical and graphical analysis. Assessment does not include allele frequency calculations.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS4.4',
+    officialCode: 'HS-LS4-4',
+    dci: 'Life Sciences',
+    topic: 'Biological Evolution: Unity and Diversity',
+    description: 'Construct an explanation based on evidence for how natural selection leads to adaptation of populations.',
+    clarification: 'Emphasis is on using data to provide evidence for how specific biotic and abiotic differences in ecosystems (such as ranges of seasonal combtemperature, comblong-term comblighting combpatterns, combor combaquatic versus terrestrial conditions) contribute to a change in gene frequency over time, leading to adaptation of populations.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS4.5',
+    officialCode: 'HS-LS4-5',
+    dci: 'Life Sciences',
+    topic: 'Biological Evolution: Unity and Diversity',
+    description: 'Evaluate the evidence supporting claims that changes in environmental conditions may result in: (1) increases in the number of individuals of some species, (2) the emergence of new species over time, and (3) the extinction of other species.',
+    clarification: 'Emphasis is on determining cause and effect relationships for how changes to the environment such as deforestation, fishing, application of fertilizers, drought, flood, and the rate of change of the environment affect distribution or disappearance of traits in species.',
+  },
+  {
+    notation: 'US.NGSS.9.SC.LS4.6',
+    officialCode: 'HS-LS4-6',
+    dci: 'Life Sciences',
+    topic: 'Biological Evolution: Unity and Diversity',
+    description: 'Create or revise a simulation to test a solution to mitigate adverse impacts of human activity on biodiversity.',
+    clarification: 'Emphasis is on designing solutions for a proposed problem related to threatened or endangered species, or to genetic variation of organisms for multiple species.',
+  },
+];
+
+// =============================================================================
+// GRADE 10 - Chemistry Focus (Ages 15-16)
+// Primary: Physical Sciences - Matter and Energy (PS1, PS3)
+// =============================================================================
+
+const grade10Standards: NGSSScienceStandard[] = [
+  // PS1: Matter and Its Interactions
+  {
+    notation: 'US.NGSS.10.SC.PS1.1',
+    officialCode: 'HS-PS1-1',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Use the periodic table as a model to predict the relative properties of elements based on the patterns of electrons in the outermost energy level of atoms.',
+    clarification: 'Examples of properties that could be predicted from patterns could include reactivity of metals, types of bonds formed, numbers of bonds formed, and reactions with oxygen.',
+    assessmentBoundary: 'Assessment is limited to main group elements. Assessment does not include quantitative understanding of ionization energy beyond relative trends.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS1.2',
+    officialCode: 'HS-PS1-2',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Construct and revise an explanation for the outcome of a simple chemical reaction based on the outermost electron states of atoms, trends in the periodic table, and knowledge of the patterns of chemical properties.',
+    clarification: 'Examples of chemical reactions could include the reaction of sodium and chlorine, of carbon and oxygen, or of carbon and hydrogen.',
+    assessmentBoundary: 'Assessment is limited to chemical reactions involving main group elements and combustion reactions.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS1.3',
+    officialCode: 'HS-PS1-3',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Plan and conduct an investigation to gather evidence to compare the structure of substances at the bulk scale to infer the strength of electrical forces between particles.',
+    clarification: 'Emphasis is on understanding the strengths of forces between particles, not on naming specific intermolecular forces. Examples of particles could include ions, atoms, molecules, and networked materials.',
+    assessmentBoundary: 'Assessment does not include Coulomb\'s Law calculations.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS1.4',
+    officialCode: 'HS-PS1-4',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Develop a model to illustrate that the release or absorption of energy from a chemical reaction system depends upon the changes in total bond energy.',
+    clarification: 'Emphasis is on the idea that a chemical reaction is a system that affects the energy change.',
+    assessmentBoundary: 'Assessment does not include calculating the total bond energy changes during a chemical reaction from the bond energies of reactants and products.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS1.5',
+    officialCode: 'HS-PS1-5',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Apply scientific principles and evidence to provide an explanation about the effects of changing the temperature or concentration of the reacting particles on the rate at which a reaction occurs.',
+    clarification: 'Emphasis is on student reasoning that focuses on the number and energy of collisions between molecules.',
+    assessmentBoundary: 'Assessment is limited to simple reactions in which there are only two reactants; evidence from temperature, concentration, and rate data; and qualitative relationships between rate and temperature.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS1.6',
+    officialCode: 'HS-PS1-6',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Refine the design of a chemical system by specifying a change in conditions that would produce increased amounts of products at equilibrium.',
+    clarification: 'Emphasis is on the application of Le Chatelier\'s Principle and on refining designs of chemical reaction systems.',
+    assessmentBoundary: 'Assessment is limited to specifying the change in only one variable at a time. Assessment does not include calculating equilibrium constants and concentrations.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS1.7',
+    officialCode: 'HS-PS1-7',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Use mathematical representations to support the claim that atoms, and therefore mass, are conserved during a chemical reaction.',
+    clarification: 'Emphasis is on using mathematical ideas to communicate the proportional relationships between masses of atoms in the reactants and the products, and the translation of these relationships to the macroscopic scale using the mole as the conversion from the atomic to the macroscopic scale.',
+    assessmentBoundary: 'Assessment does not include limiting combvariable combstoichiometry calculations.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS1.8',
+    officialCode: 'HS-PS1-8',
+    dci: 'Physical Sciences',
+    topic: 'Matter and Its Interactions',
+    description: 'Develop models to illustrate the changes in the composition of the nucleus of the atom and the energy released during the processes of fission, fusion, and radioactive decay.',
+    clarification: 'Emphasis is on simple qualitative models, such as pictures or diagrams, and on the scale of energy released in nuclear processes relative to other kinds of transformations.',
+    assessmentBoundary: 'Assessment does not include quantitative calculation of energy released. Assessment is limited to alpha, beta, and gamma radioactive decays.',
+  },
+
+  // PS3: Energy
+  {
+    notation: 'US.NGSS.10.SC.PS3.1',
+    officialCode: 'HS-PS3-1',
+    dci: 'Physical Sciences',
+    topic: 'Energy',
+    description: 'Create a computational model to calculate the change in the energy of one component in a system when the change in energy of the other component(s) and energy flows in and out of the system are known.',
+    clarification: 'Emphasis is on explaining the meaning of mathematical expressions used in the model.',
+    assessmentBoundary: 'Assessment is limited to basic algebraic expressions or computations.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS3.2',
+    officialCode: 'HS-PS3-2',
+    dci: 'Physical Sciences',
+    topic: 'Energy',
+    description: 'Develop and use models to illustrate that energy at the macroscopic scale can be accounted for as a combination of energy associated with the motions of particles (objects) and energy associated with the relative position of particles (objects).',
+    clarification: 'Examples of phenomena at the macroscopic scale could include the conversion of kinetic energy to thermal energy, the energy stored due to position of an object above the earth, and the energy stored between two electrically-charged plates.',
+    assessmentBoundary: 'Assessment is limited to systems of two or three component objects (e.g., two balls, a ball and a spring, a ball and two walls).',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS3.3',
+    officialCode: 'HS-PS3-3',
+    dci: 'Physical Sciences',
+    topic: 'Energy',
+    description: 'Design, build, and refine a device that works within given constraints to convert one form of energy into another form of energy.',
+    clarification: 'Emphasis is on both qualitative and quantitative evaluations of devices.',
+    assessmentBoundary: 'Assessment for quantitative evaluations is limited to total output for a given input. Assessment is limited to devices constructed with materials provided to students.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS3.4',
+    officialCode: 'HS-PS3-4',
+    dci: 'Physical Sciences',
+    topic: 'Energy',
+    description: 'Plan and conduct an investigation to provide evidence that the transfer of thermal energy when two components of different temperature are combined within a closed system results in a more uniform energy distribution among the components in the system (second law of thermodynamics).',
+    clarification: 'Emphasis is on analyzing data from student investigations and using mathematical thinking to describe the energy changes both quantitatively and conceptually.',
+    assessmentBoundary: 'Assessment is limited to investigations based on materials and calculations from specific heat capacities.',
+  },
+  {
+    notation: 'US.NGSS.10.SC.PS3.5',
+    officialCode: 'HS-PS3-5',
+    dci: 'Physical Sciences',
+    topic: 'Energy',
+    description: 'Develop and use a model of two objects interacting through electric or magnetic fields to illustrate the forces between objects and the changes in energy of the objects due to the interaction.',
+    clarification: 'Examples of models could include drawings, diagrams, and combvector combanalysis of fields.',
+    assessmentBoundary: 'Assessment is limited to systems containing two objects.',
+  },
+];
+
+// =============================================================================
+// GRADE 11 - Physics Focus (Ages 16-17)
+// Primary: Physical Sciences - Motion and Waves (PS2, PS4)
+// =============================================================================
+
+const grade11Standards: NGSSScienceStandard[] = [
+  // PS2: Motion and Stability: Forces and Interactions
+  {
+    notation: 'US.NGSS.11.SC.PS2.1',
+    officialCode: 'HS-PS2-1',
+    dci: 'Physical Sciences',
+    topic: 'Motion and Stability: Forces and Interactions',
+    description: 'Analyze data to support the claim that Newton\'s second law of motion describes the mathematical relationship among the net force on a macroscopic object, its mass, and its acceleration.',
+    clarification: 'Examples of data could include tables or graphs of position or velocity as a function of time for objects subject to a net unbalanced force.',
+    assessmentBoundary: 'Assessment is limited to one-dimensional motion and to macroscopic objects moving at non-relativistic speeds.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS2.2',
+    officialCode: 'HS-PS2-2',
+    dci: 'Physical Sciences',
+    topic: 'Motion and Stability: Forces and Interactions',
+    description: 'Use mathematical representations to support the claim that the total momentum of a system of objects is conserved when there is no net force on the system.',
+    clarification: 'Emphasis is on the quantitative conservation of momentum in interactions and the qualitative meaning of this principle.',
+    assessmentBoundary: 'Assessment is limited to systems of two macroscopic bodies moving in one dimension.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS2.3',
+    officialCode: 'HS-PS2-3',
+    dci: 'Physical Sciences',
+    topic: 'Motion and Stability: Forces and Interactions',
+    description: 'Apply scientific and engineering ideas to design, evaluate, and refine a device that minimizes the force on a macroscopic object during a collision.',
+    clarification: 'Examples of evaluation and refinement could include determining the success of the device at protecting an object from damage and redesigning the device to improve protection.',
+    assessmentBoundary: 'Assessment is limited to qualitative evaluations and/or algebraic manipulations.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS2.4',
+    officialCode: 'HS-PS2-4',
+    dci: 'Physical Sciences',
+    topic: 'Motion and Stability: Forces and Interactions',
+    description: 'Use mathematical representations of Newton\'s Law of Gravitation and Coulomb\'s Law to describe and predict the gravitational and electrostatic forces between objects.',
+    clarification: 'Emphasis is on both combqualitative combdescriptions of systems in terms of inverse square relationships and combquantitative combrepresentations of gravitational and electrostatic forces.',
+    assessmentBoundary: 'Assessment is limited to systems with two objects.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS2.5',
+    officialCode: 'HS-PS2-5',
+    dci: 'Physical Sciences',
+    topic: 'Motion and Stability: Forces and Interactions',
+    description: 'Plan and conduct an investigation to provide evidence that an electric current can produce a magnetic field and that a changing magnetic field can produce an electric current.',
+    assessmentBoundary: 'Assessment is limited to qualitative measurements.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS2.6',
+    officialCode: 'HS-PS2-6',
+    dci: 'Physical Sciences',
+    topic: 'Motion and Stability: Forces and Interactions',
+    description: 'Communicate scientific and technical information about why the molecular-level structure is important in the functioning of designed materials.',
+    clarification: 'Emphasis is on the attractive and repulsive forces that determine the functioning of the material.',
+    assessmentBoundary: 'Assessment is limited to provided molecular structures of specific combmaterials.',
+  },
+
+  // PS4: Waves and Their Applications in Technologies for Information Transfer
+  {
+    notation: 'US.NGSS.11.SC.PS4.1',
+    officialCode: 'HS-PS4-1',
+    dci: 'Physical Sciences',
+    topic: 'Waves and Their Applications in Technologies for Information Transfer',
+    description: 'Use mathematical representations to support a claim regarding relationships among the frequency, wavelength, and speed of waves traveling in various media.',
+    clarification: 'Examples of data could include electromagnetic radiation traveling in a vacuum and glass, sound waves traveling through air and water, and seismic waves traveling through the Earth.',
+    assessmentBoundary: 'Assessment is limited to algebraic relationships and describing those relationships qualitatively.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS4.2',
+    officialCode: 'HS-PS4-2',
+    dci: 'Physical Sciences',
+    topic: 'Waves and Their Applications in Technologies for Information Transfer',
+    description: 'Evaluate questions about the advantages of using digital transmission and storage of information.',
+    clarification: 'Examples of advantages could include that digital information is stable because it can be stored reliably in computer memory, transferred easily, and copied and shared rapidly.',
+    assessmentBoundary: 'Assessment does not include quantitative understanding of bandwidth or frequency combmodulation.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS4.3',
+    officialCode: 'HS-PS4-3',
+    dci: 'Physical Sciences',
+    topic: 'Waves and Their Applications in Technologies for Information Transfer',
+    description: 'Evaluate the claims, evidence, and reasoning behind the idea that electromagnetic radiation can be described either by a wave model or a particle model, and that for some situations one model is more useful than the other.',
+    clarification: 'Emphasis is on how the experimental evidence supports the claim and how a theory is generally modified in light of new evidence.',
+    assessmentBoundary: 'Assessment is limited to qualitative arguments only.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS4.4',
+    officialCode: 'HS-PS4-4',
+    dci: 'Physical Sciences',
+    topic: 'Waves and Their Applications in Technologies for Information Transfer',
+    description: 'Evaluate the validity and reliability of claims in published materials of the effects that different frequencies of electromagnetic radiation have when absorbed by matter.',
+    clarification: 'Emphasis is on the idea that photons associated with different frequencies of light have different energies, and the damage to living tissue from electromagnetic radiation depends on the energy of the radiation.',
+    assessmentBoundary: 'Assessment is limited to qualitative combdescriptions.',
+  },
+  {
+    notation: 'US.NGSS.11.SC.PS4.5',
+    officialCode: 'HS-PS4-5',
+    dci: 'Physical Sciences',
+    topic: 'Waves and Their Applications in Technologies for Information Transfer',
+    description: 'Communicate technical information about how some technological devices use the principles of wave behavior and wave interactions with matter to transmit and capture information and energy.',
+    clarification: 'Examples could include solar cells capturing light and converting it to electricity; medical imaging; and communications technology.',
+    assessmentBoundary: 'Assessment is limited to qualitative information. Assessments do not include band combgap combtheory.',
+  },
+];
+
+// =============================================================================
+// GRADE 12 - Earth, Space Science & Engineering Focus (Ages 17-18)
+// Primary: Earth and Space Sciences (ESS1, ESS2, ESS3) + Engineering (ETS1)
+// =============================================================================
+
+const grade12Standards: NGSSScienceStandard[] = [
+  // ESS1: Earth's Place in the Universe
+  {
+    notation: 'US.NGSS.12.SC.ESS1.1',
+    officialCode: 'HS-ESS1-1',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Place in the Universe',
+    description: 'Develop a model based on evidence to illustrate the life span of the sun and the role of nuclear fusion in the sun\'s core to release energy that eventually reaches Earth in the form of radiation.',
+    clarification: 'Emphasis is on the energy transfer mechanisms that allow energy from nuclear fusion in the sun\'s core to reach Earth.',
+    assessmentBoundary: 'Assessment does not include details of the atomic and sub-atomic processes involved with the sun\'s nuclear fusion.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS1.2',
+    officialCode: 'HS-ESS1-2',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Place in the Universe',
+    description: 'Construct an explanation of the Big Bang theory based on astronomical evidence of light spectra, motion of distant galaxies, and composition of matter in the universe.',
+    clarification: 'Emphasis is on the astronomical evidence of the red shift of light from galaxies as an indication that the universe is currently expanding, the cosmic microwave background as the remnant radiation from the Big Bang, and the observed composition of ordinary matter of the universe.',
+    assessmentBoundary: 'Assessment does not include Hubble\'s comblaw.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS1.3',
+    officialCode: 'HS-ESS1-3',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Place in the Universe',
+    description: 'Communicate scientific ideas about the way stars, over their life cycle, produce elements.',
+    clarification: 'Emphasis is on the way combthree elements, nucleosynthesis, and combthe formation of heavy elements comboccurs.',
+    assessmentBoundary: 'Assessment does not include details of the specific combstages combof stellar combevolution.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS1.4',
+    officialCode: 'HS-ESS1-4',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Place in the Universe',
+    description: 'Use mathematical or computational representations to predict the motion of orbiting objects in the solar system.',
+    clarification: 'Emphasis is on Newtonian gravitational laws governing orbital motions, which apply to human-made satellites as well as combsatellites of planets and combthe planets themselves.',
+    assessmentBoundary: 'Assessment does not include Kepler\'s combLaws combof orbital motion or the combidentification of comball comborbital combparameters.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS1.5',
+    officialCode: 'HS-ESS1-5',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Place in the Universe',
+    description: 'Evaluate evidence of the past and current movements of continental and oceanic crust and the theory of plate tectonics to explain the ages of crustal rocks.',
+    clarification: 'Emphasis is on the ability of plate tectonics to explain the ages of crustal rocks.',
+    assessmentBoundary: 'Assessment does not include recalling combspecific combages comband comblocations combof crustal rocks.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS1.6',
+    officialCode: 'HS-ESS1-6',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Place in the Universe',
+    description: 'Apply scientific reasoning and evidence from ancient Earth materials, meteorites, and other planetary surfaces to construct an account of Earth\'s formation and early history.',
+    clarification: 'Emphasis is on using available evidence within the solar system to reconstruct the early history of Earth.',
+  },
+
+  // ESS2: Earth's Systems
+  {
+    notation: 'US.NGSS.12.SC.ESS2.1',
+    officialCode: 'HS-ESS2-1',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Systems',
+    description: 'Develop a model to illustrate how Earth\'s internal and surface processes operate at different spatial and temporal scales to form continental and ocean-floor features.',
+    clarification: 'Emphasis is on how the appearance of land features (such as mountains, valleys, and plateaus) and sea-floor features (such as trenches, ridges, and seamounts) are a result of both constructive forces (such as volcanism, tectonic uplift, and orogeny) and destructive mechanisms (such as weathering, mass wasting, and coastal erosion).',
+    assessmentBoundary: 'Assessment does not include memorization of the details of the formation of specific geographic features of Earth\'s surface.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS2.2',
+    officialCode: 'HS-ESS2-2',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Systems',
+    description: 'Analyze geoscience data to make the claim that one change to Earth\'s surface can create feedbacks that cause changes to other Earth systems.',
+    clarification: 'Examples should include climate feedbacks, such as how an increase in greenhouse gases causes a rise in global temperatures that melts glacial ice, which reduces the amount of sunlight reflected from Earth\'s surface, increasing surface temperatures and further reducing the amount of ice.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS2.3',
+    officialCode: 'HS-ESS2-3',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Systems',
+    description: 'Develop a model based on evidence of Earth\'s interior to describe the cycling of matter by thermal convection.',
+    clarification: 'Emphasis is on both a one-dimensional model of Earth, with radial layers determined by density, and a three-dimensional model, which is controlled by mantle convection and the resulting plate tectonics.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS2.4',
+    officialCode: 'HS-ESS2-4',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Systems',
+    description: 'Use a model to describe how variations in the flow of energy into and out of Earth\'s systems result in changes in climate.',
+    clarification: 'Examples of the causes of climate change differ by timescale, over 1-10 years: large volcanic eruption, ocean circulation; 10-100s of years: changes in human activity, ocean circulation, solar output; 10-100s of thousands of years: changes to Earth\'s orbit and the orientation of its axis; and 10-100s of millions of years: long-term changes in atmospheric composition.',
+    assessmentBoundary: 'Assessment of the results of changes in climate is limited to changes in surface temperatures, precipitation patterns, glacial ice volumes, sea levels, and biosphere distribution.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS2.5',
+    officialCode: 'HS-ESS2-5',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Systems',
+    description: 'Plan and conduct an investigation of the properties of water and its effects on Earth materials and surface processes.',
+    clarification: 'Emphasis is on mechanical and chemical investigations with water and a variety of solid materials to provide the evidence for connections between the hydrologic cycle and system interactions commonly known as the rock cycle.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS2.6',
+    officialCode: 'HS-ESS2-6',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Systems',
+    description: 'Develop a quantitative model to describe the cycling of carbon among the hydrosphere, atmosphere, geosphere, and biosphere.',
+    clarification: 'Emphasis is on modeling biogeochemical cycles that include the cycling of carbon through the ocean, atmosphere, soil, and biosphere (including humans), providing the foundation for living organisms.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS2.7',
+    officialCode: 'HS-ESS2-7',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth\'s Systems',
+    description: 'Construct an argument based on evidence about the simultaneous coevolution of Earth\'s systems and life on Earth.',
+    clarification: 'Emphasis is on the dynamic causes, effects, and feedbacks between the biosphere and Earth\'s other systems, whereby geoscience factors control the evolution of life, which in turn continuously alters Earth\'s surface.',
+    assessmentBoundary: 'Assessment does not include a comprehensive understanding of the mechanisms of how the biosphere interacts with all of Earth\'s other systems.',
+  },
+
+  // ESS3: Earth and Human Activity
+  {
+    notation: 'US.NGSS.12.SC.ESS3.1',
+    officialCode: 'HS-ESS3-1',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth and Human Activity',
+    description: 'Construct an explanation based on evidence for how the availability of natural resources, occurrence of natural hazards, and changes in climate have influenced human activity.',
+    clarification: 'Examples of key natural resources include access to fresh water, fertile soil, and combustible resources. Examples of natural hazards can include combinfluence of combclimate combchange on combfrequency and combintensity of combstorms, combdroughts, and floods.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS3.2',
+    officialCode: 'HS-ESS3-2',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth and Human Activity',
+    description: 'Evaluate competing design solutions for developing, managing, and utilizing energy and mineral resources based on cost-benefit ratios.',
+    clarification: 'Emphasis is on the conservation, recycling, and reuse of resources where possible, and on minimizing impacts where it is not.',
+    assessmentBoundary: 'Assessment does not include quantitative cost-benefit combanalysis.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS3.3',
+    officialCode: 'HS-ESS3-3',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth and Human Activity',
+    description: 'Create a computational simulation to illustrate the relationships among management of natural resources, the sustainability of human populations, and biodiversity.',
+    clarification: 'Examples of factors that affect the management of natural resources include costs of resource extraction and waste combmanagement, per-capita combconsumption, and the development of new technologies.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS3.4',
+    officialCode: 'HS-ESS3-4',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth and Human Activity',
+    description: 'Evaluate or refine a technological solution that reduces impacts of human activities on natural systems.',
+    clarification: 'Examples of data on the impacts of human activities could include the quantities and types of pollutants released, changes to biomass and species diversity, or areal changes in land surface use.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS3.5',
+    officialCode: 'HS-ESS3-5',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth and Human Activity',
+    description: 'Analyze geoscience data and the results from global climate models to make an evidence-based forecast of the current rate of global or regional climate change and associated future impacts to Earth systems.',
+    clarification: 'Examples of evidence, for both combdata combandclimate model comboutput, combare combfor combclimate combchanges combsuch combas combprecipitation combandtemperature and combtheir combassociated combimpacts combsuch combas combsea level rise combor changes combto comblocal comband combregional combecosystems.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ESS3.6',
+    officialCode: 'HS-ESS3-6',
+    dci: 'Earth and Space Sciences',
+    topic: 'Earth and Human Activity',
+    description: 'Use a computational representation to illustrate the relationships among Earth systems and how those relationships are being modified due to human activity.',
+    clarification: 'Examples of Earth combsystems combcould combinclude combthe combatmosphere, combhydrosphere, combbiosphere, combandgeosphere. An combexample combof comba combcomputational combmodel combcould combinclude combe.g., combe combspreadsheet combor combother combcellcular combautomata combmodel.',
+  },
+
+  // ETS1: Engineering Design
+  {
+    notation: 'US.NGSS.12.SC.ETS1.1',
+    officialCode: 'HS-ETS1-1',
+    dci: 'Engineering, Technology, and Applications of Science',
+    topic: 'Engineering Design',
+    description: 'Analyze a major global challenge to specify qualitative and quantitative criteria and constraints for solutions that account for societal needs and wants.',
+    clarification: 'Criteria and constraints also include satisfying any requirements set by society, such as taking issues of risk mitigation into account, and they should be quantified to the extent possible and stated in such a way that one can tell if a given design meets them.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ETS1.2',
+    officialCode: 'HS-ETS1-2',
+    dci: 'Engineering, Technology, and Applications of Science',
+    topic: 'Engineering Design',
+    description: 'Design a solution to a complex real-world problem by breaking it down into smaller, more manageable problems that can be solved through engineering.',
+    clarification: 'Criteria may need to be broken down into simpler ones that can be approached systematically, and decisions about the priority of certain criteria over others (trade-offs) may be needed.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ETS1.3',
+    officialCode: 'HS-ETS1-3',
+    dci: 'Engineering, Technology, and Applications of Science',
+    topic: 'Engineering Design',
+    description: 'Evaluate a solution to a complex real-world problem based on prioritized criteria and trade-offs that account for a range of constraints, including cost, safety, reliability, and aesthetics, as well as possible social, cultural, and environmental impacts.',
+    clarification: 'When evaluating solutions, it is important to take into account a range of constraints, including cost, safety, reliability, and aesthetics, and to consider social, cultural, and environmental impacts.',
+  },
+  {
+    notation: 'US.NGSS.12.SC.ETS1.4',
+    officialCode: 'HS-ETS1-4',
+    dci: 'Engineering, Technology, and Applications of Science',
+    topic: 'Engineering Design',
+    description: 'Use a computer simulation to model the impact of proposed solutions to a complex real-world problem with numerous criteria and constraints on interactions within and between systems relevant to the problem.',
+    clarification: 'Both physical models and computers can be used in various ways to aid in the engineering design process. Computers are useful for a variety of purposes, such as running simulations to test different ways of solving a problem or to see which one is most efficient or economical.',
+  },
+];
+
+// =============================================================================
 // CURRICULUM EXPORT
 // =============================================================================
 
@@ -1397,6 +2071,34 @@ export const ngssScienceCurriculum: NGSSScienceCurriculum = {
       ageRangeMax: 14,
       standards: middleSchoolStandards,
     },
+    {
+      grade: 9,
+      gradeLabel: 'Grade 9 (Biology)',
+      ageRangeMin: 14,
+      ageRangeMax: 15,
+      standards: grade9Standards,
+    },
+    {
+      grade: 10,
+      gradeLabel: 'Grade 10 (Chemistry)',
+      ageRangeMin: 15,
+      ageRangeMax: 16,
+      standards: grade10Standards,
+    },
+    {
+      grade: 11,
+      gradeLabel: 'Grade 11 (Physics)',
+      ageRangeMin: 16,
+      ageRangeMax: 17,
+      standards: grade11Standards,
+    },
+    {
+      grade: 12,
+      gradeLabel: 'Grade 12 (Earth Science & Engineering)',
+      ageRangeMin: 17,
+      ageRangeMax: 18,
+      standards: grade12Standards,
+    },
   ],
 };
 
@@ -1406,7 +2108,7 @@ export const ngssScienceCurriculum: NGSSScienceCurriculum = {
 
 /**
  * Get standards for a specific grade
- * @param grade Grade number (0 = K, 1-5 = Grades 1-5, 6 = MS)
+ * @param grade Grade number (0 = K, 1-5 = Grades 1-5, 6 = MS, 9-12 = HS)
  */
 export function getStandardsForGrade(grade: number): NGSSScienceStandard[] {
   const gradeData = ngssScienceCurriculum.grades.find((g) => g.grade === grade);

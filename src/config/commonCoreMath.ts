@@ -1,6 +1,6 @@
 /**
  * US Common Core State Standards - Mathematics
- * Grades K-8
+ * Grades K-12
  *
  * Official Source: https://www.corestandards.org/Math/ (Public Domain)
  *
@@ -11,20 +11,51 @@
  * Notation System: US.CC.{grade}.MA.{domain}.{number}
  * - US = United States
  * - CC = Common Core
- * - Grade: K, 1, 2, 3, 4, 5, 6, 7, 8
+ * - Grade: K, 1-12
  * - MA = Mathematics
  * - Domain codes:
+ *   Grades K-5:
  *   - CC = Counting and Cardinality (K only)
- *   - OA = Operations and Algebraic Thinking (K-5)
- *   - NBT = Number and Operations in Base Ten (K-5)
+ *   - OA = Operations and Algebraic Thinking
+ *   - NBT = Number and Operations in Base Ten
  *   - NF = Number and Operations - Fractions (3-5)
- *   - MD = Measurement and Data (K-5)
- *   - G = Geometry (K-8)
+ *   - MD = Measurement and Data
+ *   - G = Geometry
+ *   Grades 6-8:
  *   - RP = Ratios and Proportional Relationships (6-7)
- *   - NS = The Number System (6-8)
- *   - EE = Expressions and Equations (6-8)
- *   - SP = Statistics and Probability (6-8)
+ *   - NS = The Number System
+ *   - EE = Expressions and Equations
+ *   - SP = Statistics and Probability
  *   - F = Functions (8)
+ *   - G = Geometry
+ *   High School (9-12) - Conceptual Categories:
+ *   Number and Quantity:
+ *   - NRN = The Real Number System
+ *   - NQ = Quantities
+ *   - NCN = The Complex Number System
+ *   - NVM = Vector and Matrix Quantities
+ *   Algebra:
+ *   - ASSE = Seeing Structure in Expressions
+ *   - AAPR = Arithmetic with Polynomials and Rational Expressions
+ *   - ACED = Creating Equations
+ *   - AREI = Reasoning with Equations and Inequalities
+ *   Functions:
+ *   - FIF = Interpreting Functions
+ *   - FBF = Building Functions
+ *   - FLE = Linear, Quadratic, and Exponential Models
+ *   - FTF = Trigonometric Functions
+ *   Geometry:
+ *   - GCO = Congruence
+ *   - GSRT = Similarity, Right Triangles, and Trigonometry
+ *   - GC = Circles
+ *   - GGPE = Expressing Geometric Properties with Equations
+ *   - GGMD = Geometric Measurement and Dimension
+ *   - GMG = Modeling with Geometry
+ *   Statistics and Probability:
+ *   - SID = Interpreting Categorical and Quantitative Data
+ *   - SIC = Making Inferences and Justifying Conclusions
+ *   - SCP = Conditional Probability and Rules of Probability
+ *   - SMD = Using Probability to Make Decisions
  */
 
 export interface CommonCoreMathStandard {
@@ -1579,6 +1610,1216 @@ const grade8Standards: CommonCoreMathStandard[] = [
 ];
 
 // =============================================================================
+// GRADE 9 (Ages 14-15) - Algebra I Focus
+// High School Common Core standards mapped to typical Algebra I course
+// =============================================================================
+
+const grade9Standards: CommonCoreMathStandard[] = [
+  // NUMBER AND QUANTITY - The Real Number System (N-RN)
+  {
+    notation: 'US.CC.9.MA.NRN.1',
+    domain: 'Number and Quantity',
+    cluster: 'Extend the properties of exponents to rational exponents',
+    description: 'explain how the definition of the meaning of rational exponents follows from extending the properties of integer exponents to those values, allowing for a notation for radicals in terms of rational exponents',
+  },
+  {
+    notation: 'US.CC.9.MA.NRN.2',
+    domain: 'Number and Quantity',
+    cluster: 'Extend the properties of exponents to rational exponents',
+    description: 'rewrite expressions involving radicals and rational exponents using the properties of exponents',
+  },
+  {
+    notation: 'US.CC.9.MA.NRN.3',
+    domain: 'Number and Quantity',
+    cluster: 'Use properties of rational and irrational numbers',
+    description: 'explain why the sum or product of two rational numbers is rational; that the sum of a rational number and an irrational number is irrational; and that the product of a nonzero rational number and an irrational number is irrational',
+  },
+
+  // NUMBER AND QUANTITY - Quantities (N-Q)
+  {
+    notation: 'US.CC.9.MA.NQ.1',
+    domain: 'Number and Quantity',
+    cluster: 'Reason quantitatively and use units to solve problems',
+    description: 'use units as a way to understand problems and to guide the solution of multi-step problems; choose and interpret units consistently in formulas; choose and interpret the scale and the origin in graphs and data displays',
+  },
+  {
+    notation: 'US.CC.9.MA.NQ.2',
+    domain: 'Number and Quantity',
+    cluster: 'Reason quantitatively and use units to solve problems',
+    description: 'define appropriate quantities for the purpose of descriptive modeling',
+  },
+  {
+    notation: 'US.CC.9.MA.NQ.3',
+    domain: 'Number and Quantity',
+    cluster: 'Reason quantitatively and use units to solve problems',
+    description: 'choose a level of accuracy appropriate to limitations on measurement when reporting quantities',
+  },
+
+  // ALGEBRA - Seeing Structure in Expressions (A-SSE)
+  {
+    notation: 'US.CC.9.MA.ASSE.1a',
+    domain: 'Algebra',
+    cluster: 'Interpret the structure of expressions',
+    description: 'interpret parts of an expression, such as terms, factors, and coefficients',
+  },
+  {
+    notation: 'US.CC.9.MA.ASSE.1b',
+    domain: 'Algebra',
+    cluster: 'Interpret the structure of expressions',
+    description: 'interpret complicated expressions by viewing one or more of their parts as a single entity',
+  },
+  {
+    notation: 'US.CC.9.MA.ASSE.2',
+    domain: 'Algebra',
+    cluster: 'Interpret the structure of expressions',
+    description: 'use the structure of an expression to identify ways to rewrite it',
+  },
+  {
+    notation: 'US.CC.9.MA.ASSE.3a',
+    domain: 'Algebra',
+    cluster: 'Write expressions in equivalent forms to solve problems',
+    description: 'factor a quadratic expression to reveal the zeros of the function it defines',
+  },
+  {
+    notation: 'US.CC.9.MA.ASSE.3b',
+    domain: 'Algebra',
+    cluster: 'Write expressions in equivalent forms to solve problems',
+    description: 'complete the square in a quadratic expression to reveal the maximum or minimum value of the function it defines',
+  },
+  {
+    notation: 'US.CC.9.MA.ASSE.3c',
+    domain: 'Algebra',
+    cluster: 'Write expressions in equivalent forms to solve problems',
+    description: 'use the properties of exponents to transform expressions for exponential functions',
+  },
+
+  // ALGEBRA - Arithmetic with Polynomials (A-APR)
+  {
+    notation: 'US.CC.9.MA.AAPR.1',
+    domain: 'Algebra',
+    cluster: 'Perform arithmetic operations on polynomials',
+    description: 'understand that polynomials form a system analogous to the integers, namely, they are closed under the operations of addition, subtraction, and multiplication; add, subtract, and multiply polynomials',
+  },
+
+  // ALGEBRA - Creating Equations (A-CED)
+  {
+    notation: 'US.CC.9.MA.ACED.1',
+    domain: 'Algebra',
+    cluster: 'Create equations that describe numbers or relationships',
+    description: 'create equations and inequalities in one variable and use them to solve problems',
+  },
+  {
+    notation: 'US.CC.9.MA.ACED.2',
+    domain: 'Algebra',
+    cluster: 'Create equations that describe numbers or relationships',
+    description: 'create equations in two or more variables to represent relationships between quantities; graph equations on coordinate axes with labels and scales',
+  },
+  {
+    notation: 'US.CC.9.MA.ACED.3',
+    domain: 'Algebra',
+    cluster: 'Create equations that describe numbers or relationships',
+    description: 'represent constraints by equations or inequalities, and by systems of equations and/or inequalities, and interpret solutions as viable or nonviable options in a modeling context',
+  },
+  {
+    notation: 'US.CC.9.MA.ACED.4',
+    domain: 'Algebra',
+    cluster: 'Create equations that describe numbers or relationships',
+    description: 'rearrange formulas to highlight a quantity of interest, using the same reasoning as in solving equations',
+  },
+
+  // ALGEBRA - Reasoning with Equations and Inequalities (A-REI)
+  {
+    notation: 'US.CC.9.MA.AREI.1',
+    domain: 'Algebra',
+    cluster: 'Understand solving equations as a process of reasoning',
+    description: 'explain each step in solving a simple equation as following from the equality of numbers asserted at the previous step, starting from the assumption that the original equation has a solution; construct a viable argument to justify a solution method',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.3',
+    domain: 'Algebra',
+    cluster: 'Solve equations and inequalities in one variable',
+    description: 'solve linear equations and inequalities in one variable, including equations with coefficients represented by letters',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.4a',
+    domain: 'Algebra',
+    cluster: 'Solve equations and inequalities in one variable',
+    description: 'use the method of completing the square to transform any quadratic equation in x into an equation of the form (x - p)² = q that has the same solutions; derive the quadratic formula from this form',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.4b',
+    domain: 'Algebra',
+    cluster: 'Solve equations and inequalities in one variable',
+    description: 'solve quadratic equations by inspection, taking square roots, completing the square, the quadratic formula and factoring, as appropriate to the initial form of the equation; recognize when the quadratic formula gives complex solutions',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.5',
+    domain: 'Algebra',
+    cluster: 'Solve systems of equations',
+    description: 'prove that, given a system of two equations in two variables, replacing one equation by the sum of that equation and a multiple of the other produces a system with the same solutions',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.6',
+    domain: 'Algebra',
+    cluster: 'Solve systems of equations',
+    description: 'solve systems of linear equations exactly and approximately, focusing on pairs of linear equations in two variables',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.10',
+    domain: 'Algebra',
+    cluster: 'Represent and solve equations and inequalities graphically',
+    description: 'understand that the graph of an equation in two variables is the set of all its solutions plotted in the coordinate plane, often forming a curve',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.11',
+    domain: 'Algebra',
+    cluster: 'Represent and solve equations and inequalities graphically',
+    description: 'explain why the x-coordinates of the points where the graphs of the equations y = f(x) and y = g(x) intersect are the solutions of the equation f(x) = g(x); find the solutions approximately using technology to graph the functions',
+  },
+  {
+    notation: 'US.CC.9.MA.AREI.12',
+    domain: 'Algebra',
+    cluster: 'Represent and solve equations and inequalities graphically',
+    description: 'graph the solutions to a linear inequality in two variables as a half-plane, and graph the solution set to a system of linear inequalities in two variables as the intersection of the corresponding half-planes',
+  },
+
+  // FUNCTIONS - Interpreting Functions (F-IF)
+  {
+    notation: 'US.CC.9.MA.FIF.1a',
+    domain: 'Functions',
+    cluster: 'Understand the concept of a function',
+    description: 'understand that a function from one set to another set assigns to each element of the domain exactly one element of the range',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.1b',
+    domain: 'Functions',
+    cluster: 'Understand the concept of a function',
+    description: 'use function notation, evaluate functions for inputs in their domains, and interpret statements that use function notation in terms of a context',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.1c',
+    domain: 'Functions',
+    cluster: 'Understand the concept of a function',
+    description: 'recognize that sequences are functions, sometimes defined recursively, whose domain is a subset of the integers',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.2',
+    domain: 'Functions',
+    cluster: 'Understand the concept of a function',
+    description: 'use function notation, evaluate functions for inputs in their domains, and interpret statements that use function notation in terms of a context',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.3',
+    domain: 'Functions',
+    cluster: 'Understand the concept of a function',
+    description: 'recognize that sequences are functions, sometimes defined recursively, whose domain is a subset of the integers',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.4',
+    domain: 'Functions',
+    cluster: 'Interpret functions that arise in applications',
+    description: 'for a function that models a relationship between two quantities, interpret key features of graphs and tables in terms of the quantities, and sketch graphs showing key features given a verbal description of the relationship',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.5',
+    domain: 'Functions',
+    cluster: 'Interpret functions that arise in applications',
+    description: 'relate the domain of a function to its graph and, where applicable, to the quantitative relationship it describes',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.6',
+    domain: 'Functions',
+    cluster: 'Interpret functions that arise in applications',
+    description: 'calculate and interpret the average rate of change of a function presented symbolically or as a table, over a specified interval; estimate the rate of change from a graph',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.7a',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'graph linear and quadratic functions and show intercepts, maxima, and minima',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.7b',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'graph square root, cube root, and piecewise-defined functions, including step functions and absolute value functions',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.8a',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'use the process of factoring and completing the square in a quadratic function to show zeros, extreme values, and symmetry of the graph',
+  },
+  {
+    notation: 'US.CC.9.MA.FIF.9',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'compare properties of two functions each represented in a different way (algebraically, graphically, numerically in tables, or by verbal descriptions)',
+  },
+
+  // FUNCTIONS - Building Functions (F-BF)
+  {
+    notation: 'US.CC.9.MA.FBF.1a',
+    domain: 'Functions',
+    cluster: 'Build a function that models a relationship',
+    description: 'determine an explicit expression, a recursive process, or steps for calculation from a context',
+  },
+  {
+    notation: 'US.CC.9.MA.FBF.1b',
+    domain: 'Functions',
+    cluster: 'Build a function that models a relationship',
+    description: 'combine standard function types using arithmetic operations',
+  },
+  {
+    notation: 'US.CC.9.MA.FBF.2',
+    domain: 'Functions',
+    cluster: 'Build a function that models a relationship',
+    description: 'write arithmetic and geometric sequences both recursively and with an explicit formula, use them to model situations, and translate between the two forms',
+  },
+  {
+    notation: 'US.CC.9.MA.FBF.3',
+    domain: 'Functions',
+    cluster: 'Build new functions from existing functions',
+    description: 'identify the effect on the graph of replacing f(x) by f(x) + k, k f(x), f(kx), and f(x + k) for specific values of k; find the value of k given the graphs; experiment using technology',
+  },
+
+  // FUNCTIONS - Linear, Quadratic, and Exponential Models (F-LE)
+  {
+    notation: 'US.CC.9.MA.FLE.1a',
+    domain: 'Functions',
+    cluster: 'Construct and compare linear and exponential models',
+    description: 'prove that linear functions grow by equal differences over equal intervals, and that exponential functions grow by equal factors over equal intervals',
+  },
+  {
+    notation: 'US.CC.9.MA.FLE.1b',
+    domain: 'Functions',
+    cluster: 'Construct and compare linear and exponential models',
+    description: 'recognize situations in which one quantity changes at a constant rate per unit interval relative to another',
+  },
+  {
+    notation: 'US.CC.9.MA.FLE.1c',
+    domain: 'Functions',
+    cluster: 'Construct and compare linear and exponential models',
+    description: 'recognize situations in which a quantity grows or decays by a constant percent rate per unit interval relative to another',
+  },
+  {
+    notation: 'US.CC.9.MA.FLE.2',
+    domain: 'Functions',
+    cluster: 'Construct and compare linear and exponential models',
+    description: 'construct linear and exponential functions, including arithmetic and geometric sequences, given a graph, a description of a relationship, or two input-output pairs',
+  },
+  {
+    notation: 'US.CC.9.MA.FLE.3',
+    domain: 'Functions',
+    cluster: 'Construct and compare linear and exponential models',
+    description: 'observe using graphs and tables that a quantity increasing exponentially eventually exceeds a quantity increasing linearly, quadratically, or more generally as a polynomial function',
+  },
+  {
+    notation: 'US.CC.9.MA.FLE.5',
+    domain: 'Functions',
+    cluster: 'Interpret expressions for functions',
+    description: 'interpret the parameters in a linear or exponential function in terms of a context',
+  },
+
+  // STATISTICS AND PROBABILITY - Interpreting Categorical and Quantitative Data (S-ID)
+  {
+    notation: 'US.CC.9.MA.SID.1',
+    domain: 'Statistics and Probability',
+    cluster: 'Summarize, represent, and interpret data on a single count or measurement variable',
+    description: 'represent data with plots on the real number line (dot plots, histograms, and box plots)',
+  },
+  {
+    notation: 'US.CC.9.MA.SID.2',
+    domain: 'Statistics and Probability',
+    cluster: 'Summarize, represent, and interpret data on a single count or measurement variable',
+    description: 'use statistics appropriate to the shape of the data distribution to compare center (median, mean) and spread (interquartile range, standard deviation) of two or more different data sets',
+  },
+  {
+    notation: 'US.CC.9.MA.SID.3',
+    domain: 'Statistics and Probability',
+    cluster: 'Summarize, represent, and interpret data on a single count or measurement variable',
+    description: 'interpret differences in shape, center, and spread in the context of the data sets, accounting for possible effects of extreme data points (outliers)',
+  },
+  {
+    notation: 'US.CC.9.MA.SID.5',
+    domain: 'Statistics and Probability',
+    cluster: 'Summarize, represent, and interpret data on two categorical and quantitative variables',
+    description: 'summarize categorical data for two categories in two-way frequency tables; interpret relative frequencies in the context of the data; recognize possible associations and trends in the data',
+  },
+  {
+    notation: 'US.CC.9.MA.SID.6',
+    domain: 'Statistics and Probability',
+    cluster: 'Summarize, represent, and interpret data on two categorical and quantitative variables',
+    description: 'represent data on two quantitative variables on a scatter plot, and describe how the variables are related',
+  },
+  {
+    notation: 'US.CC.9.MA.SID.7',
+    domain: 'Statistics and Probability',
+    cluster: 'Interpret linear models',
+    description: 'interpret the slope (rate of change) and the intercept (constant term) of a linear model in the context of the data',
+  },
+  {
+    notation: 'US.CC.9.MA.SID.8',
+    domain: 'Statistics and Probability',
+    cluster: 'Interpret linear models',
+    description: 'compute (using technology) and interpret the correlation coefficient of a linear fit',
+  },
+  {
+    notation: 'US.CC.9.MA.SID.9',
+    domain: 'Statistics and Probability',
+    cluster: 'Interpret linear models',
+    description: 'distinguish between correlation and causation',
+  },
+];
+
+// =============================================================================
+// GRADE 10 (Ages 15-16) - Geometry Focus
+// High School Common Core standards mapped to typical Geometry course
+// =============================================================================
+
+const grade10Standards: CommonCoreMathStandard[] = [
+  // GEOMETRY - Congruence (G-CO)
+  {
+    notation: 'US.CC.10.MA.GCO.1',
+    domain: 'Geometry',
+    cluster: 'Experiment with transformations in the plane',
+    description: 'know precise definitions of angle, circle, perpendicular line, parallel line, and line segment, based on the undefined notions of point, line, distance along a line, and distance around a circular arc',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.2',
+    domain: 'Geometry',
+    cluster: 'Experiment with transformations in the plane',
+    description: 'represent transformations in the plane using transparencies and geometry software; describe transformations as functions that take points in the plane as inputs and give other points as outputs',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.3',
+    domain: 'Geometry',
+    cluster: 'Experiment with transformations in the plane',
+    description: 'given a rectangle, parallelogram, trapezoid, or regular polygon, describe the rotations and reflections that carry it onto itself',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.4',
+    domain: 'Geometry',
+    cluster: 'Experiment with transformations in the plane',
+    description: 'develop definitions of rotations, reflections, and translations in terms of angles, circles, perpendicular lines, parallel lines, and line segments',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.5',
+    domain: 'Geometry',
+    cluster: 'Experiment with transformations in the plane',
+    description: 'given a geometric figure and a rotation, reflection, or translation, draw the transformed figure using graph paper, tracing paper, or geometry software; specify a sequence of transformations that will carry a given figure onto another',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.6',
+    domain: 'Geometry',
+    cluster: 'Understand congruence in terms of rigid motions',
+    description: 'use geometric descriptions of rigid motions to transform figures and to predict the effect of a given rigid motion on a given figure; given two figures, use the definition of congruence in terms of rigid motions to decide if they are congruent',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.7',
+    domain: 'Geometry',
+    cluster: 'Understand congruence in terms of rigid motions',
+    description: 'use the definition of congruence in terms of rigid motions to show that two triangles are congruent if and only if corresponding pairs of sides and corresponding pairs of angles are congruent',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.8',
+    domain: 'Geometry',
+    cluster: 'Understand congruence in terms of rigid motions',
+    description: 'explain how the criteria for triangle congruence (ASA, SAS, and SSS) follow from the definition of congruence in terms of rigid motions',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.9',
+    domain: 'Geometry',
+    cluster: 'Prove geometric theorems',
+    description: 'prove theorems about lines and angles (vertical angles are congruent; when a transversal crosses parallel lines, alternate interior angles are congruent and corresponding angles are congruent)',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.10',
+    domain: 'Geometry',
+    cluster: 'Prove geometric theorems',
+    description: 'prove theorems about triangles (measures of interior angles of a triangle sum to 180°; base angles of isosceles triangles are congruent; the segment joining midpoints of two sides of a triangle is parallel to the third side and half the length)',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.11',
+    domain: 'Geometry',
+    cluster: 'Prove geometric theorems',
+    description: 'prove theorems about parallelograms (opposite sides are congruent, opposite angles are congruent, the diagonals of a parallelogram bisect each other)',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.12',
+    domain: 'Geometry',
+    cluster: 'Make geometric constructions',
+    description: 'make formal geometric constructions with a variety of tools and methods (compass and straightedge, string, reflective devices, paper folding, dynamic geometric software)',
+  },
+  {
+    notation: 'US.CC.10.MA.GCO.13',
+    domain: 'Geometry',
+    cluster: 'Make geometric constructions',
+    description: 'construct an equilateral triangle, a square, and a regular hexagon inscribed in a circle',
+  },
+
+  // GEOMETRY - Similarity, Right Triangles, and Trigonometry (G-SRT)
+  {
+    notation: 'US.CC.10.MA.GSRT.1a',
+    domain: 'Geometry',
+    cluster: 'Understand similarity in terms of similarity transformations',
+    description: 'verify experimentally the properties of dilations given by a center and a scale factor: a dilation takes a line not passing through the center of the dilation to a parallel line, and leaves a line passing through the center unchanged',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.1b',
+    domain: 'Geometry',
+    cluster: 'Understand similarity in terms of similarity transformations',
+    description: 'verify experimentally the properties of dilations given by a center and a scale factor: the dilation of a line segment is longer or shorter in the ratio given by the scale factor',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.2',
+    domain: 'Geometry',
+    cluster: 'Understand similarity in terms of similarity transformations',
+    description: 'given two figures, use the definition of similarity in terms of similarity transformations to decide if they are similar; explain using similarity transformations the meaning of similarity for triangles as the equality of all corresponding pairs of angles and the proportionality of all corresponding pairs of sides',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.3',
+    domain: 'Geometry',
+    cluster: 'Understand similarity in terms of similarity transformations',
+    description: 'use the properties of similarity transformations to establish the AA criterion for two triangles to be similar',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.4',
+    domain: 'Geometry',
+    cluster: 'Prove theorems involving similarity',
+    description: 'prove theorems about triangles (a line parallel to one side of a triangle divides the other two proportionally; the Pythagorean Theorem proved using triangle similarity)',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.5',
+    domain: 'Geometry',
+    cluster: 'Prove theorems involving similarity',
+    description: 'use congruence and similarity criteria for triangles to solve problems and to prove relationships in geometric figures',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.6',
+    domain: 'Geometry',
+    cluster: 'Define trigonometric ratios and solve problems involving right triangles',
+    description: 'understand that by similarity, side ratios in right triangles are properties of the angles in the triangle, leading to definitions of trigonometric ratios for acute angles',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.7',
+    domain: 'Geometry',
+    cluster: 'Define trigonometric ratios and solve problems involving right triangles',
+    description: 'explain and use the relationship between the sine and cosine of complementary angles',
+  },
+  {
+    notation: 'US.CC.10.MA.GSRT.8',
+    domain: 'Geometry',
+    cluster: 'Define trigonometric ratios and solve problems involving right triangles',
+    description: 'use trigonometric ratios and the Pythagorean Theorem to solve right triangles in applied problems',
+  },
+
+  // GEOMETRY - Circles (G-C)
+  {
+    notation: 'US.CC.10.MA.GC.1',
+    domain: 'Geometry',
+    cluster: 'Understand and apply theorems about circles',
+    description: 'prove that all circles are similar',
+  },
+  {
+    notation: 'US.CC.10.MA.GC.2',
+    domain: 'Geometry',
+    cluster: 'Understand and apply theorems about circles',
+    description: 'identify and describe relationships among inscribed angles, radii, and chords (the relationship between central, inscribed, and circumscribed angles; inscribed angles on a diameter are right angles)',
+  },
+  {
+    notation: 'US.CC.10.MA.GC.3',
+    domain: 'Geometry',
+    cluster: 'Understand and apply theorems about circles',
+    description: 'construct the inscribed and circumscribed circles of a triangle, and prove properties of angles for a quadrilateral inscribed in a circle',
+  },
+  {
+    notation: 'US.CC.10.MA.GC.5',
+    domain: 'Geometry',
+    cluster: 'Find arc lengths and areas of sectors of circles',
+    description: 'derive using similarity the fact that the length of the arc intercepted by an angle is proportional to the radius, and define the radian measure of the angle as the constant of proportionality; derive the formula for the area of a sector',
+  },
+
+  // GEOMETRY - Expressing Geometric Properties with Equations (G-GPE)
+  {
+    notation: 'US.CC.10.MA.GGPE.1',
+    domain: 'Geometry',
+    cluster: 'Translate between the geometric description and the equation for a conic section',
+    description: 'derive the equation of a circle of given center and radius using the Pythagorean Theorem; complete the square to find the center and radius of a circle given by an equation',
+  },
+  {
+    notation: 'US.CC.10.MA.GGPE.2',
+    domain: 'Geometry',
+    cluster: 'Translate between the geometric description and the equation for a conic section',
+    description: 'derive the equation of a parabola given a focus and directrix',
+  },
+  {
+    notation: 'US.CC.10.MA.GGPE.4',
+    domain: 'Geometry',
+    cluster: 'Use coordinates to prove simple geometric theorems algebraically',
+    description: 'use coordinates to prove simple geometric theorems algebraically',
+  },
+  {
+    notation: 'US.CC.10.MA.GGPE.5',
+    domain: 'Geometry',
+    cluster: 'Use coordinates to prove simple geometric theorems algebraically',
+    description: 'prove the slope criteria for parallel and perpendicular lines and use them to solve geometric problems',
+  },
+  {
+    notation: 'US.CC.10.MA.GGPE.6',
+    domain: 'Geometry',
+    cluster: 'Use coordinates to prove simple geometric theorems algebraically',
+    description: 'find the point on a directed line segment between two given points that partitions the segment in a given ratio',
+  },
+  {
+    notation: 'US.CC.10.MA.GGPE.7',
+    domain: 'Geometry',
+    cluster: 'Use coordinates to prove simple geometric theorems algebraically',
+    description: 'use coordinates to compute perimeters of polygons and areas of triangles and rectangles',
+  },
+
+  // GEOMETRY - Geometric Measurement and Dimension (G-GMD)
+  {
+    notation: 'US.CC.10.MA.GGMD.1',
+    domain: 'Geometry',
+    cluster: 'Explain volume formulas and use them to solve problems',
+    description: 'give an informal argument for the formulas for the circumference of a circle, area of a circle, volume of a cylinder, pyramid, and cone',
+  },
+  {
+    notation: 'US.CC.10.MA.GGMD.3',
+    domain: 'Geometry',
+    cluster: 'Explain volume formulas and use them to solve problems',
+    description: 'use volume formulas for cylinders, pyramids, cones, and spheres to solve problems',
+  },
+  {
+    notation: 'US.CC.10.MA.GGMD.4',
+    domain: 'Geometry',
+    cluster: 'Visualize relationships between two-dimensional and three-dimensional objects',
+    description: 'identify the shapes of two-dimensional cross-sections of three-dimensional objects, and identify three-dimensional objects generated by rotations of two-dimensional objects',
+  },
+
+  // GEOMETRY - Modeling with Geometry (G-MG)
+  {
+    notation: 'US.CC.10.MA.GMG.1',
+    domain: 'Geometry',
+    cluster: 'Apply geometric concepts in modeling situations',
+    description: 'use geometric shapes, their measures, and their properties to describe objects',
+  },
+  {
+    notation: 'US.CC.10.MA.GMG.2',
+    domain: 'Geometry',
+    cluster: 'Apply geometric concepts in modeling situations',
+    description: 'apply concepts of density based on area and volume in modeling situations',
+  },
+  {
+    notation: 'US.CC.10.MA.GMG.3',
+    domain: 'Geometry',
+    cluster: 'Apply geometric concepts in modeling situations',
+    description: 'apply geometric methods to solve design problems',
+  },
+];
+
+// =============================================================================
+// GRADE 11 (Ages 16-17) - Algebra II Focus
+// High School Common Core standards mapped to typical Algebra II course
+// =============================================================================
+
+const grade11Standards: CommonCoreMathStandard[] = [
+  // NUMBER AND QUANTITY - The Complex Number System (N-CN)
+  {
+    notation: 'US.CC.11.MA.NCN.1',
+    domain: 'Number and Quantity',
+    cluster: 'Perform arithmetic operations with complex numbers',
+    description: 'know there is a complex number i such that i² = -1, and every complex number has the form a + bi with a and b real',
+  },
+  {
+    notation: 'US.CC.11.MA.NCN.2',
+    domain: 'Number and Quantity',
+    cluster: 'Perform arithmetic operations with complex numbers',
+    description: 'use the relation i² = -1 and the commutative, associative, and distributive properties to add, subtract, and multiply complex numbers',
+  },
+  {
+    notation: 'US.CC.11.MA.NCN.3',
+    domain: 'Number and Quantity',
+    cluster: 'Perform arithmetic operations with complex numbers',
+    description: 'find the conjugate of a complex number; use conjugates to find moduli and quotients of complex numbers',
+  },
+  {
+    notation: 'US.CC.11.MA.NCN.7',
+    domain: 'Number and Quantity',
+    cluster: 'Use complex numbers in polynomial identities and equations',
+    description: 'solve quadratic equations with real coefficients that have complex solutions',
+  },
+  {
+    notation: 'US.CC.11.MA.NCN.8',
+    domain: 'Number and Quantity',
+    cluster: 'Use complex numbers in polynomial identities and equations',
+    description: 'extend polynomial identities to the complex numbers',
+  },
+  {
+    notation: 'US.CC.11.MA.NCN.9',
+    domain: 'Number and Quantity',
+    cluster: 'Use complex numbers in polynomial identities and equations',
+    description: 'know the Fundamental Theorem of Algebra; show that it is true for quadratic polynomials',
+  },
+
+  // ALGEBRA - Arithmetic with Polynomials and Rational Expressions (A-APR)
+  {
+    notation: 'US.CC.11.MA.AAPR.2',
+    domain: 'Algebra',
+    cluster: 'Understand the relationship between zeros and factors of polynomials',
+    description: 'know and apply the Remainder Theorem: For a polynomial p(x) and a number a, the remainder on division by x - a is p(a), so p(a) = 0 if and only if (x - a) is a factor of p(x)',
+  },
+  {
+    notation: 'US.CC.11.MA.AAPR.3',
+    domain: 'Algebra',
+    cluster: 'Understand the relationship between zeros and factors of polynomials',
+    description: 'identify zeros of polynomials when suitable factorizations are available, and use the zeros to construct a rough graph of the function defined by the polynomial',
+  },
+  {
+    notation: 'US.CC.11.MA.AAPR.4',
+    domain: 'Algebra',
+    cluster: 'Use polynomial identities to solve problems',
+    description: 'prove polynomial identities and use them to describe numerical relationships',
+  },
+  {
+    notation: 'US.CC.11.MA.AAPR.5',
+    domain: 'Algebra',
+    cluster: 'Use polynomial identities to solve problems',
+    description: 'know and apply the Binomial Theorem for the expansion of (x + y)^n in powers of x and y for a positive integer n',
+  },
+  {
+    notation: 'US.CC.11.MA.AAPR.6',
+    domain: 'Algebra',
+    cluster: 'Rewrite rational expressions',
+    description: 'rewrite simple rational expressions in different forms; write a(x)/b(x) in the form q(x) + r(x)/b(x), where a(x), b(x), q(x), and r(x) are polynomials with the degree of r(x) less than the degree of b(x), using inspection, long division, or, for the more complicated examples, a computer algebra system',
+  },
+  {
+    notation: 'US.CC.11.MA.AAPR.7',
+    domain: 'Algebra',
+    cluster: 'Rewrite rational expressions',
+    description: 'understand that rational expressions form a system analogous to the rational numbers, closed under addition, subtraction, multiplication, and division by a nonzero rational expression; add, subtract, multiply, and divide rational expressions',
+  },
+
+  // ALGEBRA - Reasoning with Equations and Inequalities (A-REI)
+  {
+    notation: 'US.CC.11.MA.AREI.2',
+    domain: 'Algebra',
+    cluster: 'Understand solving equations as a process of reasoning',
+    description: 'solve simple rational and radical equations in one variable, and give examples showing how extraneous solutions may arise',
+  },
+  {
+    notation: 'US.CC.11.MA.AREI.7',
+    domain: 'Algebra',
+    cluster: 'Solve systems of equations',
+    description: 'solve a simple system consisting of a linear equation and a quadratic equation in two variables algebraically and graphically',
+  },
+  {
+    notation: 'US.CC.11.MA.AREI.8',
+    domain: 'Algebra',
+    cluster: 'Solve systems of equations',
+    description: 'represent a system of linear equations as a single matrix equation in a vector variable',
+  },
+  {
+    notation: 'US.CC.11.MA.AREI.9',
+    domain: 'Algebra',
+    cluster: 'Solve systems of equations',
+    description: 'find the inverse of a matrix if it exists and use it to solve systems of linear equations (using technology for matrices of dimension 3 × 3 or greater)',
+  },
+
+  // FUNCTIONS - Interpreting Functions (F-IF)
+  {
+    notation: 'US.CC.11.MA.FIF.7c',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'graph polynomial functions, identifying zeros when suitable factorizations are available, and showing end behavior',
+  },
+  {
+    notation: 'US.CC.11.MA.FIF.7d',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'graph rational functions, identifying zeros and asymptotes when suitable factorizations are available, and showing end behavior',
+  },
+  {
+    notation: 'US.CC.11.MA.FIF.7e',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'graph exponential and logarithmic functions, showing intercepts and end behavior, and trigonometric functions, showing period, midline, and amplitude',
+  },
+  {
+    notation: 'US.CC.11.MA.FIF.8b',
+    domain: 'Functions',
+    cluster: 'Analyze functions using different representations',
+    description: 'use the properties of exponents to interpret expressions for exponential functions',
+  },
+
+  // FUNCTIONS - Building Functions (F-BF)
+  {
+    notation: 'US.CC.11.MA.FBF.1c',
+    domain: 'Functions',
+    cluster: 'Build a function that models a relationship',
+    description: 'compose functions',
+  },
+  {
+    notation: 'US.CC.11.MA.FBF.4a',
+    domain: 'Functions',
+    cluster: 'Build new functions from existing functions',
+    description: 'solve an equation of the form f(x) = c for a simple function f that has an inverse and write an expression for the inverse',
+  },
+  {
+    notation: 'US.CC.11.MA.FBF.4b',
+    domain: 'Functions',
+    cluster: 'Build new functions from existing functions',
+    description: 'verify by composition that one function is the inverse of another',
+  },
+  {
+    notation: 'US.CC.11.MA.FBF.4c',
+    domain: 'Functions',
+    cluster: 'Build new functions from existing functions',
+    description: 'read values of an inverse function from a graph or a table, given that the function has an inverse',
+  },
+  {
+    notation: 'US.CC.11.MA.FBF.4d',
+    domain: 'Functions',
+    cluster: 'Build new functions from existing functions',
+    description: 'produce an invertible function from a non-invertible function by restricting the domain',
+  },
+  {
+    notation: 'US.CC.11.MA.FBF.5',
+    domain: 'Functions',
+    cluster: 'Build new functions from existing functions',
+    description: 'understand the inverse relationship between exponents and logarithms and use this relationship to solve problems involving logarithms and exponents',
+  },
+
+  // FUNCTIONS - Linear, Quadratic, and Exponential Models (F-LE)
+  {
+    notation: 'US.CC.11.MA.FLE.4',
+    domain: 'Functions',
+    cluster: 'Construct and compare linear and exponential models',
+    description: 'for exponential models, express as a logarithm the solution to ab^(ct) = d where a, c, and d are numbers and the base b is 2, 10, or e; evaluate the logarithm using technology',
+  },
+
+  // STATISTICS AND PROBABILITY - Making Inferences (S-IC)
+  {
+    notation: 'US.CC.11.MA.SIC.1',
+    domain: 'Statistics and Probability',
+    cluster: 'Understand and evaluate random processes underlying statistical experiments',
+    description: 'understand statistics as a process for making inferences about population parameters based on a random sample from that population',
+  },
+  {
+    notation: 'US.CC.11.MA.SIC.2',
+    domain: 'Statistics and Probability',
+    cluster: 'Understand and evaluate random processes underlying statistical experiments',
+    description: 'decide if a specified model is consistent with results from a given data-generating process',
+  },
+  {
+    notation: 'US.CC.11.MA.SIC.3',
+    domain: 'Statistics and Probability',
+    cluster: 'Make inferences and justify conclusions from sample surveys, experiments, and observational studies',
+    description: 'recognize the purposes of and differences among sample surveys, experiments, and observational studies; explain how randomization relates to each',
+  },
+  {
+    notation: 'US.CC.11.MA.SIC.4',
+    domain: 'Statistics and Probability',
+    cluster: 'Make inferences and justify conclusions from sample surveys, experiments, and observational studies',
+    description: 'use data from a sample survey to estimate a population mean or proportion; develop a margin of error through the use of simulation models for random sampling',
+  },
+  {
+    notation: 'US.CC.11.MA.SIC.5',
+    domain: 'Statistics and Probability',
+    cluster: 'Make inferences and justify conclusions from sample surveys, experiments, and observational studies',
+    description: 'use data from a randomized experiment to compare two treatments; use simulations to decide if differences between parameters are significant',
+  },
+  {
+    notation: 'US.CC.11.MA.SIC.6',
+    domain: 'Statistics and Probability',
+    cluster: 'Make inferences and justify conclusions from sample surveys, experiments, and observational studies',
+    description: 'evaluate reports based on data',
+  },
+
+  // STATISTICS AND PROBABILITY - Conditional Probability (S-CP)
+  {
+    notation: 'US.CC.11.MA.SCP.1',
+    domain: 'Statistics and Probability',
+    cluster: 'Understand independence and conditional probability',
+    description: 'describe events as subsets of a sample space using characteristics of the outcomes, or as unions, intersections, or complements of other events',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.2',
+    domain: 'Statistics and Probability',
+    cluster: 'Understand independence and conditional probability',
+    description: 'understand that two events A and B are independent if the probability of A and B occurring together is the product of their probabilities, and use this characterization to determine if they are independent',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.3',
+    domain: 'Statistics and Probability',
+    cluster: 'Understand independence and conditional probability',
+    description: 'understand the conditional probability of A given B as P(A and B)/P(B), and interpret independence of A and B as saying that the conditional probability of A given B is the same as the probability of A',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.4',
+    domain: 'Statistics and Probability',
+    cluster: 'Understand independence and conditional probability',
+    description: 'construct and interpret two-way frequency tables of data when two categories are associated with each object being classified; use the two-way table as a sample space to decide if events are independent and to approximate conditional probabilities',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.5',
+    domain: 'Statistics and Probability',
+    cluster: 'Understand independence and conditional probability',
+    description: 'recognize and explain the concepts of conditional probability and independence in everyday language and everyday situations',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.6',
+    domain: 'Statistics and Probability',
+    cluster: 'Use the rules of probability to compute probabilities of compound events',
+    description: 'find the conditional probability of A given B as the fraction of B outcomes that also belong to A, and interpret the answer in terms of the model',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.7',
+    domain: 'Statistics and Probability',
+    cluster: 'Use the rules of probability to compute probabilities of compound events',
+    description: 'apply the Addition Rule, P(A or B) = P(A) + P(B) - P(A and B), and interpret the answer in terms of the model',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.8',
+    domain: 'Statistics and Probability',
+    cluster: 'Use the rules of probability to compute probabilities of compound events',
+    description: 'apply the general Multiplication Rule in a uniform probability model, P(A and B) = P(A)P(B|A) = P(B)P(A|B), and interpret the answer in terms of the model',
+  },
+  {
+    notation: 'US.CC.11.MA.SCP.9',
+    domain: 'Statistics and Probability',
+    cluster: 'Use the rules of probability to compute probabilities of compound events',
+    description: 'use permutations and combinations to compute probabilities of compound events and solve problems',
+  },
+];
+
+// =============================================================================
+// GRADE 12 (Ages 17-18) - Pre-Calculus / Advanced Math Focus
+// High School Common Core standards mapped to typical Pre-Calculus course
+// =============================================================================
+
+const grade12Standards: CommonCoreMathStandard[] = [
+  // NUMBER AND QUANTITY - Vector and Matrix Quantities (N-VM)
+  {
+    notation: 'US.CC.12.MA.NVM.1',
+    domain: 'Number and Quantity',
+    cluster: 'Represent and model with vector quantities',
+    description: 'recognize vector quantities as having both magnitude and direction; represent vector quantities by directed line segments, and use appropriate symbols for vectors and their magnitudes',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.2',
+    domain: 'Number and Quantity',
+    cluster: 'Represent and model with vector quantities',
+    description: 'find the components of a vector by subtracting the coordinates of an initial point from the coordinates of a terminal point',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.3',
+    domain: 'Number and Quantity',
+    cluster: 'Represent and model with vector quantities',
+    description: 'solve problems involving velocity and other quantities that can be represented by vectors',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.4a',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on vectors',
+    description: 'add vectors end-to-end, component-wise, and by the parallelogram rule, and understand that the magnitude of a sum of two vectors is typically not the sum of the magnitudes',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.4b',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on vectors',
+    description: 'given two vectors in magnitude and direction form, determine the magnitude and direction of their sum',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.4c',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on vectors',
+    description: 'understand vector subtraction v - w as v + (-w), where -w is the additive inverse of w, with the same magnitude as w and pointing in the opposite direction; represent vector subtraction graphically by connecting the tips in the appropriate order, and perform vector subtraction component-wise',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.5a',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on vectors',
+    description: 'multiply a vector by a scalar, representing scalar multiplication graphically, and performing scalar multiplication component-wise',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.5b',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on vectors',
+    description: 'compute the magnitude of a scalar multiple cv using ||cv|| = |c|v; compute the direction of cv knowing that when |c|v ≠ 0, the direction of cv is either along v (for c > 0) or against v (for c < 0)',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.6',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on matrices and use matrices in applications',
+    description: 'use matrices to represent and manipulate data',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.7',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on matrices and use matrices in applications',
+    description: 'multiply matrices by scalars to produce new matrices',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.8',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on matrices and use matrices in applications',
+    description: 'add, subtract, and multiply matrices of appropriate dimensions',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.9',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on matrices and use matrices in applications',
+    description: 'understand that, unlike multiplication of numbers, matrix multiplication for square matrices is not a commutative operation, but still satisfies the associative and distributive properties',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.10',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on matrices and use matrices in applications',
+    description: 'understand that the zero and identity matrices play a role in matrix addition and multiplication similar to the role of 0 and 1 in the real numbers; the determinant of a square matrix is nonzero if and only if the matrix has a multiplicative inverse',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.11',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on matrices and use matrices in applications',
+    description: 'multiply a vector (regarded as a matrix with one column) by a matrix of suitable dimensions to produce another vector; work with matrices as transformations of vectors',
+  },
+  {
+    notation: 'US.CC.12.MA.NVM.12',
+    domain: 'Number and Quantity',
+    cluster: 'Perform operations on matrices and use matrices in applications',
+    description: 'work with 2 × 2 matrices as transformations of the plane, and interpret the absolute value of the determinant in terms of area',
+  },
+
+  // FUNCTIONS - Trigonometric Functions (F-TF)
+  {
+    notation: 'US.CC.12.MA.FTF.1',
+    domain: 'Functions',
+    cluster: 'Extend the domain of trigonometric functions using the unit circle',
+    description: 'understand radian measure of an angle as the length of the arc on the unit circle subtended by the angle',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.2',
+    domain: 'Functions',
+    cluster: 'Extend the domain of trigonometric functions using the unit circle',
+    description: 'explain how the unit circle in the coordinate plane enables the extension of trigonometric functions to all real numbers, interpreted as radian measures of angles traversed counterclockwise around the unit circle',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.3',
+    domain: 'Functions',
+    cluster: 'Extend the domain of trigonometric functions using the unit circle',
+    description: 'use special triangles to determine geometrically the values of sine, cosine, tangent for π/3, π/4 and π/6, and use the unit circle to express the values of sine, cosine, and tangent for π-x, π+x, and 2π-x in terms of their values for x',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.4',
+    domain: 'Functions',
+    cluster: 'Extend the domain of trigonometric functions using the unit circle',
+    description: 'use the unit circle to explain symmetry (odd and even) and periodicity of trigonometric functions',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.5',
+    domain: 'Functions',
+    cluster: 'Model periodic phenomena with trigonometric functions',
+    description: 'choose trigonometric functions to model periodic phenomena with specified amplitude, frequency, and midline',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.6',
+    domain: 'Functions',
+    cluster: 'Model periodic phenomena with trigonometric functions',
+    description: 'understand that restricting a trigonometric function to a domain on which it is always increasing or always decreasing allows its inverse to be constructed',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.7',
+    domain: 'Functions',
+    cluster: 'Model periodic phenomena with trigonometric functions',
+    description: 'use inverse functions to solve trigonometric equations that arise in modeling contexts; evaluate the solutions using technology, and interpret them in terms of the context',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.8',
+    domain: 'Functions',
+    cluster: 'Prove and apply trigonometric identities',
+    description: 'prove the Pythagorean identity sin²(θ) + cos²(θ) = 1 and use it to find sin(θ), cos(θ), or tan(θ) given sin(θ), cos(θ), or tan(θ) and the quadrant of the angle',
+  },
+  {
+    notation: 'US.CC.12.MA.FTF.9',
+    domain: 'Functions',
+    cluster: 'Prove and apply trigonometric identities',
+    description: 'prove the addition and subtraction formulas for sine, cosine, and tangent and use them to solve problems',
+  },
+
+  // GEOMETRY - Similarity, Right Triangles, and Trigonometry (G-SRT) - Advanced
+  {
+    notation: 'US.CC.12.MA.GSRT.9',
+    domain: 'Geometry',
+    cluster: 'Apply trigonometry to general triangles',
+    description: 'derive the formula A = (1/2)ab sin(C) for the area of a triangle by drawing an auxiliary line from a vertex perpendicular to the opposite side',
+  },
+  {
+    notation: 'US.CC.12.MA.GSRT.10',
+    domain: 'Geometry',
+    cluster: 'Apply trigonometry to general triangles',
+    description: 'prove the Laws of Sines and Cosines and use them to solve problems',
+  },
+  {
+    notation: 'US.CC.12.MA.GSRT.11',
+    domain: 'Geometry',
+    cluster: 'Apply trigonometry to general triangles',
+    description: 'understand and apply the Law of Sines and the Law of Cosines to find unknown measurements in right and non-right triangles',
+  },
+
+  // GEOMETRY - Expressing Geometric Properties with Equations (G-GPE) - Conics
+  {
+    notation: 'US.CC.12.MA.GGPE.3',
+    domain: 'Geometry',
+    cluster: 'Translate between the geometric description and the equation for a conic section',
+    description: 'derive the equations of ellipses and hyperbolas given the foci, using the fact that the sum or difference of distances from the foci is constant',
+  },
+
+  // STATISTICS AND PROBABILITY - Using Probability to Make Decisions (S-MD)
+  {
+    notation: 'US.CC.12.MA.SMD.1',
+    domain: 'Statistics and Probability',
+    cluster: 'Calculate expected values and use them to solve problems',
+    description: 'define a random variable for a quantity of interest by assigning a numerical value to each event in a sample space; graph the corresponding probability distribution using the same graphical displays as for data distributions',
+  },
+  {
+    notation: 'US.CC.12.MA.SMD.2',
+    domain: 'Statistics and Probability',
+    cluster: 'Calculate expected values and use them to solve problems',
+    description: 'calculate the expected value of a random variable; interpret it as the mean of the probability distribution',
+  },
+  {
+    notation: 'US.CC.12.MA.SMD.3',
+    domain: 'Statistics and Probability',
+    cluster: 'Calculate expected values and use them to solve problems',
+    description: 'develop a probability distribution for a random variable defined for a sample space in which theoretical probabilities can be calculated; find the expected value',
+  },
+  {
+    notation: 'US.CC.12.MA.SMD.4',
+    domain: 'Statistics and Probability',
+    cluster: 'Calculate expected values and use them to solve problems',
+    description: 'develop a probability distribution for a random variable defined for a sample space in which probabilities are assigned empirically; find the expected value',
+  },
+  {
+    notation: 'US.CC.12.MA.SMD.5a',
+    domain: 'Statistics and Probability',
+    cluster: 'Use probability to evaluate outcomes of decisions',
+    description: 'find the expected payoff for a game of chance',
+  },
+  {
+    notation: 'US.CC.12.MA.SMD.5b',
+    domain: 'Statistics and Probability',
+    cluster: 'Use probability to evaluate outcomes of decisions',
+    description: 'evaluate and compare strategies on the basis of expected values',
+  },
+  {
+    notation: 'US.CC.12.MA.SMD.6',
+    domain: 'Statistics and Probability',
+    cluster: 'Use probability to evaluate outcomes of decisions',
+    description: 'use probabilities to make fair decisions',
+  },
+  {
+    notation: 'US.CC.12.MA.SMD.7',
+    domain: 'Statistics and Probability',
+    cluster: 'Use probability to evaluate outcomes of decisions',
+    description: 'analyze decisions and strategies using probability concepts',
+  },
+
+  // ADDITIONAL ADVANCED TOPICS
+  {
+    notation: 'US.CC.12.MA.NCN.4',
+    domain: 'Number and Quantity',
+    cluster: 'Represent complex numbers and their operations on the complex plane',
+    description: 'represent complex numbers on the complex plane in rectangular and polar form (including real and imaginary numbers)',
+  },
+  {
+    notation: 'US.CC.12.MA.NCN.5',
+    domain: 'Number and Quantity',
+    cluster: 'Represent complex numbers and their operations on the complex plane',
+    description: 'represent addition, subtraction, multiplication, and conjugation of complex numbers geometrically on the complex plane; use properties of this representation for computation',
+  },
+  {
+    notation: 'US.CC.12.MA.NCN.6',
+    domain: 'Number and Quantity',
+    cluster: 'Represent complex numbers and their operations on the complex plane',
+    description: 'calculate the distance between numbers in the complex plane as the modulus of the difference, and the midpoint of a segment as the average of the numbers at its endpoints',
+  },
+
+  // LIMITS AND CONTINUITY (Pre-Calculus Preparation)
+  {
+    notation: 'US.CC.12.MA.LIM.1',
+    domain: 'Functions',
+    cluster: 'Understand limits conceptually',
+    description: 'understand that the concept of a limit describes the behavior of a function as the input approaches a particular value',
+  },
+  {
+    notation: 'US.CC.12.MA.LIM.2',
+    domain: 'Functions',
+    cluster: 'Understand limits conceptually',
+    description: 'estimate limits from graphs and tables of values',
+  },
+  {
+    notation: 'US.CC.12.MA.LIM.3',
+    domain: 'Functions',
+    cluster: 'Understand limits conceptually',
+    description: 'understand the concept of continuity and identify continuous and discontinuous functions',
+  },
+  {
+    notation: 'US.CC.12.MA.LIM.4',
+    domain: 'Functions',
+    cluster: 'Understand limits conceptually',
+    description: 'understand and apply the concept of end behavior and horizontal asymptotes',
+  },
+
+  // SEQUENCES AND SERIES
+  {
+    notation: 'US.CC.12.MA.SEQ.1',
+    domain: 'Functions',
+    cluster: 'Understand and use sequences and series',
+    description: 'write explicit and recursive formulas for arithmetic and geometric sequences',
+  },
+  {
+    notation: 'US.CC.12.MA.SEQ.2',
+    domain: 'Functions',
+    cluster: 'Understand and use sequences and series',
+    description: 'use formulas for the nth term and sum of arithmetic and geometric sequences to solve problems',
+  },
+  {
+    notation: 'US.CC.12.MA.SEQ.3',
+    domain: 'Functions',
+    cluster: 'Understand and use sequences and series',
+    description: 'understand the concept of an infinite geometric series and calculate its sum when it converges',
+  },
+  {
+    notation: 'US.CC.12.MA.SEQ.4',
+    domain: 'Functions',
+    cluster: 'Understand and use sequences and series',
+    description: 'use sigma notation to represent and evaluate sums',
+  },
+
+  // PARAMETRIC AND POLAR
+  {
+    notation: 'US.CC.12.MA.PAR.1',
+    domain: 'Functions',
+    cluster: 'Understand parametric and polar representations',
+    description: 'graph curves given by parametric equations and eliminate the parameter to find a Cartesian equation',
+  },
+  {
+    notation: 'US.CC.12.MA.PAR.2',
+    domain: 'Functions',
+    cluster: 'Understand parametric and polar representations',
+    description: 'convert between polar and rectangular coordinates',
+  },
+  {
+    notation: 'US.CC.12.MA.PAR.3',
+    domain: 'Functions',
+    cluster: 'Understand parametric and polar representations',
+    description: 'graph polar equations and identify common curves (circles, roses, limaçons, lemniscates)',
+  },
+];
+
+// =============================================================================
 // EXPORT
 // =============================================================================
 
@@ -1599,6 +2840,10 @@ export const commonCoreMathCurriculum: CommonCoreMathCurriculum = {
     { grade: 6, gradeLabel: '6', ageRangeMin: 11, ageRangeMax: 12, standards: grade6Standards },
     { grade: 7, gradeLabel: '7', ageRangeMin: 12, ageRangeMax: 13, standards: grade7Standards },
     { grade: 8, gradeLabel: '8', ageRangeMin: 13, ageRangeMax: 14, standards: grade8Standards },
+    { grade: 9, gradeLabel: '9', ageRangeMin: 14, ageRangeMax: 15, standards: grade9Standards },
+    { grade: 10, gradeLabel: '10', ageRangeMin: 15, ageRangeMax: 16, standards: grade10Standards },
+    { grade: 11, gradeLabel: '11', ageRangeMin: 16, ageRangeMax: 17, standards: grade11Standards },
+    { grade: 12, gradeLabel: '12', ageRangeMin: 17, ageRangeMax: 18, standards: grade12Standards },
   ],
 };
 
