@@ -1391,6 +1391,7 @@ model IEPGoalSession {
   // Generated Content
   generatedGoals     Json // Array of SMART goal objects
   selectedGoals      Json? // Goals teacher selected/edited
+  selectedAccommodations Json? // Accommodations teacher selected/edited
   accommodations     Json // Suggested accommodations by category
   progressMonitoring Json? // Progress monitoring suggestions
 

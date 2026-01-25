@@ -72,6 +72,7 @@ export interface UpdateIEPSessionInput {
   strengths?: string;
   challenges?: string;
   selectedGoals?: unknown;
+  selectedAccommodations?: unknown;
   goalStartDate?: Date;
   goalEndDate?: Date;
 }
@@ -291,6 +292,9 @@ export const iepGoalService = {
     if (input.strengths !== undefined) updateData.strengths = input.strengths;
     if (input.challenges !== undefined) updateData.challenges = input.challenges;
     if (input.selectedGoals !== undefined) updateData.selectedGoals = input.selectedGoals as object;
+    if (input.selectedAccommodations !== undefined) {
+      updateData.selectedAccommodations = input.selectedAccommodations as object;
+    }
     if (input.goalStartDate !== undefined) updateData.goalStartDate = input.goalStartDate;
     if (input.goalEndDate !== undefined) updateData.goalEndDate = input.goalEndDate;
 
@@ -357,6 +361,7 @@ export const iepGoalService = {
         accommodations: generated.accommodations as unknown as object,
         progressMonitoring: generated.progressMonitoring as unknown as object,
         selectedGoals: Prisma.JsonNull, // Reset selections
+        selectedAccommodations: Prisma.JsonNull,
         tokensUsed: existing.tokensUsed + generated.tokensUsed,
       },
     });

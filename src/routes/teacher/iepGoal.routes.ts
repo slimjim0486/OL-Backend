@@ -58,6 +58,8 @@ const updateSessionSchema = z.object({
     category: z.string(),
     accommodation: z.string(),
     description: z.string().optional(),
+    rationale: z.string().optional(),
+    implementationTips: z.string().optional(),
   })).optional(),
   notes: z.string().optional(),
 });
