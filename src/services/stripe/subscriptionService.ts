@@ -1210,18 +1210,44 @@ export const subscriptionService = {
       }
 
       // promoCode.coupon can be a string ID or an expanded coupon object
-      const promoCoupon = (promoCode as any).coupon as
+      let promoCoupon = (promoCode as any).coupon as
         | Stripe.Coupon
         | Stripe.DeletedCoupon
         | string
         | null
         | undefined;
-      const couponId =
+      let couponId =
         typeof promoCoupon === 'string'
           ? promoCoupon
           : promoCoupon && typeof promoCoupon === 'object'
             ? promoCoupon.id
             : null;
+
+      if (!couponId) {
+        try {
+          const fullPromoCode = await stripe.promotionCodes.retrieve(promoCode.id, {
+            expand: ['coupon'],
+          });
+          promoCoupon = (fullPromoCode as any).coupon as
+            | Stripe.Coupon
+            | Stripe.DeletedCoupon
+            | string
+            | null
+            | undefined;
+          couponId =
+            typeof promoCoupon === 'string'
+              ? promoCoupon
+              : promoCoupon && typeof promoCoupon === 'object'
+                ? promoCoupon.id
+                : null;
+        } catch (error) {
+          logger.warn('Failed to retrieve full promo code for coupon lookup', {
+            code,
+            promoCodeId: promoCode.id,
+            error: error instanceof Error ? error.message : error,
+          });
+        }
+      }
 
       if (!couponId) {
         logger.warn('Promo code is missing a coupon reference', {
