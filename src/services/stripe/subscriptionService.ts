@@ -300,32 +300,59 @@ export const subscriptionService = {
 
     // Apply promo code if provided (takes precedence over referral discount)
     if (promoCode) {
-      try {
-        // Look up the promotion code by its customer-facing code
-        const promoCodes = await stripe.promotionCodes.list({
-          code: promoCode,
-          active: true,
-          limit: 1,
-        });
-
-        if (promoCodes.data.length > 0) {
-          sessionParams.discounts = [{ promotion_code: promoCodes.data[0].id }];
-          logger.info('Applying promo code to teacher checkout', {
-            teacherId,
-            promoCode,
-            promotionCodeId: promoCodes.data[0].id,
+      const promoCodeLookup = promoCode.trim().toUpperCase();
+      if (!promoCodeLookup) {
+        logger.warn('Promo code is blank', { teacherId });
+      } else {
+        try {
+          // Look up the promotion code by its customer-facing code
+          const promoCodes = await stripe.promotionCodes.list({
+            code: promoCodeLookup,
+            active: true,
+            limit: 1,
           });
-        } else {
-          logger.warn('Promo code not found or inactive', { teacherId, promoCode });
+
+          if (promoCodes.data.length > 0) {
+            sessionParams.discounts = [{ promotion_code: promoCodes.data[0].id }];
+            logger.info('Applying promo code to teacher checkout', {
+              teacherId,
+              promoCode: promoCodeLookup,
+              promotionCodeId: promoCodes.data[0].id,
+            });
+          } else {
+            let coupon: Stripe.Coupon | null = null;
+            try {
+              const foundCoupon = await stripe.coupons.retrieve(promoCodeLookup);
+              if (foundCoupon && !('deleted' in foundCoupon && foundCoupon.deleted)) {
+                const couponDetails = foundCoupon as Stripe.Coupon;
+                if (couponDetails.valid) {
+                  coupon = couponDetails;
+                }
+              }
+            } catch (error) {
+              // Ignore invalid coupon IDs and fall through to warning below.
+            }
+
+            if (coupon) {
+              sessionParams.discounts = [{ coupon: coupon.id }];
+              logger.info('Applying coupon to teacher checkout', {
+                teacherId,
+                promoCode: promoCodeLookup,
+                couponId: coupon.id,
+              });
+            } else {
+              logger.warn('Promo code not found or inactive', { teacherId, promoCode: promoCodeLookup });
+              // Don't fail checkout - just skip the discount
+            }
+          }
+        } catch (error) {
+          logger.error('Error looking up promo code', {
+            teacherId,
+            promoCode: promoCodeLookup,
+            error: error instanceof Error ? error.message : error,
+          });
           // Don't fail checkout - just skip the discount
         }
-      } catch (error) {
-        logger.error('Error looking up promo code', {
-          teacherId,
-          promoCode,
-          error: error instanceof Error ? error.message : error,
-        });
-        // Don't fail checkout - just skip the discount
       }
     }
     // Apply referral discount if applicable (and no promo code was applied)
@@ -1177,129 +1204,173 @@ export const subscriptionService = {
       throw new Error('Stripe is not configured');
     }
 
+    const promoCodeLookup = code.trim().toUpperCase();
+
     try {
       // Look up the promotion code by its customer-facing code
       const promoCodes = await stripe.promotionCodes.list({
-        code: code.toUpperCase(),
+        code: promoCodeLookup,
         active: true,
         limit: 1,
         expand: ['data.coupon'],
       });
 
-      if (promoCodes.data.length === 0) {
-        logger.info('Promo code not found or inactive', { code });
-        return null;
-      }
+      let promoCode: Stripe.PromotionCode | null = null;
+      let missingCouponReference = false;
 
-      const promoCode = promoCodes.data[0];
+      if (promoCodes.data.length > 0) {
+        promoCode = promoCodes.data[0];
 
-      // Check redemption limits
-      if (promoCode.max_redemptions && promoCode.times_redeemed >= promoCode.max_redemptions) {
-        logger.info('Promo code has reached max redemptions', {
-          code,
-          maxRedemptions: promoCode.max_redemptions,
-          timesRedeemed: promoCode.times_redeemed,
-        });
-        return null;
-      }
-
-      // Check expiration
-      if (promoCode.expires_at && promoCode.expires_at * 1000 < Date.now()) {
-        logger.info('Promo code has expired', { code, expiresAt: promoCode.expires_at });
-        return null;
-      }
-
-      // promoCode.coupon can be a string ID or an expanded coupon object
-      let promoCoupon = (promoCode as any).coupon as
-        | Stripe.Coupon
-        | Stripe.DeletedCoupon
-        | string
-        | null
-        | undefined;
-      let couponId =
-        typeof promoCoupon === 'string'
-          ? promoCoupon
-          : promoCoupon && typeof promoCoupon === 'object'
-            ? promoCoupon.id
-            : null;
-
-      if (!couponId) {
-        try {
-          const fullPromoCode = await stripe.promotionCodes.retrieve(promoCode.id, {
-            expand: ['coupon'],
+        // Check redemption limits
+        if (promoCode.max_redemptions && promoCode.times_redeemed >= promoCode.max_redemptions) {
+          logger.info('Promo code has reached max redemptions', {
+            code: promoCodeLookup,
+            maxRedemptions: promoCode.max_redemptions,
+            timesRedeemed: promoCode.times_redeemed,
           });
-          promoCoupon = (fullPromoCode as any).coupon as
-            | Stripe.Coupon
-            | Stripe.DeletedCoupon
-            | string
-            | null
-            | undefined;
-          couponId =
-            typeof promoCoupon === 'string'
-              ? promoCoupon
-              : promoCoupon && typeof promoCoupon === 'object'
-                ? promoCoupon.id
-                : null;
-        } catch (error) {
-          logger.warn('Failed to retrieve full promo code for coupon lookup', {
-            code,
-            promoCodeId: promoCode.id,
-            error: error instanceof Error ? error.message : error,
-          });
+          return null;
         }
+
+        // Check expiration
+        if (promoCode.expires_at && promoCode.expires_at * 1000 < Date.now()) {
+          logger.info('Promo code has expired', { code: promoCodeLookup, expiresAt: promoCode.expires_at });
+          return null;
+        }
+
+        // promoCode.coupon can be a string ID or an expanded coupon object
+        let promoCoupon = (promoCode as any).coupon as
+          | Stripe.Coupon
+          | Stripe.DeletedCoupon
+          | string
+          | null
+          | undefined;
+        let couponId =
+          typeof promoCoupon === 'string'
+            ? promoCoupon
+            : promoCoupon && typeof promoCoupon === 'object'
+              ? promoCoupon.id
+              : null;
+
+        if (!couponId) {
+          try {
+            const fullPromoCode = await stripe.promotionCodes.retrieve(promoCode.id, {
+              expand: ['coupon'],
+            });
+            promoCoupon = (fullPromoCode as any).coupon as
+              | Stripe.Coupon
+              | Stripe.DeletedCoupon
+              | string
+              | null
+              | undefined;
+            couponId =
+              typeof promoCoupon === 'string'
+                ? promoCoupon
+                : promoCoupon && typeof promoCoupon === 'object'
+                  ? promoCoupon.id
+                  : null;
+          } catch (error) {
+            logger.warn('Failed to retrieve full promo code for coupon lookup', {
+              code: promoCodeLookup,
+              promoCodeId: promoCode.id,
+              error: error instanceof Error ? error.message : error,
+            });
+          }
+        }
+
+        if (couponId) {
+          const coupon =
+            typeof promoCoupon === 'string' ? await stripe.coupons.retrieve(couponId) : promoCoupon;
+
+          // Check if coupon is still valid
+          if (!coupon) {
+            logger.info('Promo code coupon is missing', { code: promoCodeLookup, couponId });
+            return null;
+          }
+
+          if ('deleted' in coupon && coupon.deleted) {
+            logger.info('Promo code coupon is deleted', { code: promoCodeLookup, couponId });
+            return null;
+          }
+
+          const couponDetails = coupon as Stripe.Coupon;
+
+          if (!couponDetails.valid) {
+            logger.info('Promo code coupon is no longer valid', { code: promoCodeLookup, couponId });
+            return null;
+          }
+
+          logger.info('Promo code validated successfully', {
+            code: promoCodeLookup,
+            couponId,
+            percentOff: couponDetails.percent_off,
+            amountOff: couponDetails.amount_off,
+            duration: couponDetails.duration,
+            durationInMonths: couponDetails.duration_in_months,
+          });
+
+          return {
+            code: promoCodeLookup,
+            percentOff: couponDetails.percent_off,
+            amountOff: couponDetails.amount_off,
+            currency: couponDetails.currency,
+            duration: couponDetails.duration,
+            durationInMonths: couponDetails.duration_in_months,
+            name: couponDetails.name,
+            valid: true,
+          };
+        }
+
+        missingCouponReference = true;
       }
 
-      if (!couponId) {
+      let fallbackCoupon: Stripe.Coupon | null = null;
+      try {
+        const coupon = await stripe.coupons.retrieve(promoCodeLookup);
+        if (coupon && !('deleted' in coupon && coupon.deleted)) {
+          const couponDetails = coupon as Stripe.Coupon;
+          if (couponDetails.valid) {
+            fallbackCoupon = couponDetails;
+          }
+        }
+      } catch (error) {
+        // Ignore invalid coupon IDs and fall through to logging below.
+      }
+
+      if (fallbackCoupon) {
+        logger.info('Promo code validated using coupon ID', {
+          code: promoCodeLookup,
+          couponId: fallbackCoupon.id,
+          promoCodeId: promoCode ? promoCode.id : null,
+        });
+
+        return {
+          code: promoCodeLookup,
+          percentOff: fallbackCoupon.percent_off,
+          amountOff: fallbackCoupon.amount_off,
+          currency: fallbackCoupon.currency,
+          duration: fallbackCoupon.duration,
+          durationInMonths: fallbackCoupon.duration_in_months,
+          name: fallbackCoupon.name,
+          valid: true,
+        };
+      }
+
+      if (!promoCode) {
+        logger.info('Promo code not found or inactive', { code: promoCodeLookup });
+        return null;
+      }
+
+      if (missingCouponReference) {
         logger.warn('Promo code is missing a coupon reference', {
-          code,
+          code: promoCodeLookup,
           promoCodeId: promoCode.id,
         });
-        return null;
       }
 
-      const coupon =
-        typeof promoCoupon === 'string' ? await stripe.coupons.retrieve(couponId) : promoCoupon;
-
-      // Check if coupon is still valid
-      if (!coupon) {
-        logger.info('Promo code coupon is missing', { code, couponId });
-        return null;
-      }
-
-      if ('deleted' in coupon && coupon.deleted) {
-        logger.info('Promo code coupon is deleted', { code, couponId });
-        return null;
-      }
-
-      const couponDetails = coupon as Stripe.Coupon;
-
-      if (!couponDetails.valid) {
-        logger.info('Promo code coupon is no longer valid', { code, couponId });
-        return null;
-      }
-
-      logger.info('Promo code validated successfully', {
-        code,
-        couponId,
-        percentOff: couponDetails.percent_off,
-        amountOff: couponDetails.amount_off,
-        duration: couponDetails.duration,
-        durationInMonths: couponDetails.duration_in_months,
-      });
-
-      return {
-        code: code.toUpperCase(),
-        percentOff: couponDetails.percent_off,
-        amountOff: couponDetails.amount_off,
-        currency: couponDetails.currency,
-        duration: couponDetails.duration,
-        durationInMonths: couponDetails.duration_in_months,
-        name: couponDetails.name,
-        valid: true,
-      };
+      return null;
     } catch (error) {
       logger.error('Error validating promo code', {
-        code,
+        code: promoCodeLookup,
         error: error instanceof Error ? error.message : error,
       });
       return null;
