@@ -1183,7 +1183,6 @@ export const subscriptionService = {
         code: code.toUpperCase(),
         active: true,
         limit: 1,
-        expand: ['data.coupon'],
       });
 
       if (promoCodes.data.length === 0) {
@@ -1192,15 +1191,6 @@ export const subscriptionService = {
       }
 
       const promoCode = promoCodes.data[0];
-      // Coupon is expanded via expand: ['data.coupon'], so access it with type assertion
-      // The Stripe SDK types don't fully represent expanded fields
-      const coupon = (promoCode as any).coupon as Stripe.Coupon;
-
-      // Check if coupon is still valid
-      if (!coupon.valid) {
-        logger.info('Promo code coupon is no longer valid', { code, couponId: coupon.id });
-        return null;
-      }
 
       // Check redemption limits
       if (promoCode.max_redemptions && promoCode.times_redeemed >= promoCode.max_redemptions) {
@@ -1215,6 +1205,20 @@ export const subscriptionService = {
       // Check expiration
       if (promoCode.expires_at && promoCode.expires_at * 1000 < Date.now()) {
         logger.info('Promo code has expired', { code, expiresAt: promoCode.expires_at });
+        return null;
+      }
+
+      // Fetch the coupon separately to get full details
+      // promoCode.coupon is the coupon ID (string)
+      const couponId = typeof promoCode.coupon === 'string'
+        ? promoCode.coupon
+        : promoCode.coupon.id;
+
+      const coupon = await stripe.coupons.retrieve(couponId);
+
+      // Check if coupon is still valid
+      if (!coupon.valid) {
+        logger.info('Promo code coupon is no longer valid', { code, couponId: coupon.id });
         return null;
       }
 
