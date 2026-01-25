@@ -1554,6 +1554,256 @@ export const analyticsService = {
 
     return result;
   },
+
+  // ============================================
+  // REPEAT/ENGAGED TEACHERS
+  // ============================================
+
+  /**
+   * Get repeat/engaged teachers - teachers who have used the service multiple times
+   * This is valuable for understanding power users and retention
+   */
+  async getRepeatTeachers(options: {
+    minDistinctDays?: number;
+    minUsageEvents?: number;
+    minContentCreated?: number;
+    limit?: number;
+  } = {}): Promise<{
+    summary: {
+      totalTeachers: number;
+      repeatTeachers: number;
+      repeatRate: number;
+      superUsers: number;
+      regularUsers: number;
+      oneTimeUsers: number;
+    };
+    teachers: {
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      country: string | null;
+      subscriptionTier: string;
+      distinctUsageDays: number;
+      totalUsageEvents: number;
+      totalTokensUsed: number;
+      contentCreated: number;
+      firstUsageDate: Date | null;
+      lastUsageDate: Date | null;
+      daysSinceLastUsage: number | null;
+      engagementTier: 'super' | 'regular' | 'light' | 'one-time';
+    }[];
+  }> {
+    const {
+      minDistinctDays = 2,
+      minUsageEvents = 1,
+      minContentCreated = 1,
+      limit = 100,
+    } = options;
+
+    const cacheKey = `analytics:teacher:repeat:${minDistinctDays}d:${minUsageEvents}e:${minContentCreated}c:${limit}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    // Get all teachers (excluding test accounts)
+    const teachers = await prisma.teacher.findMany({
+      where: {
+        NOT: {
+          email: {
+            contains: '@test.orbitlearn.com'
+          }
+        }
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        country: true,
+        subscriptionTier: true,
+        createdAt: true,
+      }
+    });
+
+    const today = new Date();
+    const teacherMetrics: {
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      country: string | null;
+      subscriptionTier: string;
+      distinctUsageDays: number;
+      totalUsageEvents: number;
+      totalTokensUsed: number;
+      contentCreated: number;
+      firstUsageDate: Date | null;
+      lastUsageDate: Date | null;
+      daysSinceLastUsage: number | null;
+      engagementTier: 'super' | 'regular' | 'light' | 'one-time';
+    }[] = [];
+
+    // Get usage data for each teacher
+    for (const teacher of teachers) {
+      const [usageLogs, contentCount] = await Promise.all([
+        prisma.tokenUsageLog.findMany({
+          where: { teacherId: teacher.id },
+          select: {
+            createdAt: true,
+            tokensUsed: true,
+          },
+          orderBy: { createdAt: 'asc' }
+        }),
+        prisma.teacherContent.count({
+          where: { teacherId: teacher.id }
+        })
+      ]);
+
+      // Calculate distinct usage days
+      const uniqueDays = new Set(
+        usageLogs.map(log => log.createdAt.toISOString().split('T')[0])
+      );
+      const distinctUsageDays = uniqueDays.size;
+
+      // Calculate totals
+      const totalUsageEvents = usageLogs.length;
+      const totalTokensUsed = usageLogs.reduce((sum, log) => sum + log.tokensUsed, 0);
+
+      const firstUsageDate = usageLogs.length > 0 ? usageLogs[0].createdAt : null;
+      const lastUsageDate = usageLogs.length > 0 ? usageLogs[usageLogs.length - 1].createdAt : null;
+
+      const daysSinceLastUsage = lastUsageDate
+        ? Math.floor((today.getTime() - lastUsageDate.getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+
+      // Determine engagement tier
+      let engagementTier: 'super' | 'regular' | 'light' | 'one-time';
+      if (distinctUsageDays >= 5 || totalUsageEvents >= 10) {
+        engagementTier = 'super';
+      } else if (distinctUsageDays >= 2 || totalUsageEvents >= 3) {
+        engagementTier = 'regular';
+      } else if (totalUsageEvents >= 1) {
+        engagementTier = 'light';
+      } else {
+        engagementTier = 'one-time';
+      }
+
+      teacherMetrics.push({
+        id: teacher.id,
+        email: teacher.email,
+        firstName: teacher.firstName,
+        lastName: teacher.lastName,
+        country: teacher.country,
+        subscriptionTier: teacher.subscriptionTier,
+        distinctUsageDays,
+        totalUsageEvents,
+        totalTokensUsed,
+        contentCreated: contentCount,
+        firstUsageDate,
+        lastUsageDate,
+        daysSinceLastUsage,
+        engagementTier,
+      });
+    }
+
+    // Sort by engagement (most engaged first)
+    teacherMetrics.sort((a, b) => {
+      if (b.distinctUsageDays !== a.distinctUsageDays) {
+        return b.distinctUsageDays - a.distinctUsageDays;
+      }
+      return b.totalUsageEvents - a.totalUsageEvents;
+    });
+
+    // Filter for repeat users (meet any criteria)
+    const repeatTeachers = teacherMetrics.filter(t =>
+      t.distinctUsageDays >= minDistinctDays ||
+      t.totalUsageEvents >= minUsageEvents ||
+      t.contentCreated >= minContentCreated
+    );
+
+    // Calculate summary stats
+    const superUsers = teacherMetrics.filter(t => t.engagementTier === 'super').length;
+    const regularUsers = teacherMetrics.filter(t => t.engagementTier === 'regular').length;
+    const lightUsers = teacherMetrics.filter(t => t.engagementTier === 'light').length;
+    const oneTimeUsers = teacherMetrics.filter(t => t.engagementTier === 'one-time').length;
+
+    const result = {
+      summary: {
+        totalTeachers: teachers.length,
+        repeatTeachers: repeatTeachers.length,
+        repeatRate: teachers.length > 0
+          ? Math.round((repeatTeachers.length / teachers.length) * 10000) / 100
+          : 0,
+        superUsers,
+        regularUsers,
+        oneTimeUsers: lightUsers + oneTimeUsers, // Combine light + never-used
+      },
+      teachers: repeatTeachers.slice(0, limit),
+    };
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
+
+    return result;
+  },
+
+  /**
+   * Get engagement tier distribution for teachers
+   */
+  async getTeacherEngagementDistribution(): Promise<{
+    tiers: { tier: string; count: number; percentage: number }[];
+    avgDaysActive: number;
+    avgUsageEvents: number;
+    avgContentCreated: number;
+  }> {
+    const cacheKey = 'analytics:teacher:engagement-distribution';
+
+    const cached = await redis.get(cacheKey);
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+
+    const repeatData = await this.getRepeatTeachers({ limit: 10000 });
+    const allTeachers = repeatData.teachers;
+
+    const tierCounts = {
+      'Super Users (5+ days)': repeatData.summary.superUsers,
+      'Regular Users (2-4 days)': repeatData.summary.regularUsers,
+      'One-time Users': repeatData.summary.oneTimeUsers,
+    };
+
+    const total = repeatData.summary.totalTeachers;
+
+    const tiers = Object.entries(tierCounts).map(([tier, count]) => ({
+      tier,
+      count,
+      percentage: total > 0 ? Math.round((count / total) * 10000) / 100 : 0,
+    }));
+
+    // Calculate averages
+    const avgDaysActive = allTeachers.length > 0
+      ? Math.round((allTeachers.reduce((s, t) => s + t.distinctUsageDays, 0) / allTeachers.length) * 10) / 10
+      : 0;
+    const avgUsageEvents = allTeachers.length > 0
+      ? Math.round((allTeachers.reduce((s, t) => s + t.totalUsageEvents, 0) / allTeachers.length) * 10) / 10
+      : 0;
+    const avgContentCreated = allTeachers.length > 0
+      ? Math.round((allTeachers.reduce((s, t) => s + t.contentCreated, 0) / allTeachers.length) * 10) / 10
+      : 0;
+
+    const result = {
+      tiers,
+      avgDaysActive,
+      avgUsageEvents,
+      avgContentCreated,
+    };
+
+    await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
+
+    return result;
+  },
 };
 
 /**

@@ -1,9 +1,11 @@
 // Admin Analytics routes for VC Dashboard
 import { Router, Request, Response, NextFunction } from 'express';
 import { analyticsService, cohortService, revenueService } from '../../services/admin/index.js';
+import { curriculumService } from '../../services/curriculum/index.js';
 import { authenticateAdmin, requireAdmin } from '../../middleware/adminAuth.js';
 import { validateInput } from '../../middleware/validateInput.js';
 import { z } from 'zod';
+import { CurriculumType, Subject } from '@prisma/client';
 
 const router = Router();
 
@@ -777,6 +779,61 @@ router.get(
   }
 );
 
+/**
+ * GET /api/admin/analytics/teacher/repeat-users
+ * Get repeat/engaged teachers who have used the service multiple times
+ * Query params:
+ *   - minDays: minimum distinct days of usage (default: 2)
+ *   - minEvents: minimum usage events (default: 1)
+ *   - minContent: minimum content created (default: 1)
+ *   - limit: max results to return (default: 100)
+ */
+router.get(
+  '/teacher/repeat-users',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const minDistinctDays = parseInt(req.query.minDays as string) || 2;
+      const minUsageEvents = parseInt(req.query.minEvents as string) || 1;
+      const minContentCreated = parseInt(req.query.minContent as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 100;
+
+      const data = await analyticsService.getRepeatTeachers({
+        minDistinctDays,
+        minUsageEvents,
+        minContentCreated,
+        limit,
+      });
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/teacher/engagement-distribution
+ * Get engagement tier distribution for teachers
+ */
+router.get(
+  '/teacher/engagement-distribution',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const distribution = await analyticsService.getTeacherEngagementDistribution();
+
+      res.json({
+        success: true,
+        data: distribution,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // ============================================
 // CACHE MANAGEMENT ROUTES
 // ============================================
@@ -798,6 +855,143 @@ router.post(
       res.json({
         success: true,
         message: 'Analytics cache invalidated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
+// STANDARDS CACHE MANAGEMENT ROUTES
+// ============================================
+
+/**
+ * GET /api/admin/analytics/cache/standards
+ * Get standards cache statistics
+ */
+router.get(
+  '/cache/standards',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const stats = await curriculumService.getStandardsCacheStats();
+
+      res.json({
+        success: true,
+        data: {
+          cached: {
+            rawStandards: stats.rawCount,
+            adjacentStandards: stats.adjacentCount,
+            aiContexts: stats.aiContextCount,
+            strands: stats.strandsCount,
+          },
+          lastInvalidation: stats.lastInvalidation
+            ? JSON.parse(stats.lastInvalidation)
+            : null,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/admin/analytics/cache/standards/invalidate
+ * Invalidate all standards cache
+ */
+router.post(
+  '/cache/standards/invalidate',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      await curriculumService.invalidateAllStandardsCache();
+
+      res.json({
+        success: true,
+        message: 'All standards cache invalidated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Validation schema for curriculum invalidation
+const invalidateCurriculumSchema = z.object({
+  curriculum: z.enum(['BRITISH', 'AMERICAN', 'IB', 'INDIAN_CBSE', 'INDIAN_ICSE', 'ARABIC']),
+});
+
+/**
+ * POST /api/admin/analytics/cache/standards/invalidate/:curriculum
+ * Invalidate standards cache for a specific curriculum
+ */
+router.post(
+  '/cache/standards/invalidate/:curriculum',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const curriculum = req.params.curriculum.toUpperCase() as CurriculumType;
+
+      // Validate curriculum type
+      const validCurricula: CurriculumType[] = ['BRITISH', 'AMERICAN', 'IB', 'INDIAN_CBSE', 'INDIAN_ICSE', 'ARABIC'];
+      if (!validCurricula.includes(curriculum)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid curriculum: ${req.params.curriculum}. Valid options: ${validCurricula.join(', ')}`,
+        });
+      }
+
+      await curriculumService.invalidateCacheForCurriculum(curriculum);
+
+      res.json({
+        success: true,
+        message: `Standards cache for ${curriculum} invalidated successfully`,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Validation schema for cache warming
+const warmCacheSchema = z.object({
+  curriculum: z.enum(['BRITISH', 'AMERICAN', 'IB', 'INDIAN_CBSE', 'INDIAN_ICSE', 'ARABIC']),
+  subject: z.enum(['MATH', 'SCIENCE', 'ENGLISH', 'SOCIAL_STUDIES', 'ARABIC', 'HISTORY', 'GEOGRAPHY', 'OTHER']),
+  grades: z.array(z.number().min(1).max(12)).min(1).max(12),
+});
+
+/**
+ * POST /api/admin/analytics/cache/standards/warm
+ * Warm the standards cache for specified curriculum/subject/grades
+ *
+ * Body: { curriculum: 'BRITISH', subject: 'MATH', grades: [1, 2, 3, 4, 5] }
+ */
+router.post(
+  '/cache/standards/warm',
+  validateInput(warmCacheSchema, 'body'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { curriculum, subject, grades } = req.body as {
+        curriculum: CurriculumType;
+        subject: Subject;
+        grades: number[];
+      };
+
+      const result = await curriculumService.warmStandardsCache(
+        curriculum,
+        subject,
+        grades
+      );
+
+      res.json({
+        success: true,
+        message: `Cache warming complete for ${curriculum}/${subject}`,
+        data: {
+          curriculum,
+          subject,
+          gradesRequested: grades.length,
+          gradesWarmed: result.warmed,
+          gradesFailed: result.failed,
+        },
       });
     } catch (error) {
       next(error);

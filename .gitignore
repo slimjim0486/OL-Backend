@@ -46,3 +46,7 @@ uploads/
 
 # GCP Service Account Credentials (NEVER commit)
 credentials/
+
+# Marketing exports (contain PII - NEVER commit)
+exports/
+*-emails-*.csv
