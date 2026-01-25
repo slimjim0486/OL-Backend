@@ -1183,6 +1183,7 @@ export const subscriptionService = {
         code: code.toUpperCase(),
         active: true,
         limit: 1,
+        expand: ['data.coupon'],
       });
 
       if (promoCodes.data.length === 0) {
@@ -1208,35 +1209,66 @@ export const subscriptionService = {
         return null;
       }
 
-      // Fetch the coupon separately to get full details
-      // promoCode.coupon is the coupon ID - use type assertion since Stripe types are incomplete
-      const couponId = (promoCode as any).coupon as string;
+      // promoCode.coupon can be a string ID or an expanded coupon object
+      const promoCoupon = (promoCode as any).coupon as
+        | Stripe.Coupon
+        | Stripe.DeletedCoupon
+        | string
+        | null
+        | undefined;
+      const couponId =
+        typeof promoCoupon === 'string'
+          ? promoCoupon
+          : promoCoupon && typeof promoCoupon === 'object'
+            ? promoCoupon.id
+            : null;
 
-      const coupon = await stripe.coupons.retrieve(couponId);
+      if (!couponId) {
+        logger.warn('Promo code is missing a coupon reference', {
+          code,
+          promoCodeId: promoCode.id,
+        });
+        return null;
+      }
+
+      const coupon =
+        typeof promoCoupon === 'string' ? await stripe.coupons.retrieve(couponId) : promoCoupon;
 
       // Check if coupon is still valid
-      if (!coupon.valid) {
-        logger.info('Promo code coupon is no longer valid', { code, couponId: coupon.id });
+      if (!coupon) {
+        logger.info('Promo code coupon is missing', { code, couponId });
+        return null;
+      }
+
+      if ('deleted' in coupon && coupon.deleted) {
+        logger.info('Promo code coupon is deleted', { code, couponId });
+        return null;
+      }
+
+      const couponDetails = coupon as Stripe.Coupon;
+
+      if (!couponDetails.valid) {
+        logger.info('Promo code coupon is no longer valid', { code, couponId });
         return null;
       }
 
       logger.info('Promo code validated successfully', {
         code,
-        couponId: coupon.id,
-        percentOff: coupon.percent_off,
-        amountOff: coupon.amount_off,
-        duration: coupon.duration,
-        durationInMonths: coupon.duration_in_months,
+        couponId,
+        percentOff: couponDetails.percent_off,
+        amountOff: couponDetails.amount_off,
+        duration: couponDetails.duration,
+        durationInMonths: couponDetails.duration_in_months,
       });
 
       return {
         code: code.toUpperCase(),
-        percentOff: coupon.percent_off,
-        amountOff: coupon.amount_off,
-        currency: coupon.currency,
-        duration: coupon.duration,
-        durationInMonths: coupon.duration_in_months,
-        name: coupon.name,
+        percentOff: couponDetails.percent_off,
+        amountOff: couponDetails.amount_off,
+        currency: couponDetails.currency,
+        duration: couponDetails.duration,
+        durationInMonths: couponDetails.duration_in_months,
+        name: couponDetails.name,
         valid: true,
       };
     } catch (error) {
