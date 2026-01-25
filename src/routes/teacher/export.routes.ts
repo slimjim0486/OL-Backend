@@ -104,6 +104,7 @@ router.get('/downloads', async (req: Request, res: Response) => {
           editUrl: exp.editUrl,
           status: exp.status,
           errorMessage: exp.errorMessage,
+          emailSent: exp.emailSent,
           createdAt: exp.createdAt,
           completedAt: exp.completedAt,
         })),
