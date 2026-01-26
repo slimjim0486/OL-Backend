@@ -69,6 +69,443 @@ export interface IBMYPDPEnglishCurriculum {
 // Individual Oral: 15-minute oral based on works studied
 
 // =============================================================================
+// MYP YEAR 1 (Grade 6, Ages 11-12) - Foundation
+// Focus: Building reading comprehension, basic writing, oral communication
+// =============================================================================
+
+const mypYear1Standards: IBMYPDPEnglishStandard[] = [
+  // ANALYZING (Criterion A)
+  {
+    notation: 'IB.MYP.Y1.EN.AN.1',
+    strand: 'Analyzing',
+    topic: 'Reading Comprehension',
+    level: 'standard',
+    description: 'Identify main ideas and supporting details in literary and non-literary texts',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.AN.2',
+    strand: 'Analyzing',
+    topic: 'Text Features',
+    level: 'standard',
+    description: 'Identify and explain the purpose of text features and structures',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.AN.3',
+    strand: 'Analyzing',
+    topic: 'Literary Elements',
+    level: 'standard',
+    description: 'Identify basic literary elements including character, setting, and plot',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.AN.4',
+    strand: 'Analyzing',
+    topic: 'Author Purpose',
+    level: 'standard',
+    description: 'Identify the author\'s purpose and intended audience',
+    assessmentCriteria: ['A'],
+  },
+
+  // ORGANIZING (Criterion B)
+  {
+    notation: 'IB.MYP.Y1.EN.OR.1',
+    strand: 'Organizing',
+    topic: 'Paragraph Structure',
+    level: 'standard',
+    description: 'Organize ideas into coherent paragraphs with topic sentences',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.OR.2',
+    strand: 'Organizing',
+    topic: 'Logical Sequence',
+    level: 'standard',
+    description: 'Arrange ideas in a logical sequence with appropriate transitions',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.OR.3',
+    strand: 'Organizing',
+    topic: 'Basic Formatting',
+    level: 'standard',
+    description: 'Use appropriate formatting conventions for different text types',
+    assessmentCriteria: ['B'],
+  },
+
+  // PRODUCING TEXT (Criterion C)
+  {
+    notation: 'IB.MYP.Y1.EN.PT.1',
+    strand: 'Producing Text',
+    topic: 'Narrative Writing',
+    level: 'standard',
+    description: 'Write narratives with a clear beginning, middle, and end',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.PT.2',
+    strand: 'Producing Text',
+    topic: 'Descriptive Writing',
+    level: 'standard',
+    description: 'Use sensory details to create vivid descriptions',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.PT.3',
+    strand: 'Producing Text',
+    topic: 'Expository Writing',
+    level: 'standard',
+    description: 'Write informational texts that explain a topic clearly',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.PT.4',
+    strand: 'Producing Text',
+    topic: 'Creative Expression',
+    level: 'standard',
+    description: 'Express ideas creatively through poetry and short fiction',
+    assessmentCriteria: ['C'],
+  },
+
+  // USING LANGUAGE (Criterion D)
+  {
+    notation: 'IB.MYP.Y1.EN.UL.1',
+    strand: 'Using Language',
+    topic: 'Vocabulary',
+    level: 'standard',
+    description: 'Use grade-appropriate vocabulary accurately in writing',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.UL.2',
+    strand: 'Using Language',
+    topic: 'Grammar',
+    level: 'standard',
+    description: 'Apply correct grammar including subject-verb agreement and verb tenses',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.UL.3',
+    strand: 'Using Language',
+    topic: 'Punctuation',
+    level: 'standard',
+    description: 'Use punctuation correctly including periods, commas, and quotation marks',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.EN.UL.4',
+    strand: 'Using Language',
+    topic: 'Oral Communication',
+    level: 'standard',
+    description: 'Speak clearly and listen actively in discussions and presentations',
+    assessmentCriteria: ['D'],
+  },
+];
+
+// =============================================================================
+// MYP YEAR 2 (Grade 7, Ages 12-13) - Developing
+// Focus: Developing analysis skills, structured writing, literary appreciation
+// =============================================================================
+
+const mypYear2Standards: IBMYPDPEnglishStandard[] = [
+  // ANALYZING (Criterion A)
+  {
+    notation: 'IB.MYP.Y2.EN.AN.1',
+    strand: 'Analyzing',
+    topic: 'Textual Analysis',
+    level: 'standard',
+    description: 'Analyze how authors use language and structure to create meaning',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.AN.2',
+    strand: 'Analyzing',
+    topic: 'Character Development',
+    level: 'standard',
+    description: 'Analyze character development and motivation in literary texts',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.AN.3',
+    strand: 'Analyzing',
+    topic: 'Theme',
+    level: 'standard',
+    description: 'Identify and analyze themes across different texts',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.AN.4',
+    strand: 'Analyzing',
+    topic: 'Literary Devices',
+    level: 'standard',
+    description: 'Identify and explain the effect of simile, metaphor, and personification',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.AN.5',
+    strand: 'Analyzing',
+    topic: 'Point of View',
+    level: 'standard',
+    description: 'Analyze how point of view affects the reader\'s understanding',
+    assessmentCriteria: ['A'],
+  },
+
+  // ORGANIZING (Criterion B)
+  {
+    notation: 'IB.MYP.Y2.EN.OR.1',
+    strand: 'Organizing',
+    topic: 'Essay Structure',
+    level: 'standard',
+    description: 'Organize multi-paragraph essays with introduction, body, and conclusion',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.OR.2',
+    strand: 'Organizing',
+    topic: 'Thesis Statements',
+    level: 'standard',
+    description: 'Develop clear thesis statements that guide essay organization',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.OR.3',
+    strand: 'Organizing',
+    topic: 'Transitions',
+    level: 'standard',
+    description: 'Use transitional words and phrases to connect ideas between paragraphs',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.OR.4',
+    strand: 'Organizing',
+    topic: 'Evidence Integration',
+    level: 'standard',
+    description: 'Integrate textual evidence to support claims and ideas',
+    assessmentCriteria: ['B'],
+  },
+
+  // PRODUCING TEXT (Criterion C)
+  {
+    notation: 'IB.MYP.Y2.EN.PT.1',
+    strand: 'Producing Text',
+    topic: 'Narrative Techniques',
+    level: 'standard',
+    description: 'Use dialogue, pacing, and description to develop experiences and events',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.PT.2',
+    strand: 'Producing Text',
+    topic: 'Argumentative Writing',
+    level: 'standard',
+    description: 'Write arguments with clear claims supported by reasons and evidence',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.PT.3',
+    strand: 'Producing Text',
+    topic: 'Research Writing',
+    level: 'standard',
+    description: 'Conduct short research projects and synthesize information from sources',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.PT.4',
+    strand: 'Producing Text',
+    topic: 'Genre Awareness',
+    level: 'standard',
+    description: 'Produce texts in different genres adapting style and format appropriately',
+    assessmentCriteria: ['C'],
+  },
+
+  // USING LANGUAGE (Criterion D)
+  {
+    notation: 'IB.MYP.Y2.EN.UL.1',
+    strand: 'Using Language',
+    topic: 'Vocabulary Development',
+    level: 'standard',
+    description: 'Use precise vocabulary including academic and domain-specific words',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.UL.2',
+    strand: 'Using Language',
+    topic: 'Sentence Variety',
+    level: 'standard',
+    description: 'Use varied sentence structures including compound and complex sentences',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.UL.3',
+    strand: 'Using Language',
+    topic: 'Conventions',
+    level: 'standard',
+    description: 'Apply grammar, usage, and mechanics conventions accurately',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.EN.UL.4',
+    strand: 'Using Language',
+    topic: 'Presentation Skills',
+    level: 'standard',
+    description: 'Deliver presentations with appropriate volume, eye contact, and pacing',
+    assessmentCriteria: ['D'],
+  },
+];
+
+// =============================================================================
+// MYP YEAR 3 (Grade 8, Ages 13-14) - Expanding
+// Focus: Critical analysis, persuasive writing, literary interpretation
+// =============================================================================
+
+const mypYear3Standards: IBMYPDPEnglishStandard[] = [
+  // ANALYZING (Criterion A)
+  {
+    notation: 'IB.MYP.Y3.EN.AN.1',
+    strand: 'Analyzing',
+    topic: 'Critical Analysis',
+    level: 'standard',
+    description: 'Analyze how authors use rhetoric and literary techniques to achieve purpose',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.AN.2',
+    strand: 'Analyzing',
+    topic: 'Context and Culture',
+    level: 'standard',
+    description: 'Analyze how cultural and historical context shapes meaning in texts',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.AN.3',
+    strand: 'Analyzing',
+    topic: 'Comparing Texts',
+    level: 'standard',
+    description: 'Compare and contrast how different texts address similar themes',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.AN.4',
+    strand: 'Analyzing',
+    topic: 'Symbolism and Imagery',
+    level: 'standard',
+    description: 'Analyze the use of symbolism, imagery, and figurative language',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.AN.5',
+    strand: 'Analyzing',
+    topic: 'Media Analysis',
+    level: 'standard',
+    description: 'Analyze how media texts use visual and verbal techniques to convey meaning',
+    assessmentCriteria: ['A'],
+  },
+
+  // ORGANIZING (Criterion B)
+  {
+    notation: 'IB.MYP.Y3.EN.OR.1',
+    strand: 'Organizing',
+    topic: 'Argument Structure',
+    level: 'standard',
+    description: 'Organize arguments with claims, counterclaims, and evidence',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.OR.2',
+    strand: 'Organizing',
+    topic: 'Literary Essays',
+    level: 'standard',
+    description: 'Structure literary analysis essays with thesis, analysis, and synthesis',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.OR.3',
+    strand: 'Organizing',
+    topic: 'Research Integration',
+    level: 'standard',
+    description: 'Integrate multiple sources effectively with proper citation',
+    assessmentCriteria: ['B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.OR.4',
+    strand: 'Organizing',
+    topic: 'Coherent Arguments',
+    level: 'standard',
+    description: 'Develop sustained, coherent arguments with logical progression',
+    assessmentCriteria: ['B'],
+  },
+
+  // PRODUCING TEXT (Criterion C)
+  {
+    notation: 'IB.MYP.Y3.EN.PT.1',
+    strand: 'Producing Text',
+    topic: 'Persuasive Writing',
+    level: 'standard',
+    description: 'Write persuasive texts using rhetorical appeals and techniques',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.PT.2',
+    strand: 'Producing Text',
+    topic: 'Literary Response',
+    level: 'standard',
+    description: 'Write analytical responses to literature demonstrating critical insight',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.PT.3',
+    strand: 'Producing Text',
+    topic: 'Creative Writing',
+    level: 'standard',
+    description: 'Create original literary works exploring voice, style, and technique',
+    assessmentCriteria: ['C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.PT.4',
+    strand: 'Producing Text',
+    topic: 'Extended Writing',
+    level: 'standard',
+    description: 'Produce extended texts (500+ words) with sustained development',
+    assessmentCriteria: ['C'],
+  },
+
+  // USING LANGUAGE (Criterion D)
+  {
+    notation: 'IB.MYP.Y3.EN.UL.1',
+    strand: 'Using Language',
+    topic: 'Advanced Vocabulary',
+    level: 'standard',
+    description: 'Use sophisticated vocabulary including figurative and connotative meanings',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.UL.2',
+    strand: 'Using Language',
+    topic: 'Syntax Control',
+    level: 'standard',
+    description: 'Use varied and controlled syntax for effect and clarity',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.UL.3',
+    strand: 'Using Language',
+    topic: 'Register and Tone',
+    level: 'standard',
+    description: 'Adapt register and tone appropriately for audience and purpose',
+    assessmentCriteria: ['D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.EN.UL.4',
+    strand: 'Using Language',
+    topic: 'Formal Discussion',
+    level: 'standard',
+    description: 'Participate effectively in formal discussions and debates',
+    assessmentCriteria: ['D'],
+  },
+];
+
+// =============================================================================
 // MYP YEAR 4 (Grade 9, Ages 14-15)
 // Focus: Sophisticated analysis, comparative studies, creative writing mastery
 // =============================================================================
@@ -718,8 +1155,35 @@ export const ibMYPDPEnglishCurriculum: IBMYPDPEnglishCurriculum = {
   sourceUrl: 'https://www.ibo.org/programmes/',
   subject: 'English Language and Literature',
   years: [
-    // Note: MYP Years 1-3 (Grades 6-8) are covered by PYP extension
-    // This file covers Years 4-5 (Grades 9-10) and DP (Grades 11-12)
+    // MYP Years 1-3 (Grades 6-8) - Foundation level
+    {
+      year: 1,
+      grade: 6,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 1 (Grade 6)',
+      ageRangeMin: 11,
+      ageRangeMax: 12,
+      standards: mypYear1Standards,
+    },
+    {
+      year: 2,
+      grade: 7,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 2 (Grade 7)',
+      ageRangeMin: 12,
+      ageRangeMax: 13,
+      standards: mypYear2Standards,
+    },
+    {
+      year: 3,
+      grade: 8,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 3 (Grade 8)',
+      ageRangeMin: 13,
+      ageRangeMax: 14,
+      standards: mypYear3Standards,
+    },
+    // MYP Years 4-5 (Grades 9-10) - Advanced level
     {
       year: 4,
       grade: 9,
@@ -764,7 +1228,7 @@ export const ibMYPDPEnglishCurriculum: IBMYPDPEnglishCurriculum = {
 // =============================================================================
 
 /**
- * Get standards for a specific grade (9-12)
+ * Get standards for a specific grade (6-12)
  */
 export function getIBMYPDPEnglishStandardsByGrade(grade: number): IBMYPDPEnglishStandard[] {
   const year = ibMYPDPEnglishCurriculum.years.find((y) => y.grade === grade);

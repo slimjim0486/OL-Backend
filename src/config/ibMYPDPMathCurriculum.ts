@@ -58,6 +58,552 @@ export interface IBMYPDPMathCurriculum {
 // Criterion D: Applying mathematics in real-life contexts
 
 // =============================================================================
+// MYP YEAR 1 (Grade 6, Ages 11-12) - Foundation
+// =============================================================================
+
+const mypYear1Standards: IBMYPDPMathStandard[] = [
+  // NUMERICAL AND ABSTRACT REASONING
+  {
+    notation: 'IB.MYP.Y1.MA.NR.1',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Number Systems',
+    level: 'standard',
+    description: 'Understand and work with positive and negative integers',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.NR.2',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Fractions and Decimals',
+    level: 'standard',
+    description: 'Convert between fractions, decimals, and percentages',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.NR.3',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Order of Operations',
+    level: 'standard',
+    description: 'Apply order of operations with integers and rational numbers',
+    assessmentCriteria: ['A'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.NR.4',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Factors and Multiples',
+    level: 'standard',
+    description: 'Find factors, multiples, and prime factorization of numbers',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.NR.5',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Basic Algebra',
+    level: 'standard',
+    description: 'Use variables to represent unknown quantities and write simple expressions',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.NR.6',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'One-Step Equations',
+    level: 'standard',
+    description: 'Solve one-step equations using inverse operations',
+    assessmentCriteria: ['A', 'D'],
+  },
+
+  // THINKING WITH MODELS
+  {
+    notation: 'IB.MYP.Y1.MA.TM.1',
+    branch: 'Thinking with Models',
+    topic: 'Ratios',
+    level: 'standard',
+    description: 'Understand and use ratios to compare quantities',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.TM.2',
+    branch: 'Thinking with Models',
+    topic: 'Proportional Relationships',
+    level: 'standard',
+    description: 'Recognize and represent proportional relationships',
+    assessmentCriteria: ['B', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.TM.3',
+    branch: 'Thinking with Models',
+    topic: 'Tables and Patterns',
+    level: 'standard',
+    description: 'Identify patterns in tables and extend sequences',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.TM.4',
+    branch: 'Thinking with Models',
+    topic: 'Graphs',
+    level: 'standard',
+    description: 'Plot points on a coordinate plane and interpret simple graphs',
+    assessmentCriteria: ['B', 'C'],
+  },
+
+  // SPATIAL REASONING
+  {
+    notation: 'IB.MYP.Y1.MA.SR.1',
+    branch: 'Spatial Reasoning',
+    topic: 'Angles',
+    level: 'standard',
+    description: 'Measure, classify, and construct angles',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.SR.2',
+    branch: 'Spatial Reasoning',
+    topic: '2D Shapes',
+    level: 'standard',
+    description: 'Classify and analyze properties of polygons',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.SR.3',
+    branch: 'Spatial Reasoning',
+    topic: 'Perimeter and Area',
+    level: 'standard',
+    description: 'Calculate perimeter and area of rectangles, triangles, and composite shapes',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.SR.4',
+    branch: 'Spatial Reasoning',
+    topic: '3D Shapes',
+    level: 'standard',
+    description: 'Identify and describe properties of prisms and pyramids',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.SR.5',
+    branch: 'Spatial Reasoning',
+    topic: 'Surface Area and Volume',
+    level: 'standard',
+    description: 'Calculate surface area and volume of rectangular prisms',
+    assessmentCriteria: ['A', 'D'],
+  },
+
+  // REASONING WITH DATA
+  {
+    notation: 'IB.MYP.Y1.MA.RD.1',
+    branch: 'Reasoning with Data',
+    topic: 'Data Collection',
+    level: 'standard',
+    description: 'Design and conduct surveys to collect data',
+    assessmentCriteria: ['B', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.RD.2',
+    branch: 'Reasoning with Data',
+    topic: 'Data Representation',
+    level: 'standard',
+    description: 'Create and interpret bar graphs, line graphs, and pie charts',
+    assessmentCriteria: ['C', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.RD.3',
+    branch: 'Reasoning with Data',
+    topic: 'Measures of Center',
+    level: 'standard',
+    description: 'Calculate and interpret mean, median, and mode',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.MA.RD.4',
+    branch: 'Reasoning with Data',
+    topic: 'Basic Probability',
+    level: 'standard',
+    description: 'Calculate probability of simple events using fractions',
+    assessmentCriteria: ['A', 'D'],
+  },
+];
+
+// =============================================================================
+// MYP YEAR 2 (Grade 7, Ages 12-13) - Developing
+// =============================================================================
+
+const mypYear2Standards: IBMYPDPMathStandard[] = [
+  // NUMERICAL AND ABSTRACT REASONING
+  {
+    notation: 'IB.MYP.Y2.MA.NR.1',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Rational Numbers',
+    level: 'standard',
+    description: 'Perform operations with positive and negative rational numbers',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.NR.2',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Exponents',
+    level: 'standard',
+    description: 'Understand and apply integer exponents and powers of 10',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.NR.3',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Square Roots',
+    level: 'standard',
+    description: 'Find square roots of perfect squares and estimate others',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.NR.4',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Algebraic Expressions',
+    level: 'standard',
+    description: 'Simplify algebraic expressions by combining like terms',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.NR.5',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Two-Step Equations',
+    level: 'standard',
+    description: 'Solve two-step linear equations',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.NR.6',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Inequalities',
+    level: 'standard',
+    description: 'Write and solve one-step inequalities',
+    assessmentCriteria: ['A', 'C'],
+  },
+
+  // THINKING WITH MODELS
+  {
+    notation: 'IB.MYP.Y2.MA.TM.1',
+    branch: 'Thinking with Models',
+    topic: 'Proportional Reasoning',
+    level: 'standard',
+    description: 'Solve problems involving proportions and unit rates',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.TM.2',
+    branch: 'Thinking with Models',
+    topic: 'Percent Applications',
+    level: 'standard',
+    description: 'Calculate percent increase, decrease, and solve percent problems',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.TM.3',
+    branch: 'Thinking with Models',
+    topic: 'Linear Relationships',
+    level: 'standard',
+    description: 'Identify and represent linear relationships in tables and graphs',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.TM.4',
+    branch: 'Thinking with Models',
+    topic: 'Direct Variation',
+    level: 'standard',
+    description: 'Recognize and model direct variation relationships',
+    assessmentCriteria: ['B', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.TM.5',
+    branch: 'Thinking with Models',
+    topic: 'Simple Interest',
+    level: 'standard',
+    description: 'Calculate simple interest in financial contexts',
+    assessmentCriteria: ['A', 'D'],
+  },
+
+  // SPATIAL REASONING
+  {
+    notation: 'IB.MYP.Y2.MA.SR.1',
+    branch: 'Spatial Reasoning',
+    topic: 'Angle Relationships',
+    level: 'standard',
+    description: 'Identify and use complementary, supplementary, and vertical angles',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.SR.2',
+    branch: 'Spatial Reasoning',
+    topic: 'Triangle Properties',
+    level: 'standard',
+    description: 'Apply triangle angle sum and inequality theorems',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.SR.3',
+    branch: 'Spatial Reasoning',
+    topic: 'Circle Basics',
+    level: 'standard',
+    description: 'Calculate circumference and area of circles',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.SR.4',
+    branch: 'Spatial Reasoning',
+    topic: 'Scale Drawings',
+    level: 'standard',
+    description: 'Interpret and create scale drawings and models',
+    assessmentCriteria: ['C', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.SR.5',
+    branch: 'Spatial Reasoning',
+    topic: 'Cross-Sections',
+    level: 'standard',
+    description: 'Identify cross-sections of 3D shapes',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.SR.6',
+    branch: 'Spatial Reasoning',
+    topic: 'Composite Figures',
+    level: 'standard',
+    description: 'Calculate area of composite 2D figures',
+    assessmentCriteria: ['A', 'D'],
+  },
+
+  // REASONING WITH DATA
+  {
+    notation: 'IB.MYP.Y2.MA.RD.1',
+    branch: 'Reasoning with Data',
+    topic: 'Statistical Questions',
+    level: 'standard',
+    description: 'Recognize and formulate statistical questions',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.RD.2',
+    branch: 'Reasoning with Data',
+    topic: 'Measures of Spread',
+    level: 'standard',
+    description: 'Calculate and interpret range and interquartile range',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.RD.3',
+    branch: 'Reasoning with Data',
+    topic: 'Box Plots',
+    level: 'standard',
+    description: 'Create and interpret box-and-whisker plots',
+    assessmentCriteria: ['C', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.RD.4',
+    branch: 'Reasoning with Data',
+    topic: 'Compound Probability',
+    level: 'standard',
+    description: 'Calculate probability of compound events',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.MA.RD.5',
+    branch: 'Reasoning with Data',
+    topic: 'Sampling',
+    level: 'standard',
+    description: 'Understand random sampling and make inferences about populations',
+    assessmentCriteria: ['B', 'D'],
+  },
+];
+
+// =============================================================================
+// MYP YEAR 3 (Grade 8, Ages 13-14) - Expanding
+// =============================================================================
+
+const mypYear3Standards: IBMYPDPMathStandard[] = [
+  // NUMERICAL AND ABSTRACT REASONING
+  {
+    notation: 'IB.MYP.Y3.MA.NR.1',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Real Numbers',
+    level: 'standard',
+    description: 'Classify numbers as rational or irrational and approximate irrationals',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.NR.2',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Scientific Notation',
+    level: 'standard',
+    description: 'Express and compute with numbers in scientific notation',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.NR.3',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Laws of Exponents',
+    level: 'standard',
+    description: 'Apply laws of exponents to simplify expressions',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.NR.4',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Multi-Step Equations',
+    level: 'standard',
+    description: 'Solve multi-step linear equations with variables on both sides',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.NR.5',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Systems Introduction',
+    level: 'standard',
+    description: 'Solve simple systems of linear equations graphically',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.NR.6',
+    branch: 'Numerical and Abstract Reasoning',
+    topic: 'Polynomials Introduction',
+    level: 'standard',
+    description: 'Add, subtract, and multiply polynomials',
+    assessmentCriteria: ['A', 'C'],
+  },
+
+  // THINKING WITH MODELS
+  {
+    notation: 'IB.MYP.Y3.MA.TM.1',
+    branch: 'Thinking with Models',
+    topic: 'Linear Functions',
+    level: 'standard',
+    description: 'Write and graph linear equations in slope-intercept form',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.TM.2',
+    branch: 'Thinking with Models',
+    topic: 'Slope',
+    level: 'standard',
+    description: 'Calculate and interpret slope as rate of change',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.TM.3',
+    branch: 'Thinking with Models',
+    topic: 'Function Concept',
+    level: 'standard',
+    description: 'Understand functions as input-output relationships',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.TM.4',
+    branch: 'Thinking with Models',
+    topic: 'Comparing Functions',
+    level: 'standard',
+    description: 'Compare properties of functions represented in different ways',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.TM.5',
+    branch: 'Thinking with Models',
+    topic: 'Non-Linear Patterns',
+    level: 'standard',
+    description: 'Recognize and describe patterns in non-linear relationships',
+    assessmentCriteria: ['B', 'D'],
+  },
+
+  // SPATIAL REASONING
+  {
+    notation: 'IB.MYP.Y3.MA.SR.1',
+    branch: 'Spatial Reasoning',
+    topic: 'Transformations',
+    level: 'standard',
+    description: 'Perform and describe rotations, reflections, and translations',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.SR.2',
+    branch: 'Spatial Reasoning',
+    topic: 'Congruence',
+    level: 'standard',
+    description: 'Understand congruence through transformations',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.SR.3',
+    branch: 'Spatial Reasoning',
+    topic: 'Similarity',
+    level: 'standard',
+    description: 'Understand similarity through dilations and apply scale factors',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.SR.4',
+    branch: 'Spatial Reasoning',
+    topic: 'Pythagorean Theorem',
+    level: 'standard',
+    description: 'Apply the Pythagorean theorem to find distances',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.SR.5',
+    branch: 'Spatial Reasoning',
+    topic: 'Volume of Cylinders',
+    level: 'standard',
+    description: 'Calculate volume of cylinders, cones, and spheres',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.SR.6',
+    branch: 'Spatial Reasoning',
+    topic: 'Coordinate Geometry',
+    level: 'standard',
+    description: 'Apply distance and midpoint formulas in the coordinate plane',
+    assessmentCriteria: ['A', 'C'],
+  },
+
+  // REASONING WITH DATA
+  {
+    notation: 'IB.MYP.Y3.MA.RD.1',
+    branch: 'Reasoning with Data',
+    topic: 'Bivariate Data',
+    level: 'standard',
+    description: 'Create and interpret scatter plots for bivariate data',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.RD.2',
+    branch: 'Reasoning with Data',
+    topic: 'Line of Best Fit',
+    level: 'standard',
+    description: 'Draw and use informal lines of best fit',
+    assessmentCriteria: ['B', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.RD.3',
+    branch: 'Reasoning with Data',
+    topic: 'Two-Way Tables',
+    level: 'standard',
+    description: 'Construct and interpret two-way frequency tables',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.RD.4',
+    branch: 'Reasoning with Data',
+    topic: 'Probability Models',
+    level: 'standard',
+    description: 'Develop and use probability models including tree diagrams',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.MA.RD.5',
+    branch: 'Reasoning with Data',
+    topic: 'Simulations',
+    level: 'standard',
+    description: 'Design simulations to estimate probabilities',
+    assessmentCriteria: ['B', 'D'],
+  },
+];
+
+// =============================================================================
 // MYP YEAR 4 (Grade 9, Ages 14-15) - Standard & Extended
 // =============================================================================
 
@@ -876,6 +1422,33 @@ export const ibMYPDPMathCurriculum: IBMYPDPMathCurriculum = {
   subject: 'Mathematics',
   years: [
     {
+      year: 1,
+      grade: 6,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 1 (Grade 6)',
+      ageRangeMin: 11,
+      ageRangeMax: 12,
+      standards: mypYear1Standards,
+    },
+    {
+      year: 2,
+      grade: 7,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 2 (Grade 7)',
+      ageRangeMin: 12,
+      ageRangeMax: 13,
+      standards: mypYear2Standards,
+    },
+    {
+      year: 3,
+      grade: 8,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 3 (Grade 8)',
+      ageRangeMin: 13,
+      ageRangeMax: 14,
+      standards: mypYear3Standards,
+    },
+    {
       year: 4,
       grade: 9,
       programme: 'MYP',
@@ -920,7 +1493,7 @@ export const ibMYPDPMathCurriculum: IBMYPDPMathCurriculum = {
 
 /**
  * Get standards for a specific grade
- * @param grade Grade number (9-12)
+ * @param grade Grade number (6-12)
  */
 export function getIBMathStandardsForGrade(grade: number): IBMYPDPMathStandard[] {
   const yearData = ibMYPDPMathCurriculum.years.find((y) => y.grade === grade);

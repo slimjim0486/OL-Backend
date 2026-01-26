@@ -55,6 +55,391 @@ export interface IBMYPDPScienceCurriculum {
 // Criterion D: Reflecting on the impacts of science
 
 // =============================================================================
+// MYP YEAR 1 (Grade 6, Ages 11-12) - Foundation
+// =============================================================================
+
+const mypYear1ScienceStandards: IBMYPDPScienceStandard[] = [
+  // BIOLOGY
+  {
+    notation: 'IB.MYP.Y1.SC.BIO.1',
+    discipline: 'Biology',
+    topic: 'Living Things',
+    description: 'Classify living things based on observable characteristics',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.BIO.2',
+    discipline: 'Biology',
+    topic: 'Cells',
+    description: 'Identify the basic structure and function of plant and animal cells',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.BIO.3',
+    discipline: 'Biology',
+    topic: 'Body Systems',
+    description: 'Describe the major organ systems and their functions',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.BIO.4',
+    discipline: 'Biology',
+    topic: 'Ecosystems',
+    description: 'Explain the relationships between organisms in ecosystems',
+    assessmentCriteria: ['A', 'D'],
+  },
+
+  // CHEMISTRY
+  {
+    notation: 'IB.MYP.Y1.SC.CHM.1',
+    discipline: 'Chemistry',
+    topic: 'Properties of Matter',
+    description: 'Distinguish between physical and chemical properties of matter',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.CHM.2',
+    discipline: 'Chemistry',
+    topic: 'States of Matter',
+    description: 'Describe the particle model and changes of state',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.CHM.3',
+    discipline: 'Chemistry',
+    topic: 'Mixtures and Solutions',
+    description: 'Distinguish between pure substances and mixtures',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.CHM.4',
+    discipline: 'Chemistry',
+    topic: 'Separation Techniques',
+    description: 'Apply separation techniques based on properties of matter',
+    assessmentCriteria: ['B', 'C'],
+  },
+
+  // PHYSICS
+  {
+    notation: 'IB.MYP.Y1.SC.PHY.1',
+    discipline: 'Physics',
+    topic: 'Forces and Motion',
+    description: 'Describe the effects of forces on objects',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.PHY.2',
+    discipline: 'Physics',
+    topic: 'Energy Forms',
+    description: 'Identify different forms of energy and energy transfers',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.PHY.3',
+    discipline: 'Physics',
+    topic: 'Light',
+    description: 'Explain properties of light including reflection and refraction',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.PHY.4',
+    discipline: 'Physics',
+    topic: 'Sound',
+    description: 'Describe how sound is produced and travels through different media',
+    assessmentCriteria: ['A', 'B'],
+  },
+
+  // INTEGRATED/EARTH SCIENCE
+  {
+    notation: 'IB.MYP.Y1.SC.INT.1',
+    discipline: 'Integrated Sciences',
+    topic: 'Scientific Method',
+    description: 'Apply the steps of scientific inquiry to investigations',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.INT.2',
+    discipline: 'Integrated Sciences',
+    topic: 'Earth Materials',
+    description: 'Identify and classify rocks and minerals',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y1.SC.INT.3',
+    discipline: 'Integrated Sciences',
+    topic: 'Weather and Climate',
+    description: 'Describe factors that influence weather and climate',
+    assessmentCriteria: ['A', 'D'],
+  },
+];
+
+// =============================================================================
+// MYP YEAR 2 (Grade 7, Ages 12-13) - Developing
+// =============================================================================
+
+const mypYear2ScienceStandards: IBMYPDPScienceStandard[] = [
+  // BIOLOGY
+  {
+    notation: 'IB.MYP.Y2.SC.BIO.1',
+    discipline: 'Biology',
+    topic: 'Cell Functions',
+    description: 'Explain cellular processes including respiration and photosynthesis',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.BIO.2',
+    discipline: 'Biology',
+    topic: 'Nutrition and Digestion',
+    description: 'Describe the process of digestion and nutrient absorption',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.BIO.3',
+    discipline: 'Biology',
+    topic: 'Respiratory System',
+    description: 'Explain the structure and function of the respiratory system',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.BIO.4',
+    discipline: 'Biology',
+    topic: 'Circulatory System',
+    description: 'Describe the structure and function of the heart and blood vessels',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.BIO.5',
+    discipline: 'Biology',
+    topic: 'Reproduction in Plants',
+    description: 'Describe sexual and asexual reproduction in plants',
+    assessmentCriteria: ['A', 'B'],
+  },
+
+  // CHEMISTRY
+  {
+    notation: 'IB.MYP.Y2.SC.CHM.1',
+    discipline: 'Chemistry',
+    topic: 'Atoms and Elements',
+    description: 'Describe the structure of atoms and the periodic table organization',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.CHM.2',
+    discipline: 'Chemistry',
+    topic: 'Compounds and Molecules',
+    description: 'Distinguish between elements, compounds, and molecules',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.CHM.3',
+    discipline: 'Chemistry',
+    topic: 'Chemical Reactions',
+    description: 'Identify signs of chemical reactions and write word equations',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.CHM.4',
+    discipline: 'Chemistry',
+    topic: 'Acids and Bases',
+    description: 'Identify acids and bases using indicators and pH scale',
+    assessmentCriteria: ['A', 'B'],
+  },
+
+  // PHYSICS
+  {
+    notation: 'IB.MYP.Y2.SC.PHY.1',
+    discipline: 'Physics',
+    topic: 'Speed and Velocity',
+    description: 'Calculate speed and distinguish between speed and velocity',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.PHY.2',
+    discipline: 'Physics',
+    topic: 'Forces and Friction',
+    description: 'Explain balanced and unbalanced forces and friction',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.PHY.3',
+    discipline: 'Physics',
+    topic: 'Energy Transformations',
+    description: 'Describe energy transformations in different contexts',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.PHY.4',
+    discipline: 'Physics',
+    topic: 'Heat Transfer',
+    description: 'Explain conduction, convection, and radiation',
+    assessmentCriteria: ['A', 'C'],
+  },
+
+  // INTEGRATED/EARTH SCIENCE
+  {
+    notation: 'IB.MYP.Y2.SC.INT.1',
+    discipline: 'Integrated Sciences',
+    topic: 'Experimental Design',
+    description: 'Design controlled experiments with variables and controls',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.INT.2',
+    discipline: 'Integrated Sciences',
+    topic: 'Earth Structure',
+    description: 'Describe the layers of the Earth and plate tectonics',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y2.SC.INT.3',
+    discipline: 'Integrated Sciences',
+    topic: 'Rock Cycle',
+    description: 'Explain the formation and transformation of rock types',
+    assessmentCriteria: ['A', 'C'],
+  },
+];
+
+// =============================================================================
+// MYP YEAR 3 (Grade 8, Ages 13-14) - Expanding
+// =============================================================================
+
+const mypYear3ScienceStandards: IBMYPDPScienceStandard[] = [
+  // BIOLOGY
+  {
+    notation: 'IB.MYP.Y3.SC.BIO.1',
+    discipline: 'Biology',
+    topic: 'Cell Processes',
+    description: 'Explain diffusion, osmosis, and active transport',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.BIO.2',
+    discipline: 'Biology',
+    topic: 'Nervous System',
+    description: 'Describe the structure and function of the nervous system',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.BIO.3',
+    discipline: 'Biology',
+    topic: 'Hormones',
+    description: 'Explain the role of hormones in regulating body functions',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.BIO.4',
+    discipline: 'Biology',
+    topic: 'Reproduction and Development',
+    description: 'Describe human reproductive systems and development',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.BIO.5',
+    discipline: 'Biology',
+    topic: 'Heredity and DNA',
+    description: 'Introduce the concept of genes, DNA, and inheritance',
+    assessmentCriteria: ['A', 'B'],
+  },
+
+  // CHEMISTRY
+  {
+    notation: 'IB.MYP.Y3.SC.CHM.1',
+    discipline: 'Chemistry',
+    topic: 'Atomic Structure',
+    description: 'Describe protons, neutrons, electrons, and electron configuration',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.CHM.2',
+    discipline: 'Chemistry',
+    topic: 'Chemical Bonding',
+    description: 'Explain ionic and covalent bonding',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.CHM.3',
+    discipline: 'Chemistry',
+    topic: 'Chemical Equations',
+    description: 'Write and balance chemical equations',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.CHM.4',
+    discipline: 'Chemistry',
+    topic: 'Types of Reactions',
+    description: 'Classify reactions as synthesis, decomposition, or displacement',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.CHM.5',
+    discipline: 'Chemistry',
+    topic: 'Conservation of Mass',
+    description: 'Apply the law of conservation of mass to chemical reactions',
+    assessmentCriteria: ['A', 'C'],
+  },
+
+  // PHYSICS
+  {
+    notation: 'IB.MYP.Y3.SC.PHY.1',
+    discipline: 'Physics',
+    topic: 'Acceleration',
+    description: 'Calculate acceleration and interpret motion graphs',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.PHY.2',
+    discipline: 'Physics',
+    topic: 'Newton\'s Laws',
+    description: 'Apply Newton\'s laws of motion to predict object behavior',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.PHY.3',
+    discipline: 'Physics',
+    topic: 'Work and Power',
+    description: 'Calculate work, power, and mechanical advantage',
+    assessmentCriteria: ['A', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.PHY.4',
+    discipline: 'Physics',
+    topic: 'Electricity',
+    description: 'Describe electric circuits, current, voltage, and resistance',
+    assessmentCriteria: ['A', 'B'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.PHY.5',
+    discipline: 'Physics',
+    topic: 'Magnetism',
+    description: 'Explain the relationship between electricity and magnetism',
+    assessmentCriteria: ['A', 'D'],
+  },
+
+  // INTEGRATED/EARTH SCIENCE
+  {
+    notation: 'IB.MYP.Y3.SC.INT.1',
+    discipline: 'Integrated Sciences',
+    topic: 'Data Analysis',
+    description: 'Analyze experimental data and evaluate conclusions',
+    assessmentCriteria: ['B', 'C'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.INT.2',
+    discipline: 'Integrated Sciences',
+    topic: 'Natural Hazards',
+    description: 'Explain causes and effects of earthquakes and volcanoes',
+    assessmentCriteria: ['A', 'D'],
+  },
+  {
+    notation: 'IB.MYP.Y3.SC.INT.3',
+    discipline: 'Integrated Sciences',
+    topic: 'Human Impact',
+    description: 'Evaluate human impact on ecosystems and climate',
+    assessmentCriteria: ['C', 'D'],
+  },
+];
+
+// =============================================================================
 // MYP YEAR 4 (Grade 9, Ages 14-15)
 // =============================================================================
 
@@ -690,6 +1075,33 @@ export const ibMYPDPScienceCurriculum: IBMYPDPScienceCurriculum = {
   sourceUrl: 'https://www.ibo.org/programmes/',
   subject: 'Sciences',
   years: [
+    {
+      year: 1,
+      grade: 6,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 1 (Grade 6)',
+      ageRangeMin: 11,
+      ageRangeMax: 12,
+      standards: mypYear1ScienceStandards,
+    },
+    {
+      year: 2,
+      grade: 7,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 2 (Grade 7)',
+      ageRangeMin: 12,
+      ageRangeMax: 13,
+      standards: mypYear2ScienceStandards,
+    },
+    {
+      year: 3,
+      grade: 8,
+      programme: 'MYP',
+      yearLabel: 'MYP Year 3 (Grade 8)',
+      ageRangeMin: 13,
+      ageRangeMax: 14,
+      standards: mypYear3ScienceStandards,
+    },
     {
       year: 4,
       grade: 9,
