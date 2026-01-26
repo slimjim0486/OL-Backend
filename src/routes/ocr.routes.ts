@@ -123,6 +123,7 @@ router.post(
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const normalizedError = errorMessage.toLowerCase();
       const errorStack = error instanceof Error ? error.stack : undefined;
 
       logger.error('OCR extraction error', {
@@ -137,12 +138,16 @@ router.post(
 
       // Provide more specific error messages
       let userMessage = errorMessage;
-      if (errorMessage.includes('SAFETY')) {
+      if (normalizedError.includes('safety')) {
         userMessage = 'The image was flagged by content safety filters. Please try a different image.';
-      } else if (errorMessage.includes('quota') || errorMessage.includes('rate')) {
+      } else if (normalizedError.includes('quota') || normalizedError.includes('rate')) {
         userMessage = 'Too many requests. Please wait a moment and try again.';
-      } else if (errorMessage.includes('timeout')) {
-        userMessage = 'The request timed out. Please try again with a smaller image.';
+      } else if (
+        normalizedError.includes('timeout') ||
+        normalizedError.includes('timed out') ||
+        normalizedError.includes('time out')
+      ) {
+        userMessage = 'We could not finish processing that image. Try a smaller image or retry in a moment.';
       }
 
       res.status(500).json({

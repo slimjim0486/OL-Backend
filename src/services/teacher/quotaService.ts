@@ -480,12 +480,17 @@ export const quotaService = {
       bonusCredits,
     });
 
-    // Calculate credit balance (credits.total = used + remaining)
+    // Calculate credit balance (credits.total = used + remaining, with rounding normalization)
     const subscriptionCredits = tokensToCredits(monthlyLimit);
     const usedCredits = tokensToCredits(used);
     const rolloverRemainingCredits = tokensToCredits(rolloverRemainingTokens);
-    const remainingCredits = tokensToCredits(totalRemainingTokens);
-    const totalCredits = usedCredits + remainingCredits;
+    const totalTokens = used + totalRemainingTokens;
+    const totalCredits = tokensToCredits(totalTokens);
+    let remainingCredits = tokensToCredits(totalRemainingTokens);
+    const overflow = usedCredits + remainingCredits - totalCredits;
+    if (overflow > 0) {
+      remainingCredits = Math.max(0, remainingCredits - overflow);
+    }
 
     const creditBalance: CreditBalance = {
       subscription: subscriptionCredits,

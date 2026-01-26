@@ -9,9 +9,12 @@ import subscriptionRoutes from './subscription.routes.js';
 import audioUpdateRoutes from './audioUpdate.routes.js';
 import subPlanRoutes from './subPlan.routes.js';
 import iepGoalRoutes from './iepGoal.routes.js';
+import brainstormRoutes from './brainstorm.routes.js';
 import referralRoutes from './referral.routes.js';
 import sampleContentRoutes from './sampleContent.routes.js';
 import activityRoutes from './activity.routes.js';
+import rubricRoutes from './rubric.routes.js';
+import gradingRoutes from './grading.routes.js';
 
 const router = Router();
 
@@ -25,12 +28,11 @@ router.use('/subscription', subscriptionRoutes);
 router.use('/audio-updates', audioUpdateRoutes);
 router.use('/sub-plans', subPlanRoutes);
 router.use('/iep-goals', iepGoalRoutes);
+router.use('/brainstorm', brainstormRoutes);
 router.use('/referrals', referralRoutes);
 router.use('/samples', sampleContentRoutes);  // Public sample content
 router.use('/activities', activityRoutes);    // Activity feed for notifications
-
-// Future routes will be added here:
-// router.use('/rubrics', rubricRoutes);
-// router.use('/grading', gradingRoutes);
+router.use('/rubrics', rubricRoutes);         // Rubric management
+router.use('/grading', gradingRoutes);        // AI grading
 
 export default router;
