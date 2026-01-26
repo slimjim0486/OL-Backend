@@ -250,16 +250,31 @@ export const teacherAuthService = {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    // Check if teacher signed up via Google and has no password
-    if (!teacher.passwordHash) {
-      throw new UnauthorizedError('This account uses Google Sign-In. Please sign in with Google.');
-    }
+    // Check if teacher needs to set password (recovery mode)
+    if (teacher.mustSetPassword) {
+      // First login after recovery - accept any password and save it
+      const newPasswordHash = await bcrypt.hash(password, SALT_ROUNDS);
+      await prisma.teacher.update({
+        where: { id: teacher.id },
+        data: {
+          passwordHash: newPasswordHash,
+          mustSetPassword: false,
+        },
+      });
+      logger.info('Teacher set new password via recovery login', { teacherId: teacher.id, email: teacher.email });
+    } else {
+      // Normal login flow
+      // Check if teacher signed up via Google and has no password
+      if (!teacher.passwordHash) {
+        throw new UnauthorizedError('This account uses Google Sign-In. Please sign in with Google.');
+      }
 
-    // Verify password
-    const isValid = await bcrypt.compare(password, teacher.passwordHash);
+      // Verify password
+      const isValid = await bcrypt.compare(password, teacher.passwordHash);
 
-    if (!isValid) {
-      throw new UnauthorizedError('Invalid email or password');
+      if (!isValid) {
+        throw new UnauthorizedError('Invalid email or password');
+      }
     }
 
     // Generate tokens

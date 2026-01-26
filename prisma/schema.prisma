@@ -896,6 +896,8 @@ model Teacher {
   schoolName     String? // School or organization name
   primarySubject Subject? // Primary teaching subject
   gradeRange     String? // e.g., "ELEMENTARY", "MIDDLE", "HIGH", "MIXED"
+  preferredCurriculum CurriculumType? // Brainstorm curriculum default
+  preferredGradeRange String? // "K-2", "3-5", "6-8", "MIXED"
 
   // Location (captured from IP on login)
   country     String? // e.g., "United Arab Emirates"
@@ -904,6 +906,9 @@ model Teacher {
   // Email verification (disabled - teachers are auto-verified on signup)
   emailVerified   Boolean   @default(true)
   emailVerifiedAt DateTime?
+
+  // Password recovery flag - when true, first login password becomes permanent
+  mustSetPassword Boolean @default(false)
 
   // Notification preferences
   notifyProductUpdates   Boolean @default(true) // Product updates and news
@@ -954,6 +959,7 @@ model Teacher {
   audioUpdates    TeacherAudioUpdate[]
   substitutePlans SubstitutePlan[]
   iepGoalSessions IEPGoalSession[]
+  brainstormSessions BrainstormSession[]
   exports         TeacherExport[]
   documentAnalyses TeacherDocumentAnalysis[]
 
@@ -1410,6 +1416,67 @@ model IEPGoalSession {
   @@index([teacherId])
   @@index([teacherId, disabilityCategory])
   @@index([teacherId, createdAt])
+}
+
+// ============================================
+// TEACHER PORTAL - BRAINSTORM
+// ============================================
+
+model BrainstormSession {
+  id            String   @id @default(uuid())
+  teacherId     String
+  teacher       Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  title         String?  // Auto-generated or user-set
+
+  // Curriculum context for this session (overrides teacher default)
+  curriculumType CurriculumType?
+  gradeLevel     String? // "3rd Grade", "Year 5", etc.
+  subject        Subject?
+
+  // Optional lesson context
+  lessonId      String?
+  lessonTitle   String?
+  lessonContent String?  @db.Text // Snapshot at session start
+
+  // Standards referenced in conversation (for quick reference)
+  referencedStandardIds String[] @default([])
+
+  // Conversation
+  messages      BrainstormMessage[]
+
+  // Token tracking
+  totalTokens   Int      @default(0)
+  flashTokens   Int      @default(0)
+  proTokens     Int      @default(0)
+
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([teacherId, createdAt])
+  @@index([teacherId, curriculumType])
+  @@index([teacherId, subject])
+}
+
+model BrainstormMessage {
+  id          String   @id @default(uuid())
+  sessionId   String
+  session     BrainstormSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  role        MessageRole // USER or ASSISTANT
+  content     String   @db.Text
+  model       String?  // "flash" or "pro" for assistant messages
+  tokens      Int      @default(0)
+
+  // Standards mentioned in this message
+  standardReferences Json?  // [{id, notation, description}]
+  imageUrls   String[] @default([])
+  imagePrompt String?  @db.Text
+
+  createdAt   DateTime @default(now())
+
+  @@index([sessionId, createdAt])
 }
 
 enum DisabilityCategory {
@@ -2257,6 +2324,7 @@ enum TokenOperation {
   GRADING_BATCH
   FEEDBACK_GENERATION
   CHAT
+  BRAINSTORM
   AUDIO_UPDATE // Podcast-style audio class updates for parents
   SUB_PLAN_GENERATION // Emergency substitute teacher plans
   IEP_GOAL_GENERATION // SMART IEP goals and accommodations
