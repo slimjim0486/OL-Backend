@@ -8,5 +8,3 @@ export { subPlanService } from './subPlanService.js';
 export { iepGoalService } from './iepGoalService.js';
 export { brainstormService } from './brainstormService.js';
 export { activityService } from './activityService.js';
-export { rubricService } from './rubricService.js';
-export { gradingService } from './gradingService.js';

@@ -769,7 +769,7 @@ export const brainstormService = {
           content: finalResponseText,
           model: modelLabel,
           tokens: tokensUsed,
-          standardReferences: standardReferences ? standardReferences : undefined,
+          standardReferences: standardReferences ? JSON.parse(JSON.stringify(standardReferences)) : undefined,
           imageUrls,
           imagePrompt: imagePrompt || undefined,
         },
