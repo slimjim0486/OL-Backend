@@ -103,12 +103,40 @@ function shouldSearchStandards(message: string): boolean {
   return triggers.some(trigger => normalized.includes(trigger));
 }
 
-function formatStandardsForPrompt(standards: LearningStandard[]): string {
+function getSubjectDisplayName(subject?: Subject | null): string {
+  if (!subject) return 'General';
+  const mapping: Partial<Record<Subject, string>> = {
+    MATH: 'Mathematics',
+    SCIENCE: 'Science',
+    ENGLISH: 'English Language Arts',
+    SOCIAL_STUDIES: 'Social Studies',
+    HISTORY: 'History',
+    GEOGRAPHY: 'Geography',
+    ART: 'Art',
+    MUSIC: 'Music',
+    PHYSICAL_EDUCATION: 'Physical Education',
+    COMPUTER_SCIENCE: 'Computer Science',
+    FOREIGN_LANGUAGE: 'World Languages',
+    OTHER: 'General',
+  };
+  return mapping[subject] || subject.replace(/_/g, ' ');
+}
+
+function formatStandardsForPrompt(
+  standards: LearningStandard[],
+  context: { curriculumType?: CurriculumType | null; subject?: Subject | null }
+): string {
   if (!standards.length) return '';
+  const subjectName = getSubjectDisplayName(context.subject);
+  const curriculumName = context.curriculumType
+    ? getCurriculumConfig(context.curriculumType).displayName
+    : null;
+
   return standards
     .map((standard) => {
-      const code = standard.notation || standard.id;
-      return `- [${code}] ${standard.description}`;
+      const strandLabel = standard.strand ? ` — ${standard.strand}` : '';
+      const curriculumLabel = curriculumName ? `${curriculumName} ` : '';
+      return `- ${curriculumLabel}${subjectName}${strandLabel}: ${standard.description}`;
     })
     .join('\n');
 }
@@ -398,8 +426,10 @@ ${standardsContext}
 
 STANDARDS AWARENESS:
 When discussing curriculum topics, you can reference specific learning standards.
-If the teacher asks about standards or what a lesson covers, cite them clearly.
-Format standard references as: **[Standard Code]** - Description
+If the teacher asks about standards or what a lesson covers, reference them in teacher-friendly language.
+Avoid CCSS/notation codes unless the teacher explicitly asks for them.
+Format standard references as: **[Subject — Standard Focus]** - Plain-language description
+Example: **[English Language Arts — Reading Informational Text]** - Citing textual evidence to support analysis.
 
 BEHAVIOR:
 - For simple questions: Be concise, offer 2-3 ideas
@@ -661,7 +691,12 @@ export const brainstormService = {
       );
     }
 
-    const standardsContext = standards.length ? formatStandardsForPrompt(standards) : null;
+    const standardsContext = standards.length
+      ? formatStandardsForPrompt(standards, {
+        curriculumType: effectiveCurriculum,
+        subject: effectiveSubject,
+      })
+      : null;
     const systemPrompt = buildBrainstormSystemPrompt({
       curriculumType: effectiveCurriculum,
       gradeLevel: effectiveGradeLevel,
