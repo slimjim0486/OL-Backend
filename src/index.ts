@@ -41,6 +41,7 @@ import webhookRoutes from './routes/webhook.routes.js';
 
 // Cron Jobs
 import { scheduleBrevoInactivityChecks } from './jobs/brevoInactivityChecks.js';
+import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -276,6 +277,10 @@ async function startServer(): Promise<void> {
       // Runs daily at 9 AM to check for inactive teachers
       scheduleBrevoInactivityChecks();
       logger.info('Brevo inactivity checks scheduled for 9:00 AM daily');
+
+      // Schedule daily games refresh (connections + icebreakers)
+      scheduleDailyGamesRefresh();
+      logger.info('Daily games refresh scheduled for 00:05 UTC');
     });
 
     // Graceful shutdown

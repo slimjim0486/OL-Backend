@@ -103,6 +103,55 @@ export function requireTeacher(
 }
 
 /**
+ * Optional teacher authentication - attaches teacher if token present, continues if not
+ */
+export async function optionalTeacherAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // No token, continue without authentication
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+
+    // Verify token with the access token secret
+    const payload = jwt.verify(token, config.jwtAccessSecret) as TeacherAccessTokenPayload;
+
+    // Ensure this is a teacher token
+    if (payload.type !== 'teacher') {
+      return next();
+    }
+
+    // Check if token is blacklisted
+    const tokenHash = hashToken(token);
+    const isBlacklisted = await redis.get(`blacklist:${tokenHash}`);
+    if (isBlacklisted) {
+      return next();
+    }
+
+    // Attach teacher info to request
+    req.sessionType = 'teacher';
+    req.teacher = {
+      id: payload.sub,
+      email: payload.email,
+      organizationId: payload.orgId,
+      role: payload.role,
+    };
+
+    next();
+  } catch {
+    // Invalid token, continue without authentication
+    next();
+  }
+}
+
+/**
  * Require organization admin role
  */
 export function requireOrgAdmin(

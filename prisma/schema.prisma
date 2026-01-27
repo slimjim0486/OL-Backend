@@ -899,6 +899,11 @@ model Teacher {
   preferredCurriculum CurriculumType? // Brainstorm curriculum default
   preferredGradeRange String? // "K-2", "3-5", "6-8", "MIXED"
 
+  // Public profile (Content Sharing Hub)
+  bio               String?   @db.Text
+  isProfilePublic   Boolean   @default(true)
+  followerCount     Int       @default(0)
+
   // Location (captured from IP on login)
   country     String? // e.g., "United Arab Emirates"
   countryCode String? // e.g., "AE"
@@ -968,6 +973,9 @@ model Teacher {
   referredBy        Referral?          @relation("ReferredTeacher")
   referralRewards   ReferralReward[]
   shareableContents ShareableContent[]
+
+  // Content Sharing Hub
+  contentLikes      ContentLike[]
 
   // Credit Pack Purchases
   creditPackPurchases TeacherCreditPackPurchase[]
@@ -1055,6 +1063,29 @@ model OrgTokenUsageLog {
 }
 
 // ============================================
+// TEACHER PORTAL - GAMES (DAILY CACHE)
+// ============================================
+
+model DailyGame {
+  id       String        @id @default(uuid())
+  date     DateTime
+  gameType DailyGameType
+  key      String
+  payload  Json
+
+  // Generation metadata
+  source    String?
+  modelUsed String?
+  tokensUsed Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, gameType, key])
+  @@index([gameType, date])
+}
+
+// ============================================
 // TEACHER PORTAL - CONTENT
 // ============================================
 
@@ -1087,6 +1118,19 @@ model TeacherContent {
   isPublic    Boolean       @default(false)
   publishedAt DateTime?
 
+  // Sharing (Content Collaboration Hub)
+  sharedAt          DateTime?       // When first shared publicly
+  shareCategory     ShareCategory?  // Category for discovery
+  downloadCount     Int       @default(0)  // Times remixed by others
+  viewCount         Int       @default(0)  // Times viewed publicly
+  likeCount         Int       @default(0)  // Likes from other teachers
+  isFeatured        Boolean   @default(false)  // Staff picks
+
+  // Remix attribution
+  remixedFromId     String?
+  remixedFrom       TeacherContent?   @relation("ContentRemix", fields: [remixedFromId], references: [id])
+  remixes           TeacherContent[]  @relation("ContentRemix")
+
   // Template reference
   templateId String?
   template   ContentTemplate? @relation(fields: [templateId], references: [id])
@@ -1097,6 +1141,7 @@ model TeacherContent {
 
   // Relationships
   exports TeacherExport[]
+  likes   ContentLike[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -1105,6 +1150,22 @@ model TeacherContent {
   @@index([teacherId, contentType])
   @@index([subject, gradeLevel])
   @@index([status])
+  @@index([isPublic, status, sharedAt])  // Discovery index
+  @@index([subject, gradeLevel, isPublic])  // Filter index
+  @@index([downloadCount])  // Popularity index
+}
+
+model ContentLike {
+  id          String   @id @default(uuid())
+  teacherId   String
+  contentId   String
+  createdAt   DateTime @default(now())
+
+  teacher     Teacher        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  content     TeacherContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, contentId])  // One like per teacher per content
+  @@index([contentId])
 }
 
 model ContentTemplate {
@@ -2300,6 +2361,19 @@ enum TeacherContentType {
   STUDY_GUIDE
 }
 
+enum ShareCategory {
+  CURRICULUM_ALIGNED
+  PROJECT_BASED
+  DIFFERENTIATED
+  ASSESSMENT
+  ENRICHMENT
+  INTERVENTION
+  SEASONAL
+  STEM
+  LITERACY
+  OTHER
+}
+
 enum ContentStatus {
   DRAFT
   REVIEW
@@ -2328,6 +2402,12 @@ enum TokenOperation {
   AUDIO_UPDATE // Podcast-style audio class updates for parents
   SUB_PLAN_GENERATION // Emergency substitute teacher plans
   IEP_GOAL_GENERATION // SMART IEP goals and accommodations
+  GAMES // Teacher games generation and daily refresh
+}
+
+enum DailyGameType {
+  CONNECTIONS
+  ICEBREAKER
 }
 
 enum ScoringType {

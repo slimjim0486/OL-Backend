@@ -13,6 +13,8 @@ import brainstormRoutes from './brainstorm.routes.js';
 import referralRoutes from './referral.routes.js';
 import sampleContentRoutes from './sampleContent.routes.js';
 import activityRoutes from './activity.routes.js';
+import gamesRoutes from './games.routes.js';
+import sharingRoutes from './sharing.routes.js';
 const router = Router();
 
 // Mount teacher routes
@@ -29,5 +31,7 @@ router.use('/brainstorm', brainstormRoutes);
 router.use('/referrals', referralRoutes);
 router.use('/samples', sampleContentRoutes);  // Public sample content
 router.use('/activities', activityRoutes);    // Activity feed for notifications
+router.use('/games', gamesRoutes);
+router.use('/sharing', sharingRoutes);        // Content sharing hub
 
 export default router;
