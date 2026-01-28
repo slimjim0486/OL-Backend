@@ -567,6 +567,192 @@ Questions? Reply to this email - we're here to help!
   }),
 
   /**
+   * Teacher trial welcome email (7-day unlimited trial)
+   */
+  teacherTrialWelcome: (teacherName: string, trialEndDateText: string) => ({
+    subject: 'Welcome to Orbit Learn! Your 7-day unlimited trial starts now ✨',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Orbit Learn</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); border-radius: 24px 24px 0 0; padding: 36px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 96px; height: 96px; border-radius: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">Unlimited Trial Unlocked</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 16px;">Make the most of your next 7 days</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <h2 style="color: #312E81; margin-top: 0; font-size: 22px;">Hi ${teacherName}! 👋</h2>
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Welcome to Orbit Learn! You now have <strong>7 days of unlimited access</strong> to all our AI-powered tools.
+        </p>
+
+        <div style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border-radius: 16px; padding: 20px; margin: 24px 0;">
+          <p style="color: #4338CA; margin: 0; font-size: 15px;">
+            Your trial ends on <strong>${trialEndDateText}</strong>.
+          </p>
+        </div>
+
+        <ul style="color: #4b5563; margin: 0 0 20px 18px; font-size: 15px; line-height: 1.7;">
+          <li>Generate unlimited lessons</li>
+          <li>Create quizzes and flashcards</li>
+          <li>Build substitute teacher plans</li>
+          <li>Write IEP goals and more</li>
+        </ul>
+
+        <p style="color: #4b5563; line-height: 1.7; font-size: 15px;">
+          After your trial, you'll have <strong>30 free credits per month</strong> — or you can upgrade for 500 credits/month.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${config.frontendUrl}/teacher/dashboard" style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: 700; font-size: 15px; display: inline-block;">
+            Start Creating →
+          </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 18px; margin: 0;">
+          Questions? Reply to this email — we're here to help.<br>
+          <span style="color: #6366F1;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `
+Welcome to Orbit Learn!
+
+Hi ${teacherName},
+
+You now have 7 days of unlimited access to all our AI-powered tools.
+Your trial ends on ${trialEndDateText}.
+
+After your trial, you'll have 30 free credits per month — or you can upgrade for 500 credits/month.
+
+Start creating: ${config.frontendUrl}/teacher/dashboard
+
+— The Orbit Learn Team
+    `,
+  }),
+
+  /**
+   * Teacher trial expiring email (24 hours remaining)
+   */
+  teacherTrialExpiring: (teacherName: string, trialEndDateText: string) => ({
+    subject: '⏰ Your unlimited trial ends tomorrow',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trial Ending Soon</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%); border-radius: 20px 20px 0 0; padding: 28px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Your trial ends tomorrow</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 28px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 18px rgba(0,0,0,0.08);">
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin-top: 0;">
+          Hi ${teacherName}, your 7-day unlimited trial ends <strong>tomorrow (${trialEndDateText})</strong>.
+        </p>
+        <p style="color: #4b5563; font-size: 15px; line-height: 1.7;">
+          Upgrade now to keep creating without limits. After your trial, you'll have 30 free credits per month.
+        </p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; display: inline-block;">
+            Upgrade to Teacher Plus →
+          </a>
+        </div>
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0;">
+          — The Orbit Learn Team
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `
+Hi ${teacherName},
+
+Your 7-day unlimited trial ends tomorrow (${trialEndDateText}).
+Upgrade now to keep creating without limits. After your trial, you'll have 30 free credits per month.
+
+Upgrade: ${config.frontendUrl}/teacher/billing
+
+— The Orbit Learn Team
+    `,
+  }),
+
+  /**
+   * Teacher trial expired email
+   */
+  teacherTrialExpired: (teacherName: string) => ({
+    subject: 'Your trial has ended — here’s what happens next',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trial Ended</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: #111827; border-radius: 20px 20px 0 0; padding: 26px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Your trial has ended</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 28px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 18px rgba(0,0,0,0.08);">
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin-top: 0;">
+          Hi ${teacherName}, your 7-day unlimited trial has ended. You now have <strong>30 free credits per month</strong>.
+        </p>
+        <p style="color: #4b5563; font-size: 15px; line-height: 1.7;">
+          Upgrade to Teacher Plus for 500 credits/month, or grab a credit pack for a quick top‑up.
+        </p>
+        <div style="text-align: center; margin: 22px 0;">
+          <a href="${config.frontendUrl}/teacher/billing" style="background: #111827; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; display: inline-block;">
+            View Plans →
+          </a>
+        </div>
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0;">
+          — The Orbit Learn Team
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `
+Hi ${teacherName},
+
+Your 7-day unlimited trial has ended. You now have 30 free credits per month.
+Upgrade to Teacher Plus for 500 credits/month, or grab a credit pack for a quick top‑up.
+
+View plans: ${config.frontendUrl}/teacher/billing
+
+— The Orbit Learn Team
+    `,
+  }),
+
+  /**
    * OTP verification email for teachers (green color scheme)
    */
   teacherOtp: (otp: string, purpose: 'verify_email' | 'reset_password' | 'login') => {
@@ -1849,6 +2035,119 @@ export const emailService = {
       return true;
     } catch (error) {
       logger.error('Error sending teacher welcome email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send trial welcome email to new teacher (7-day unlimited trial)
+   */
+  async sendTeacherTrialWelcomeEmail(
+    email: string,
+    teacherName: string,
+    trialEndsAt: Date | null
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped teacher trial welcome email to ${email}`);
+      return true;
+    }
+
+    try {
+      const trialEndDateText = trialEndsAt
+        ? trialEndsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : 'in 7 days';
+      const template = templates.teacherTrialWelcome(teacherName, trialEndDateText);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send teacher trial welcome email', { error, email });
+        return false;
+      }
+
+      logger.info(`Teacher trial welcome email sent to ${email}`);
+      return true;
+    } catch (error) {
+      logger.error('Error sending teacher trial welcome email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send trial expiring email (24 hours remaining)
+   */
+  async sendTeacherTrialExpiringEmail(
+    email: string,
+    teacherName: string,
+    trialEndsAt: Date | null
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped teacher trial expiring email to ${email}`);
+      return true;
+    }
+
+    try {
+      const trialEndDateText = trialEndsAt
+        ? trialEndsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : 'tomorrow';
+      const template = templates.teacherTrialExpiring(teacherName, trialEndDateText);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send teacher trial expiring email', { error, email });
+        return false;
+      }
+
+      logger.info(`Teacher trial expiring email sent to ${email}`);
+      return true;
+    } catch (error) {
+      logger.error('Error sending teacher trial expiring email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send trial expired email
+   */
+  async sendTeacherTrialExpiredEmail(email: string, teacherName: string): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped teacher trial expired email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.teacherTrialExpired(teacherName);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send teacher trial expired email', { error, email });
+        return false;
+      }
+
+      logger.info(`Teacher trial expired email sent to ${email}`);
+      return true;
+    } catch (error) {
+      logger.error('Error sending teacher trial expired email', { error, email });
       return false;
     }
   },

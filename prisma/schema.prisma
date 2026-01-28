@@ -933,11 +933,13 @@ model Teacher {
   stripeSubscriptionId  String? // Active Stripe subscription ID
   subscriptionExpiresAt DateTime?
 
-  // Trial period
-  trialEndsAt DateTime? // When trial period ends (null = no trial)
+  // Trial tracking (free-tier unlimited trial)
+  trialStartedAt DateTime? // When unlimited trial began
+  trialEndsAt    DateTime? // When trial ends (trialStartedAt + 7 days)
+  trialUsed      Boolean   @default(false) // Has used/expired free trial
 
   // Token Quotas (individual)
-  monthlyTokenQuota BigInt   @default(100000) // 100K tokens/month free (100 credits)
+  monthlyTokenQuota BigInt   @default(30000) // 30K tokens/month free (30 credits)
   currentMonthUsage BigInt   @default(0)
   quotaResetDate    DateTime @default(now())
 
@@ -2340,7 +2342,7 @@ enum OrgSubscriptionTier {
 }
 
 enum TeacherSubscriptionTier {
-  FREE // 100K tokens/month
+  FREE // 30K tokens/month
   BASIC // 500K tokens/month
   PROFESSIONAL // 2M tokens/month
 }

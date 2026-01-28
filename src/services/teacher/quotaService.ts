@@ -66,13 +66,18 @@ const TOKENS_PER_CREDIT = 1000;
 
 // Monthly credit allocations by subscription tier
 const TIER_CREDITS: Record<TeacherSubscriptionTier, number> = {
-  FREE: 100,           // 100K tokens
+  FREE: 30,            // 30K tokens
   BASIC: 500,          // 500K tokens
   PROFESSIONAL: 2000,  // 2M tokens
 };
 
 // Maximum rollover cap (2x monthly allocation)
 const ROLLOVER_MULTIPLIER = 2;
+
+// Unlimited trial configuration
+const UNLIMITED_CREDITS = 999999999; // Display-safe large number for internal use
+const UNLIMITED_TOKENS = BigInt(UNLIMITED_CREDITS * TOKENS_PER_CREDIT);
+const DAY_MS = 1000 * 60 * 60 * 24;
 
 export interface QuotaCheckResult {
   allowed: boolean;
@@ -197,6 +202,23 @@ export const quotaService = {
       return this.checkQuota(teacherId, operation, estimatedTokens);
     }
 
+    // Calculate cost estimate using the appropriate model
+    const costPerToken = TOKEN_COSTS.default / 1000;
+    const estimatedCost = estimate * costPerToken;
+
+    // Free-tier unlimited trial (skip quota checks)
+    const freeTrial = getFreeTrialStatus(teacher);
+    if (freeTrial.isActive) {
+      return {
+        allowed: true,
+        remainingTokens: UNLIMITED_TOKENS,
+        remainingCredits: UNLIMITED_CREDITS,
+        estimatedCost,
+        quotaResetDate: resetDate,
+        percentUsed: 0,
+      };
+    }
+
     const rolledOverCredits = Number((teacher as any).rolledOverCredits || 0);
     const bonusCredits = Number((teacher as any).bonusCredits || 0);
     const { totalRemainingTokens } = calculateRemainingTokens({
@@ -211,10 +233,6 @@ export const quotaService = {
     const percentUsed = monthlyLimit > BigInt(0)
       ? Number((currentUsage * BigInt(100)) / monthlyLimit)
       : 100;
-
-    // Calculate cost estimate using the appropriate model
-    const costPerToken = TOKEN_COSTS.default / 1000;
-    const estimatedCost = estimate * costPerToken;
 
     let warning: string | undefined;
     const remainingCredits = tokensToCredits(totalRemainingTokens);
@@ -257,10 +275,14 @@ export const quotaService = {
       where: { id: teacherId },
       select: {
         organizationId: true,
+        subscriptionTier: true,
         monthlyTokenQuota: true,
         currentMonthUsage: true,
         rolledOverCredits: true,
         bonusCredits: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
+        trialUsed: true,
       },
     });
 
@@ -280,6 +302,17 @@ export const quotaService = {
         estimatedCost,
       },
     });
+
+    // Skip quota usage tracking during free-tier unlimited trial
+    const freeTrial = getFreeTrialStatus(teacher as any);
+    if (freeTrial.isActive) {
+      logger.info('Usage recorded during free-tier trial (not counted toward credits)', {
+        teacherId,
+        operation,
+        tokensUsed,
+      });
+      return;
+    }
 
     // Update current usage
     if (teacher.organizationId) {
@@ -507,6 +540,16 @@ export const quotaService = {
       ? Number((used * BigInt(100)) / monthlyLimit)
       : 0;
 
+    const trialEndsAt = (teacher as any).trialEndsAt || null;
+    const isInTrial = trialEndsAt ? new Date() < new Date(trialEndsAt) : false;
+    const freeTrial = getFreeTrialStatus({
+      subscriptionTier: teacher.subscriptionTier,
+      organizationId: teacher.organizationId,
+      trialStartedAt: (teacher as any).trialStartedAt,
+      trialEndsAt: (teacher as any).trialEndsAt,
+      trialUsed: (teacher as any).trialUsed,
+    });
+
     return {
       isOrgMember,
       organizationName: teacher.organization?.name || null,
@@ -523,9 +566,16 @@ export const quotaService = {
       },
       // New credit balance info
       credits: creditBalance,
-      // Trial info (if applicable)
-      trialEndsAt: (teacher as any).trialEndsAt || null,
-      isInTrial: (teacher as any).trialEndsAt ? new Date() < new Date((teacher as any).trialEndsAt) : false,
+      // Trial info (free-tier unlimited trial + existing paid trials)
+      trial: {
+        isActive: freeTrial.isActive,
+        startedAt: freeTrial.startedAt,
+        endsAt: freeTrial.endsAt,
+        daysRemaining: freeTrial.daysRemaining,
+        used: freeTrial.used,
+      },
+      trialEndsAt,
+      isInTrial,
     };
   },
 
@@ -573,11 +623,14 @@ export const quotaService = {
         const rolloverCap = tierCredits; // Cap at 1 month's worth
         const newRolloverCredits = Math.min(unusedCredits, rolloverCap);
 
+        const shouldReduceFreeQuota = teacher.subscriptionTier === 'FREE' && teacher.monthlyTokenQuota > BigInt(30000);
+
         await prisma.teacher.update({
           where: { id: teacherId },
           data: {
             currentMonthUsage: 0,
             quotaResetDate: nextMonth,
+            ...(shouldReduceFreeQuota && { monthlyTokenQuota: BigInt(30000) }),
             // Only update if the field exists (after migration)
             ...(typeof (teacher as any).rolledOverCredits !== 'undefined' && {
               rolledOverCredits: newRolloverCredits,
@@ -613,12 +666,26 @@ export const quotaService = {
     const now = new Date();
     const nextMonth = getNextMonthStart();
 
+    const resetEligibleTeachers = {
+      organizationId: null,
+      quotaResetDate: { lt: now },
+    };
+
+    // Reduce legacy FREE quotas (100K -> 30K) on first reset after change
+    const reducedFreeQuota = await prisma.teacher.updateMany({
+      where: {
+        ...resetEligibleTeachers,
+        subscriptionTier: 'FREE',
+        monthlyTokenQuota: { gt: BigInt(30000) },
+      },
+      data: {
+        monthlyTokenQuota: BigInt(30000),
+      },
+    });
+
     // Reset individual teachers whose reset date has passed
     const teacherResult = await prisma.teacher.updateMany({
-      where: {
-        organizationId: null,
-        quotaResetDate: { lt: now },
-      },
+      where: resetEligibleTeachers,
       data: {
         currentMonthUsage: 0,
         quotaResetDate: nextMonth,
@@ -639,6 +706,7 @@ export const quotaService = {
     logger.info(`Monthly quota reset completed`, {
       teachersReset: teacherResult.count,
       orgsReset: orgResult.count,
+      freeQuotaReduced: reducedFreeQuota.count,
     });
 
     return {
@@ -829,6 +897,45 @@ function getNextMonthStart(): Date {
   return new Date(now.getFullYear(), now.getMonth() + 1, 1);
 }
 
+function getFreeTrialStatus(teacher: {
+  subscriptionTier: TeacherSubscriptionTier;
+  organizationId?: string | null;
+  trialStartedAt?: Date | null;
+  trialEndsAt?: Date | null;
+  trialUsed?: boolean | null;
+}): {
+  isActive: boolean;
+  daysRemaining: number | null;
+  endsAt: Date | null;
+  startedAt: Date | null;
+  used: boolean;
+} {
+  const now = new Date();
+  const endsAt = teacher.trialEndsAt ? new Date(teacher.trialEndsAt) : null;
+  const startedAt = teacher.trialStartedAt ? new Date(teacher.trialStartedAt) : null;
+  const used = Boolean(teacher.trialUsed);
+
+  const isActive = Boolean(
+    teacher.subscriptionTier === 'FREE' &&
+    !teacher.organizationId &&
+    endsAt &&
+    endsAt.getTime() > now.getTime() &&
+    !used
+  );
+
+  const daysRemaining = isActive && endsAt
+    ? Math.ceil((endsAt.getTime() - now.getTime()) / DAY_MS)
+    : null;
+
+  return {
+    isActive,
+    daysRemaining,
+    endsAt,
+    startedAt,
+    used,
+  };
+}
+
 /**
  * Get the start of current month for notification tracking
  */
@@ -920,6 +1027,7 @@ async function checkAndSendCreditNotifications(teacherId: string): Promise<void>
   const teacher = await prisma.teacher.findUnique({
     where: { id: teacherId },
     select: {
+      organizationId: true,
       email: true,
       firstName: true,
       subscriptionTier: true,
@@ -927,6 +1035,9 @@ async function checkAndSendCreditNotifications(teacherId: string): Promise<void>
       currentMonthUsage: true,
       rolledOverCredits: true,
       bonusCredits: true,
+      trialStartedAt: true,
+      trialEndsAt: true,
+      trialUsed: true,
       notifiedWarning70: true,
       notifiedWarning90: true,
       notifiedLimitReached: true,
@@ -935,6 +1046,12 @@ async function checkAndSendCreditNotifications(teacherId: string): Promise<void>
   });
 
   if (!teacher) return;
+
+  // Skip credit notifications during free-tier unlimited trial
+  const freeTrial = getFreeTrialStatus(teacher as any);
+  if (freeTrial.isActive) {
+    return;
+  }
 
   // Check if we need to reset notification flags for a new month
   const currentMonth = getCurrentMonthStart();

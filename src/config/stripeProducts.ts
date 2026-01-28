@@ -7,7 +7,7 @@
  * Price IDs should be set in environment variables and loaded here.
  *
  * Teacher Pricing Structure (December 2025):
- * - FREE: $0/month - 100 credits (100K tokens)
+ * - FREE: $0/month - 30 credits (30K tokens)
  * - BASIC: $9.99/month or $95.90/year - 500 credits (500K tokens)
  * - PROFESSIONAL: $24.99/month or $239.90/year - 2,000 credits (2M tokens)
  *
@@ -46,14 +46,15 @@ export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, Subscription
   FREE: {
     name: 'Teacher Starter',
     tier: 'FREE',
-    credits: 100,
-    tokens: 100000,
+    credits: 30,
+    tokens: 30000,
     priceMonthly: 0,
     priceAnnual: 0,
     priceIdMonthly: '',  // No subscription needed
     priceIdAnnual: '',
     features: [
-      '100 credits per month',
+      '7-day unlimited trial',
+      '30 credits per month after trial',
       'Basic content generation',
       'Quiz and flashcard creation',
       'Community support',

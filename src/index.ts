@@ -42,6 +42,7 @@ import webhookRoutes from './routes/webhook.routes.js';
 // Cron Jobs
 import { scheduleBrevoInactivityChecks } from './jobs/brevoInactivityChecks.js';
 import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
+import { scheduleTrialExpirationChecks } from './jobs/trialExpirationJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -281,6 +282,10 @@ async function startServer(): Promise<void> {
       // Schedule daily games refresh (connections + icebreakers)
       scheduleDailyGamesRefresh();
       logger.info('Daily games refresh scheduled for 00:05 UTC');
+
+      // Schedule trial expiration checks (hourly)
+      scheduleTrialExpirationChecks();
+      logger.info('Trial expiration checks scheduled hourly');
     });
 
     // Graceful shutdown
