@@ -39,7 +39,6 @@ export interface UpdateContentInput {
   flashcardContent?: unknown;
   infographicUrl?: string | null;
   status?: ContentStatus;
-  isPublic?: boolean;
 }
 
 export interface ContentFilters {
@@ -153,6 +152,17 @@ export const contentService = {
             name: true,
           },
         },
+        remixedFrom: {
+          select: {
+            id: true,
+            title: true,
+            teacher: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -258,7 +268,6 @@ export const contentService = {
     if (input.gradeLevel !== undefined) updateData.gradeLevel = input.gradeLevel;
     if (input.infographicUrl !== undefined) updateData.infographicUrl = input.infographicUrl;
     if (input.status !== undefined) updateData.status = input.status;
-    if (input.isPublic !== undefined) updateData.isPublic = input.isPublic;
 
     // Handle JSON fields - Prisma expects InputJsonValue
     if (input.lessonContent !== undefined) {

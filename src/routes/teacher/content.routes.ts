@@ -53,7 +53,6 @@ const updateContentSchema = z.object({
   flashcardContent: z.record(z.unknown()).optional(),
   infographicUrl: z.string().url().optional().nullable(),
   status: z.nativeEnum(ContentStatus).optional(),
-  isPublic: z.boolean().optional(),
 });
 
 const listContentQuerySchema = z.object({

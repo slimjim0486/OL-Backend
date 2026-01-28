@@ -20,6 +20,38 @@ BEGIN
     END IF;
 END$$;
 
+-- Ensure shareCategory column uses the enum type (not TEXT)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'TeacherContent'
+          AND column_name = 'shareCategory'
+          AND udt_name <> 'ShareCategory'
+    ) THEN
+        ALTER TABLE "TeacherContent"
+        ALTER COLUMN "shareCategory" TYPE "ShareCategory"
+        USING (
+            CASE
+                WHEN "shareCategory" IN (
+                    'CURRICULUM_ALIGNED',
+                    'PROJECT_BASED',
+                    'DIFFERENTIATED',
+                    'ASSESSMENT',
+                    'ENRICHMENT',
+                    'INTERVENTION',
+                    'SEASONAL',
+                    'STEM',
+                    'LITERACY',
+                    'OTHER'
+                ) THEN "shareCategory"::"ShareCategory"
+                ELSE NULL
+            END
+        );
+    END IF;
+END$$;
+
 -- CreateTable ContentLike
 CREATE TABLE IF NOT EXISTS "ContentLike" (
     "id" TEXT NOT NULL,

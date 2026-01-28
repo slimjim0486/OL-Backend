@@ -1,6 +1,6 @@
 // Content Sharing Service - Discovery, sharing, and remix functionality
 import { prisma } from '../../config/database.js';
-import { TeacherContent, ShareCategory, ContentStatus, Subject, TeacherContentType } from '@prisma/client';
+import { Prisma, ShareCategory, Subject, TeacherContent, TeacherContentType } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 
 // ============================================
@@ -23,23 +23,74 @@ export interface DiscoverPagination {
 
 export interface TeacherPublicInfo {
   id: string;
-  firstName: string | null;
-  lastName: string | null;
-  schoolName: string | null;
   country: string | null;
   primarySubject: Subject | null;
-  bio: string | null;
   isProfilePublic: boolean;
 }
 
-export interface SharedContentWithTeacher extends TeacherContent {
-  teacher: TeacherPublicInfo;
+const teacherPublicSelect = {
+  id: true,
+  country: true,
+  primarySubject: true,
+  isProfilePublic: true,
+} as const;
+
+const sharedContentListSelect = {
+  id: true,
+  teacherId: true,
+  title: true,
+  description: true,
+  subject: true,
+  gradeLevel: true,
+  contentType: true,
+  sourceType: true,
+  infographicUrl: true,
+  status: true,
+  isPublic: true,
+  publishedAt: true,
+  sharedAt: true,
+  shareCategory: true,
+  downloadCount: true,
+  viewCount: true,
+  likeCount: true,
+  isFeatured: true,
+  remixedFromId: true,
+  createdAt: true,
+  updatedAt: true,
+  teacher: {
+    select: teacherPublicSelect,
+  },
+} as const;
+
+export type SharedContentListItem = Prisma.TeacherContentGetPayload<{
+  select: typeof sharedContentListSelect;
+}> & {
   isLikedByMe?: boolean;
   isRemixedByMe?: boolean;
-}
+};
+
+export type SharedContentWithTeacher = Prisma.TeacherContentGetPayload<{
+  include: {
+    teacher: { select: typeof teacherPublicSelect };
+    remixedFrom: {
+      select: {
+        id: true;
+        title: true;
+        teacher: {
+          select: {
+            id: true;
+          };
+        };
+      };
+    };
+  };
+}> & {
+  isLikedByMe?: boolean;
+  isRemixedByMe?: boolean;
+};
 
 export interface DiscoverResult {
-  content: SharedContentWithTeacher[];
+  content: SharedContentListItem[];
   total: number;
   pages: number;
 }
@@ -141,9 +192,14 @@ export const contentSharingService = {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: Record<string, unknown> = {
+    const where: Prisma.TeacherContentWhereInput = {
       isPublic: true,
       status: 'PUBLISHED',
+      teacher: {
+        is: {
+          isProfilePublic: true,
+        },
+      },
     };
 
     if (filters.contentType) {
@@ -166,7 +222,7 @@ export const contentSharingService = {
     }
 
     // Build order by
-    type OrderByType = { downloadCount?: 'desc'; sharedAt?: 'desc'; likeCount?: 'desc' };
+    type OrderByType = Prisma.TeacherContentOrderByWithRelationInput;
     const orderByMap: Record<string, OrderByType> = {
       popular: { downloadCount: 'desc' },
       recent: { sharedAt: 'desc' },
@@ -181,25 +237,17 @@ export const contentSharingService = {
         orderBy,
         skip,
         take: limit,
-        include: {
-          teacher: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              schoolName: true,
-              country: true,
-              primarySubject: true,
-              bio: true,
-              isProfilePublic: true,
-            },
-          },
-          ...(viewerId ? {
-            likes: {
-              where: { teacherId: viewerId },
-              take: 1,
-            },
-          } : {}),
+        select: {
+          ...sharedContentListSelect,
+          ...(viewerId
+            ? {
+                likes: {
+                  where: { teacherId: viewerId },
+                  take: 1,
+                  select: { id: true },
+                },
+              }
+            : {}),
         },
       }),
       prisma.teacherContent.count({ where }),
@@ -225,7 +273,7 @@ export const contentSharingService = {
         ...rest,
         isLikedByMe: viewerId ? (likes?.length ?? 0) > 0 : false,
         isRemixedByMe: viewerId ? remixedIds.has(c.id) : false,
-      } as SharedContentWithTeacher;
+      } as SharedContentListItem;
     });
 
     return {
@@ -247,19 +295,15 @@ export const contentSharingService = {
         id: contentId,
         isPublic: true,
         status: 'PUBLISHED',
+        teacher: {
+          is: {
+            isProfilePublic: true,
+          },
+        },
       },
       include: {
         teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            schoolName: true,
-            country: true,
-            primarySubject: true,
-            bio: true,
-            isProfilePublic: true,
-          },
+          select: teacherPublicSelect,
         },
         remixedFrom: {
           select: {
@@ -457,13 +501,15 @@ export const contentSharingService = {
   /**
    * Get teacher's shared content
    */
-  async getTeacherSharedContent(teacherId: string): Promise<TeacherContent[]> {
+  async getTeacherSharedContent(teacherId: string): Promise<SharedContentListItem[]> {
     return prisma.teacherContent.findMany({
       where: {
         teacherId,
         isPublic: true,
+        status: 'PUBLISHED',
       },
       orderBy: { sharedAt: 'desc' },
+      select: sharedContentListSelect,
     });
   },
 
@@ -474,7 +520,7 @@ export const contentSharingService = {
     remixedFrom: {
       id: string;
       title: string;
-      teacher: { id: string; firstName: string | null; lastName: string | null };
+      teacher: { id: string };
     } | null;
   })[]> {
     return prisma.teacherContent.findMany({
@@ -490,8 +536,6 @@ export const contentSharingService = {
             teacher: {
               select: {
                 id: true,
-                firstName: true,
-                lastName: true,
               },
             },
           },
@@ -525,7 +569,9 @@ export const contentSharingService = {
         teacherId,
         isPublic: true,
       },
-      _count: true,
+      _count: {
+        _all: true,
+      },
       _sum: {
         downloadCount: true,
         viewCount: true,
@@ -534,7 +580,7 @@ export const contentSharingService = {
     });
 
     return {
-      totalShared: stats._count,
+      totalShared: stats._count?._all ?? 0,
       totalDownloads: stats._sum.downloadCount || 0,
       totalViews: stats._sum.viewCount || 0,
       totalLikes: stats._sum.likeCount || 0,
@@ -544,32 +590,24 @@ export const contentSharingService = {
   /**
    * Get featured content (staff picks)
    */
-  async getFeaturedContent(limit: number = 6): Promise<SharedContentWithTeacher[]> {
+  async getFeaturedContent(limit: number = 6): Promise<SharedContentListItem[]> {
     const contentList = await prisma.teacherContent.findMany({
       where: {
         isPublic: true,
         status: 'PUBLISHED',
         isFeatured: true,
-      },
-      take: limit,
-      orderBy: { sharedAt: 'desc' },
-      include: {
         teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            schoolName: true,
-            country: true,
-            primarySubject: true,
-            bio: true,
+          is: {
             isProfilePublic: true,
           },
         },
       },
+      take: limit,
+      orderBy: { sharedAt: 'desc' },
+      select: sharedContentListSelect,
     });
 
-    return contentList as SharedContentWithTeacher[];
+    return contentList;
   },
 
   /**
@@ -578,7 +616,7 @@ export const contentSharingService = {
   async getPopularContent(
     period: 'week' | 'month',
     limit: number = 12
-  ): Promise<SharedContentWithTeacher[]> {
+  ): Promise<SharedContentListItem[]> {
     const now = new Date();
     const startDate = new Date(now);
     if (period === 'week') {
@@ -592,47 +630,30 @@ export const contentSharingService = {
         isPublic: true,
         status: 'PUBLISHED',
         sharedAt: { gte: startDate },
-      },
-      take: limit,
-      orderBy: { downloadCount: 'desc' },
-      include: {
         teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            schoolName: true,
-            country: true,
-            primarySubject: true,
-            bio: true,
+          is: {
             isProfilePublic: true,
           },
         },
       },
+      take: limit,
+      orderBy: { downloadCount: 'desc' },
+      select: sharedContentListSelect,
     });
 
-    return contentList as SharedContentWithTeacher[];
+    return contentList;
   },
 
   /**
    * Get teacher public profile with their shared content
    */
-  async getTeacherProfile(teacherId: string, viewerId?: string): Promise<{
+  async getTeacherProfile(teacherId: string, _viewerId?: string): Promise<{
     teacher: TeacherPublicInfo & { sharedContentCount: number };
-    content: TeacherContent[];
+    content: SharedContentListItem[];
   } | null> {
     const teacher = await prisma.teacher.findUnique({
       where: { id: teacherId },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        schoolName: true,
-        country: true,
-        primarySubject: true,
-        bio: true,
-        isProfilePublic: true,
-      },
+      select: teacherPublicSelect,
     });
 
     if (!teacher || !teacher.isProfilePublic) {
@@ -648,6 +669,7 @@ export const contentSharingService = {
         },
         orderBy: { sharedAt: 'desc' },
         take: 20,
+        select: sharedContentListSelect,
       }),
       prisma.teacherContent.count({
         where: {
@@ -680,22 +702,10 @@ export const contentSharingService = {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          createdAt: true,
           content: {
-            include: {
-              teacher: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  schoolName: true,
-                  country: true,
-                  primarySubject: true,
-                  bio: true,
-                  isProfilePublic: true,
-                },
-              },
-            },
+            select: sharedContentListSelect,
           },
         },
       }),
@@ -704,12 +714,17 @@ export const contentSharingService = {
 
     // Filter out unpublished/private content (in case content was unshared after being liked)
     const content = likes
-      .filter(l => l.content.isPublic && l.content.status === 'PUBLISHED')
+      .filter(
+        l =>
+          l.content.isPublic &&
+          l.content.status === 'PUBLISHED' &&
+          l.content.teacher.isProfilePublic
+      )
       .map(l => ({
         ...l.content,
         isLikedByMe: true,
         isRemixedByMe: false, // Could check but not critical for liked list
-      })) as SharedContentWithTeacher[];
+      })) as SharedContentListItem[];
 
     return {
       content,
@@ -724,7 +739,7 @@ export const contentSharingService = {
   async getRelatedContent(
     contentId: string,
     limit: number = 6
-  ): Promise<TeacherContent[]> {
+  ): Promise<SharedContentListItem[]> {
     const original = await prisma.teacherContent.findUnique({
       where: { id: contentId },
       select: { subject: true, gradeLevel: true, teacherId: true },
@@ -739,6 +754,11 @@ export const contentSharingService = {
         id: { not: contentId },
         isPublic: true,
         status: 'PUBLISHED',
+        teacher: {
+          is: {
+            isProfilePublic: true,
+          },
+        },
         OR: [
           { subject: original.subject },
           { gradeLevel: original.gradeLevel },
@@ -746,20 +766,7 @@ export const contentSharingService = {
       },
       take: limit,
       orderBy: { downloadCount: 'desc' },
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            schoolName: true,
-            country: true,
-            primarySubject: true,
-            bio: true,
-            isProfilePublic: true,
-          },
-        },
-      },
+      select: sharedContentListSelect,
     });
   },
 
