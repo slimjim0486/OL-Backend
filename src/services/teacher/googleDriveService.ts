@@ -21,6 +21,13 @@ const SCOPES = [
 ];
 
 /**
+ * Extended credentials including our custom fields
+ */
+interface ExtendedCredentials extends Credentials {
+  orbitFolderId?: string;
+}
+
+/**
  * Create a new OAuth2 client
  */
 function createOAuth2Client(): OAuth2Client {
@@ -59,7 +66,7 @@ export async function exchangeCodeForTokens(code: string): Promise<Credentials> 
  */
 export async function saveTeacherDriveTokens(
   teacherId: string,
-  tokens: Credentials
+  tokens: ExtendedCredentials
 ): Promise<void> {
   await prisma.teacher.update({
     where: { id: teacherId },
@@ -72,7 +79,7 @@ export async function saveTeacherDriveTokens(
 /**
  * Get stored Google Drive tokens for a teacher
  */
-export async function getTeacherDriveTokens(teacherId: string): Promise<Credentials | null> {
+export async function getTeacherDriveTokens(teacherId: string): Promise<ExtendedCredentials | null> {
   const teacher = await prisma.teacher.findUnique({
     where: { id: teacherId },
     select: { googleDriveTokens: true },
@@ -82,7 +89,7 @@ export async function getTeacherDriveTokens(teacherId: string): Promise<Credenti
     return null;
   }
 
-  return teacher.googleDriveTokens as Credentials;
+  return teacher.googleDriveTokens as ExtendedCredentials;
 }
 
 /**
@@ -133,21 +140,28 @@ async function getDriveClient(teacherId: string): Promise<drive_v3.Drive | null>
 
 /**
  * Create the Orbit Learn folder in Drive if it doesn't exist
+ * Uses stored folder ID to avoid needing search permissions
  */
-async function getOrCreateOrbitFolder(drive: drive_v3.Drive): Promise<string> {
+async function getOrCreateOrbitFolder(
+  drive: drive_v3.Drive,
+  teacherId: string
+): Promise<string> {
   const folderName = 'Orbit Learn';
 
-  // Search for existing folder
-  const response = await drive.files.list({
-    q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-    fields: 'files(id, name)',
-  });
-
-  if (response.data.files && response.data.files.length > 0) {
-    return response.data.files[0].id!;
+  // First check if we have a stored folder ID
+  const tokens = await getTeacherDriveTokens(teacherId);
+  if (tokens?.orbitFolderId) {
+    // Verify the folder still exists and is accessible
+    try {
+      await drive.files.get({ fileId: tokens.orbitFolderId, fields: 'id' });
+      return tokens.orbitFolderId;
+    } catch {
+      // Folder was deleted or inaccessible, create a new one
+      console.log('Stored folder ID invalid, creating new folder');
+    }
   }
 
-  // Create folder if it doesn't exist
+  // Create new folder (drive.file scope allows this)
   const folderMetadata = {
     name: folderName,
     mimeType: 'application/vnd.google-apps.folder',
@@ -158,7 +172,17 @@ async function getOrCreateOrbitFolder(drive: drive_v3.Drive): Promise<string> {
     fields: 'id',
   });
 
-  return folder.data.id!;
+  const folderId = folder.data.id!;
+
+  // Store the folder ID for future use
+  if (tokens) {
+    await saveTeacherDriveTokens(teacherId, {
+      ...tokens,
+      orbitFolderId: folderId,
+    });
+  }
+
+  return folderId;
 }
 
 /**
@@ -192,7 +216,7 @@ export async function uploadToDrive(
 
   try {
     // Get or create the Orbit Learn folder
-    const folderId = options.folderId || await getOrCreateOrbitFolder(drive);
+    const folderId = options.folderId || await getOrCreateOrbitFolder(drive, teacherId);
 
     // Convert data to stream
     const stream = new Readable();
@@ -232,6 +256,18 @@ export async function uploadToDrive(
       };
     }
 
+    // Check for insufficient scopes error
+    if (error instanceof Error &&
+        (error.message.includes('insufficient authentication scopes') ||
+         error.message.includes('PERMISSION_DENIED'))) {
+      // User's stored tokens have outdated scopes - force re-auth
+      await disconnectGoogleDrive(teacherId);
+      return {
+        success: false,
+        error: 'Google Drive permissions need to be updated. Please reconnect your account to grant the required permissions.',
+      };
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to upload to Google Drive',
@@ -268,7 +304,7 @@ export async function listDriveFiles(
   }
 
   try {
-    const folderId = await getOrCreateOrbitFolder(drive);
+    const folderId = await getOrCreateOrbitFolder(drive, teacherId);
 
     const response = await drive.files.list({
       q: `'${folderId}' in parents and trashed=false`,
@@ -291,6 +327,18 @@ export async function listDriveFiles(
     };
   } catch (error: unknown) {
     console.error('Google Drive list error:', error);
+
+    // Check for insufficient scopes error
+    if (error instanceof Error &&
+        (error.message.includes('insufficient authentication scopes') ||
+         error.message.includes('PERMISSION_DENIED'))) {
+      await disconnectGoogleDrive(teacherId);
+      return {
+        success: false,
+        error: 'Google Drive permissions need to be updated. Please reconnect your account.',
+      };
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to list Drive files',
