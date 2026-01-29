@@ -82,7 +82,6 @@ const UNLIMITED_TOKENS = BigInt(UNLIMITED_CREDITS * TOKENS_PER_CREDIT);
 const DAY_MS = 1000 * 60 * 60 * 24;
 
 const GRACE_OPERATIONS = new Set<TokenOperation>([
-  TokenOperation.LESSON_GENERATION,
   TokenOperation.QUIZ_GENERATION,
   TokenOperation.FLASHCARD_GENERATION,
   TokenOperation.INFOGRAPHIC_GENERATION,
@@ -242,6 +241,13 @@ export const quotaService = {
     const requiredTokens = BigInt(estimate);
     let allowed = totalRemainingTokens >= requiredTokens;
     let graceApplied = false;
+    let lessonOverrideApplied = false;
+
+    // Allow a full lesson to complete if any credits remain at start
+    if (!allowed && operation === TokenOperation.LESSON_GENERATION && totalRemainingTokens > BigInt(0)) {
+      allowed = true;
+      lessonOverrideApplied = true;
+    }
 
     if (!allowed && GRACE_OPERATIONS.has(operation)) {
       const graceTokens = monthlyLimit / GENERATION_OVERAGE_DENOMINATOR;
@@ -258,7 +264,9 @@ export const quotaService = {
 
     let warning: string | undefined;
     const remainingCredits = tokensToCredits(totalRemainingTokens);
-    if (percentUsed >= 90) {
+    if (lessonOverrideApplied) {
+      warning = `You're low on credits, but we'll allow this lesson to finish. Add credits to keep creating.`;
+    } else if (percentUsed >= 90) {
       warning = `Only ${remainingCredits} credits left this month. Get more credits at Settings → Billing to avoid interruptions.`;
     } else if (percentUsed >= 75) {
       warning = `${remainingCredits} credits remaining this month. Your quota resets on ${resetDate.toLocaleDateString()}.`;
