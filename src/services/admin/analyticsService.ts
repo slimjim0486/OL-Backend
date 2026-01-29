@@ -1040,8 +1040,12 @@ export const analyticsService = {
     newTeachersThisWeek: number;
     newTeachersThisMonth: number;
     tierBreakdown: { tier: string; count: number }[];
+    totalTokensUsed: number;
+    avgOperationsPerDay: number;
+    contentCreated: number;
+    activeTeachers7d: number;
   }> {
-    const cacheKey = 'analytics:teacher:overview';
+    const cacheKey = 'analytics:teacher:overview:v2';
 
     const cached = await redis.get(cacheKey);
     if (cached !== null) {
@@ -1066,6 +1070,8 @@ export const analyticsService = {
       newTeachersToday,
       newTeachersThisWeek,
       newTeachersThisMonth,
+      tokenUsageStats,
+      contentCreated,
     ] = await Promise.all([
       prisma.teacher.count(),
       this.getTeacherDAU(),
@@ -1096,7 +1102,27 @@ export const analyticsService = {
           createdAt: { gte: monthAgo },
         },
       }),
+      prisma.tokenUsageLog.aggregate({
+        where: {
+          createdAt: { gte: monthAgo },
+        },
+        _sum: {
+          tokensUsed: true,
+        },
+        _count: {
+          id: true,
+        },
+      }),
+      prisma.teacherContent.count({
+        where: {
+          createdAt: { gte: monthAgo },
+        },
+      }),
     ]);
+
+    const totalTokensUsed = tokenUsageStats._sum.tokensUsed || 0;
+    const totalOperations = tokenUsageStats._count.id || 0;
+    const avgOperationsPerDay = Math.round((totalOperations / 30) * 10) / 10;
 
     const result = {
       totalTeachers,
@@ -1117,6 +1143,10 @@ export const analyticsService = {
         tier: t.subscriptionTier,
         count: t._count.id,
       })),
+      totalTokensUsed,
+      avgOperationsPerDay,
+      contentCreated,
+      activeTeachers7d: wau,
     };
 
     await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
