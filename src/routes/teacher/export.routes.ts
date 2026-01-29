@@ -421,7 +421,7 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
             r2Key,
             r2Url: uploadResult.publicUrl,
             fileSize: result.data.length,
-            editUrl: 'editUrl' in result ? result.editUrl : undefined,
+            editUrl: 'editUrl' in result ? (result.editUrl as string) : undefined,
             completedAt: new Date(),
             filename: result.filename,
           },
