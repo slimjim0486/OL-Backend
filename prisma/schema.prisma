@@ -967,7 +967,6 @@ model Teacher {
   substitutePlans SubstitutePlan[]
   iepGoalSessions IEPGoalSession[]
   brainstormSessions BrainstormSession[]
-  lessonAnalyses  LessonEnhancementAnalysis[]
   exports         TeacherExport[]
   documentAnalyses TeacherDocumentAnalysis[]
 
@@ -1145,7 +1144,6 @@ model TeacherContent {
   // Relationships
   exports TeacherExport[]
   likes   ContentLike[]
-  enhancementAnalysis LessonEnhancementAnalysis?
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -1157,115 +1155,6 @@ model TeacherContent {
   @@index([isPublic, status, sharedAt])  // Discovery index
   @@index([subject, gradeLevel, isPublic])  // Filter index
   @@index([downloadCount])  // Popularity index
-}
-
-// ============================================
-// LESSON ENHANCEMENT SUGGESTIONS
-// ============================================
-
-enum SuggestionCategory {
-  STANDARDS_ALIGNMENT
-  DIFFERENTIATION
-  PEDAGOGICAL_TECHNIQUE
-  ENGAGEMENT_ENHANCEMENT
-  ASSESSMENT_IMPROVEMENT
-  CONTENT_GAP
-}
-
-enum SuggestionStatus {
-  PENDING
-  ANALYZING
-  READY
-  FAILED
-  EXPIRED
-}
-
-enum SuggestionInteraction {
-  VIEWED
-  EXPANDED
-  APPLIED
-  DISMISSED
-  BRAINSTORM_CLICKED
-}
-
-model LessonEnhancementAnalysis {
-  id            String   @id @default(uuid())
-  contentId     String   @unique
-  content       TeacherContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  teacherId     String
-  teacher       Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-
-  // Analysis metadata
-  status        SuggestionStatus @default(PENDING)
-  contentHash   String?
-  analysisModel String?
-  tokensUsed    Int              @default(0)
-
-  // Curriculum context used for analysis
-  curriculumType   CurriculumType?
-  gradeLevel       String?
-  subject          Subject?
-
-  // Results
-  suggestions      LessonSuggestion[]
-
-  // Error handling
-  errorMessage  String?
-  retryCount    Int      @default(0)
-
-  // Timestamps
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([teacherId, status])
-  @@index([contentId])
-  @@index([status, createdAt])
-}
-
-model LessonSuggestion {
-  id            String   @id @default(uuid())
-  analysisId    String
-  analysis      LessonEnhancementAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-
-  // Suggestion content
-  category      SuggestionCategory
-  priority      Int
-  title         String
-  summary       String
-  details       String   @db.Text
-  actionPrompt  String?
-
-  // For standards alignment suggestions
-  relatedStandardIds String[]
-
-  // Interaction tracking
-  interactions  SuggestionInteractionLog[]
-
-  // Tier gating (NULL = all tiers, 'PROFESSIONAL' = PRO only)
-  requiredTier  TeacherSubscriptionTier?
-
-  // Metadata
-  confidence    Float    @default(0.8)
-  createdAt     DateTime @default(now())
-
-  @@index([analysisId, priority])
-}
-
-model SuggestionInteractionLog {
-  id            String   @id @default(uuid())
-  suggestionId  String
-  suggestion    LessonSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
-  teacherId     String
-
-  interaction   SuggestionInteraction
-  metadata      Json?
-
-  createdAt     DateTime @default(now())
-
-  @@index([suggestionId])
-  @@index([teacherId, createdAt])
 }
 
 model ContentLike {
@@ -2503,7 +2392,6 @@ enum DocumentAnalysisStatus {
 
 enum TokenOperation {
   CONTENT_ANALYSIS
-  LESSON_ENHANCEMENT_ANALYSIS
   LESSON_GENERATION
   QUIZ_GENERATION
   FLASHCARD_GENERATION
