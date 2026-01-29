@@ -19,7 +19,6 @@ import { currencyService } from '../currency/currencyService.js';
 import { trackTeacherSignup, trackTeacherActivity } from '../brevo/brevoTrackingService.js';
 
 const SALT_ROUNDS = 12;
-const FREE_TRIAL_DAYS = 7;
 
 // Google OAuth client - initialized lazily to ensure env var is available
 let googleClient: OAuth2Client | null = null;
@@ -116,10 +115,6 @@ export const teacherAuthService = {
     // Hash password
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
-    const shouldStartTrial = !organizationId;
-
     // Create teacher account (emailVerified: true - no OTP required for teachers)
     const teacher = await prisma.teacher.create({
       data: {
@@ -132,10 +127,10 @@ export const teacherAuthService = {
         organizationId: organizationId || null,
         role: organizationId ? 'TEACHER' : 'TEACHER', // Default role
         subscriptionTier: organizationId ? 'FREE' : 'FREE', // Free tier for individual teachers
-        monthlyTokenQuota: 30000, // 30 credits post-trial
-        trialStartedAt: shouldStartTrial ? now : null,
-        trialEndsAt: shouldStartTrial ? trialEndsAt : null,
-        trialUsed: false,
+        monthlyTokenQuota: 30000, // 30 credits/month
+        trialStartedAt: null,
+        trialEndsAt: null,
+        trialUsed: true,
         quotaResetDate: getNextMonthStart(),
       },
     });
@@ -155,23 +150,13 @@ export const teacherAuthService = {
       ipAddress,
     });
 
-    // Send trial welcome email (async, don't block signup)
-    if (shouldStartTrial) {
-      emailService.sendTeacherTrialWelcomeEmail(
-        teacher.email,
-        teacher.firstName || 'Teacher',
-        trialEndsAt
-      ).catch(err => {
-        logger.error('Failed to send teacher trial welcome email', { error: err, teacherId: teacher.id });
-      });
-    } else {
-      emailService.sendTeacherWelcomeEmail(
-        teacher.email,
-        teacher.firstName || 'Teacher'
-      ).catch(err => {
-        logger.error('Failed to send teacher welcome email', { error: err, teacherId: teacher.id });
-      });
-    }
+    // Send welcome email (async, don't block signup)
+    emailService.sendTeacherWelcomeEmail(
+      teacher.email,
+      teacher.firstName || 'Teacher'
+    ).catch(err => {
+      logger.error('Failed to send teacher welcome email', { error: err, teacherId: teacher.id });
+    });
 
     // NOTE: Email verification OTP removed - teachers are auto-verified on signup
     // to reduce friction. Payment verification is sufficient for paid tiers.
@@ -439,8 +424,6 @@ export const teacherAuthService = {
     if (!teacher) {
       // New teacher - create account
       isNewUser = true;
-      const now = new Date();
-      const trialEndsAt = new Date(now.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
       teacher = await prisma.teacher.create({
         data: {
           email: email.toLowerCase(),
@@ -451,10 +434,10 @@ export const teacherAuthService = {
           emailVerified: email_verified ?? true, // Google verifies emails
           emailVerifiedAt: email_verified ? new Date() : null,
           subscriptionTier: 'FREE',
-          monthlyTokenQuota: 30000, // 30 credits post-trial
-          trialStartedAt: now,
-          trialEndsAt,
-          trialUsed: false,
+          monthlyTokenQuota: 30000, // 30 credits/month
+          trialStartedAt: null,
+          trialEndsAt: null,
+          trialUsed: true,
           quotaResetDate: getNextMonthStart(),
         },
         include: {
@@ -470,14 +453,13 @@ export const teacherAuthService = {
         },
       });
 
-      // Send trial welcome email for new teachers
-      logger.info(`Sending trial welcome email for new Google teacher: ${teacher.email}`);
-      emailService.sendTeacherTrialWelcomeEmail(
+      // Send welcome email for new teachers
+      logger.info(`Sending welcome email for new Google teacher: ${teacher.email}`);
+      emailService.sendTeacherWelcomeEmail(
         teacher.email,
-        teacher.firstName || 'Teacher',
-        trialEndsAt
+        teacher.firstName || 'Teacher'
       ).catch(err => {
-        logger.error('Failed to send teacher trial welcome email for Google signup', { error: err, teacherId: teacher!.id });
+        logger.error('Failed to send teacher welcome email for Google signup', { error: err, teacherId: teacher!.id });
       });
     } else if (!teacher.googleId) {
       // Existing teacher with email - link Google account

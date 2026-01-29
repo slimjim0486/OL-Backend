@@ -63,6 +63,7 @@ const OPERATION_ESTIMATES: Record<TokenOperation, number> = {
 // =============================================================================
 // 1 Credit = 1,000 tokens (simplified for user understanding)
 const TOKENS_PER_CREDIT = 1000;
+const GENERATION_OVERAGE_DENOMINATOR = 10n; // 10% = monthlyLimit / 10
 
 // Monthly credit allocations by subscription tier
 const TIER_CREDITS: Record<TeacherSubscriptionTier, number> = {
@@ -75,9 +76,20 @@ const TIER_CREDITS: Record<TeacherSubscriptionTier, number> = {
 const ROLLOVER_MULTIPLIER = 2;
 
 // Unlimited trial configuration
+const FREE_TRIAL_ENABLED = false;
 const UNLIMITED_CREDITS = 999999999; // Display-safe large number for internal use
 const UNLIMITED_TOKENS = BigInt(UNLIMITED_CREDITS * TOKENS_PER_CREDIT);
 const DAY_MS = 1000 * 60 * 60 * 24;
+
+const GRACE_OPERATIONS = new Set<TokenOperation>([
+  TokenOperation.LESSON_GENERATION,
+  TokenOperation.QUIZ_GENERATION,
+  TokenOperation.FLASHCARD_GENERATION,
+  TokenOperation.INFOGRAPHIC_GENERATION,
+  TokenOperation.AUDIO_UPDATE,
+  TokenOperation.SUB_PLAN_GENERATION,
+  TokenOperation.IEP_GOAL_GENERATION,
+]);
 
 export interface QuotaCheckResult {
   allowed: boolean;
@@ -227,7 +239,17 @@ export const quotaService = {
       rolledOverCredits,
       bonusCredits,
     });
-    const allowed = totalRemainingTokens >= BigInt(estimate);
+    const requiredTokens = BigInt(estimate);
+    let allowed = totalRemainingTokens >= requiredTokens;
+    let graceApplied = false;
+
+    if (!allowed && GRACE_OPERATIONS.has(operation)) {
+      const graceTokens = monthlyLimit / GENERATION_OVERAGE_DENOMINATOR;
+      if (graceTokens > BigInt(0) && totalRemainingTokens + graceTokens >= requiredTokens) {
+        allowed = true;
+        graceApplied = true;
+      }
+    }
 
     // Calculate percent used of subscription credits only (for display)
     const percentUsed = monthlyLimit > BigInt(0)
@@ -240,6 +262,8 @@ export const quotaService = {
       warning = `Only ${remainingCredits} credits left this month. Get more credits at Settings → Billing to avoid interruptions.`;
     } else if (percentUsed >= 75) {
       warning = `${remainingCredits} credits remaining this month. Your quota resets on ${resetDate.toLocaleDateString()}.`;
+    } else if (graceApplied) {
+      warning = `You're using a 10% grace buffer to finish this generation. Upgrade or add credits to avoid interruptions.`;
     }
 
     return {
@@ -540,8 +564,11 @@ export const quotaService = {
       ? Number((used * BigInt(100)) / monthlyLimit)
       : 0;
 
-    const trialEndsAt = (teacher as any).trialEndsAt || null;
-    const isInTrial = trialEndsAt ? new Date() < new Date(trialEndsAt) : false;
+    const rawTrialEndsAt = (teacher as any).trialEndsAt || null;
+    const trialEndsAt = FREE_TRIAL_ENABLED ? rawTrialEndsAt : null;
+    const isInTrial = FREE_TRIAL_ENABLED && trialEndsAt
+      ? new Date() < new Date(trialEndsAt)
+      : false;
     const freeTrial = getFreeTrialStatus({
       subscriptionTier: teacher.subscriptionTier,
       organizationId: teacher.organizationId,
@@ -910,10 +937,20 @@ function getFreeTrialStatus(teacher: {
   startedAt: Date | null;
   used: boolean;
 } {
+  const used = Boolean(teacher.trialUsed);
+  if (!FREE_TRIAL_ENABLED) {
+    return {
+      isActive: false,
+      daysRemaining: null,
+      endsAt: null,
+      startedAt: null,
+      used,
+    };
+  }
+
   const now = new Date();
   const endsAt = teacher.trialEndsAt ? new Date(teacher.trialEndsAt) : null;
   const startedAt = teacher.trialStartedAt ? new Date(teacher.trialStartedAt) : null;
-  const used = Boolean(teacher.trialUsed);
 
   const isActive = Boolean(
     teacher.subscriptionTier === 'FREE' &&

@@ -669,7 +669,8 @@ export const contentGenerationService = {
           teacherId,
           tokensUsed,
           config.gemini.models.flash,
-          TokenOperation.QUIZ_GENERATION
+          TokenOperation.QUIZ_GENERATION,
+          { recordQuota: false }
         );
       }
 
@@ -749,7 +750,8 @@ export const contentGenerationService = {
           teacherId,
           tokensUsed,
           config.gemini.models.flash,
-          TokenOperation.FLASHCARD_GENERATION
+          TokenOperation.FLASHCARD_GENERATION,
+          { recordQuota: false }
         );
       }
 
@@ -1029,7 +1031,8 @@ Do NOT include any inappropriate or scary imagery. Keep it child-friendly and ed
           teacherId,
           tokensUsed,
           config.gemini.models.image,
-          TokenOperation.INFOGRAPHIC_GENERATION
+          TokenOperation.INFOGRAPHIC_GENERATION,
+          { recordQuota: false }
         );
       }
 

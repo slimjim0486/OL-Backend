@@ -53,8 +53,7 @@ export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, Subscription
     priceIdMonthly: '',  // No subscription needed
     priceIdAnnual: '',
     features: [
-      '7-day unlimited trial',
-      '30 credits per month after trial',
+      '30 credits per month',
       'Basic content generation',
       'Quiz and flashcard creation',
       'Community support',
@@ -77,7 +76,7 @@ export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, Subscription
       'Credit rollover (up to 500)',
       'Email support',
     ],
-    trialDays: 7,
+    trialDays: 0,
   },
   PROFESSIONAL: {
     name: 'Teacher Pro',
@@ -97,7 +96,7 @@ export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, Subscription
       'Credit rollover (up to 2,000)',
       'Priority email support',
     ],
-    trialDays: 7,
+    trialDays: 0,
   },
 };
 

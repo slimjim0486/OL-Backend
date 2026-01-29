@@ -406,8 +406,13 @@ export const contentService = {
     teacherId: string,
     tokensUsed: number,
     modelUsed: string,
-    operation: TokenOperation
+    operation: TokenOperation,
+    options?: {
+      recordQuota?: boolean;
+    }
   ) {
+    const recordQuota = options?.recordQuota !== false;
+
     // Update content with AI metadata
     await prisma.teacherContent.update({
       where: { id: contentId },
@@ -418,14 +423,16 @@ export const contentService = {
     });
 
     // Record in quota system
-    await quotaService.recordUsage({
-      teacherId,
-      operation,
-      tokensUsed,
-      modelUsed,
-      resourceType: 'content',
-      resourceId: contentId,
-    });
+    if (recordQuota) {
+      await quotaService.recordUsage({
+        teacherId,
+        operation,
+        tokensUsed,
+        modelUsed,
+        resourceType: 'content',
+        resourceId: contentId,
+      });
+    }
   },
 
   /**
