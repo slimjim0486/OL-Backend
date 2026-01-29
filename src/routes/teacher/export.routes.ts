@@ -10,6 +10,7 @@ import { prisma } from '../../config/database.js';
 import { exportContent, exportMultipleContent, ExportOptions } from '../../services/teacher/exportService.js';
 import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
 import * as googleDriveService from '../../services/teacher/googleDriveService.js';
+import { uploadFile } from '../../services/storage/storageService.js';
 
 const router = Router();
 
@@ -378,6 +379,70 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
     const result = content.contentType === 'FLASHCARD_DECK'
       ? await generateFlashcardPPTX(content, options)
       : await generateLessonPPTX(content, options);
+
+    // Persist export record for admin reports/downloads (best-effort)
+    try {
+      const exportRecord = await prisma.teacherExport.create({
+        data: {
+          teacherId,
+          contentId,
+          contentTitle: content.title,
+          format: ExportFormat.PPTX,
+          filename: result.filename,
+          status: ExportStatus.PROCESSING,
+        },
+      });
+
+      try {
+        const timestamp = Date.now();
+        const sanitizedTitle = content.title
+          .replace(/[^a-z0-9]/gi, '-')
+          .replace(/-+/g, '-')
+          .substring(0, 50);
+        const r2Key = `teacher/${teacherId}/exports/${timestamp}-${sanitizedTitle}.pptx`;
+        const mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+        const uploadResult = await uploadFile(
+          'aiContent',
+          r2Key,
+          result.data,
+          mimeType,
+          {
+            'teacher-id': teacherId,
+            'content-id': contentId,
+            'export-id': exportRecord.id,
+            'original-filename': result.filename,
+          }
+        );
+
+        await prisma.teacherExport.update({
+          where: { id: exportRecord.id },
+          data: {
+            status: ExportStatus.COMPLETED,
+            r2Key,
+            r2Url: uploadResult.publicUrl,
+            fileSize: result.data.length,
+            editUrl: 'editUrl' in result ? result.editUrl : undefined,
+            completedAt: new Date(),
+            filename: result.filename,
+          },
+        });
+      } catch (storeError) {
+        console.error('Failed to store PPTX export for reports:', storeError);
+        try {
+          await prisma.teacherExport.update({
+            where: { id: exportRecord.id },
+            data: {
+              status: ExportStatus.FAILED,
+              errorMessage: storeError instanceof Error ? storeError.message : 'Failed to store export',
+            },
+          });
+        } catch (updateError) {
+          console.error('Failed to mark PPTX export as failed:', updateError);
+        }
+      }
+    } catch (recordError) {
+      console.error('Failed to create PPTX export record:', recordError);
+    }
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
