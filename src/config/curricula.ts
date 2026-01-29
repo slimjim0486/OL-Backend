@@ -1,7 +1,7 @@
 // Curriculum Configuration for Jeffrey AI Tutor
 // Based on educational systems research for K-8 teaching characteristics
 
-import { CurriculumType, AgeGroup, SuggestionCategory } from '@prisma/client';
+import { CurriculumType, AgeGroup } from '@prisma/client';
 
 export interface CurriculumConfig {
   name: string;
@@ -48,13 +48,6 @@ export interface CurriculumConfig {
     scoreDisplay: 'percentage' | 'stars' | 'descriptive' | 'none';
     encouragementLevel: 'high' | 'moderate' | 'minimal';
     mistakeHandling: string;
-  };
-
-  // Suggestion guidance for proactive lesson enhancement
-  suggestionFocus: {
-    primaryCategories: SuggestionCategory[];
-    emphasize: string[];
-    avoid: string[];
   };
 }
 
@@ -211,23 +204,6 @@ export const CURRICULUM_CONFIGS: Record<CurriculumType, CurriculumConfig> = {
       encouragementLevel: 'moderate',
       mistakeHandling: 'Mistakes are explored as learning opportunities. "What did you discover from trying that approach?"',
     },
-    suggestionFocus: {
-      primaryCategories: [
-        SuggestionCategory.ENGAGEMENT_ENHANCEMENT,
-        SuggestionCategory.PEDAGOGICAL_TECHNIQUE,
-      ],
-      emphasize: [
-        'Open-ended inquiry opportunities',
-        'Student agency and voice',
-        'Transdisciplinary connections',
-        'Learner profile attributes',
-      ],
-      avoid: [
-        'Heavy scaffolding',
-        'Percentage-based assessments',
-        'Single correct answer focus',
-      ],
-    },
   },
 
   BRITISH: {
@@ -289,22 +265,6 @@ export const CURRICULUM_CONFIGS: Record<CurriculumType, CurriculumConfig> = {
       scoreDisplay: 'descriptive',
       encouragementLevel: 'moderate',
       mistakeHandling: 'Gentle correction with clear guidance. "Let\'s check that together. Remember the rule..."',
-    },
-    suggestionFocus: {
-      primaryCategories: [
-        SuggestionCategory.STANDARDS_ALIGNMENT,
-        SuggestionCategory.DIFFERENTIATION,
-      ],
-      emphasize: [
-        'Concrete-pictorial-abstract progression',
-        'Greater depth challenges',
-        'Mastery checkpoints',
-        'National Curriculum alignment',
-      ],
-      avoid: [
-        'Open-ended tasks without structure',
-        'Star ratings instead of descriptive feedback',
-      ],
     },
   },
 
@@ -368,23 +328,6 @@ export const CURRICULUM_CONFIGS: Record<CurriculumType, CurriculumConfig> = {
       encouragementLevel: 'high',
       mistakeHandling: 'Growth mindset framing. "You don\'t know this YET! Let\'s try a different strategy."',
     },
-    suggestionFocus: {
-      primaryCategories: [
-        SuggestionCategory.STANDARDS_ALIGNMENT,
-        SuggestionCategory.ASSESSMENT_IMPROVEMENT,
-        SuggestionCategory.DIFFERENTIATION,
-      ],
-      emphasize: [
-        'Clear standards alignment and objectives',
-        'Formative checks for understanding',
-        'Gradual release of responsibility',
-        'Scaffolded supports for diverse learners',
-      ],
-      avoid: [
-        'Assessment-only lessons without instruction',
-        'Overly rigid pacing without flexibility',
-      ],
-    },
   },
 
   INDIAN_CBSE: {
@@ -447,23 +390,6 @@ export const CURRICULUM_CONFIGS: Record<CurriculumType, CurriculumConfig> = {
       encouragementLevel: 'moderate',
       mistakeHandling: 'Clear correction with the right method. "That\'s not quite right. The correct approach is..."',
     },
-    suggestionFocus: {
-      primaryCategories: [
-        SuggestionCategory.STANDARDS_ALIGNMENT,
-        SuggestionCategory.CONTENT_GAP,
-        SuggestionCategory.ASSESSMENT_IMPROVEMENT,
-      ],
-      emphasize: [
-        'NCERT/CBSE learning outcomes',
-        'Concept clarity before practice',
-        'Competency-based questioning',
-        'Stepwise problem solving',
-      ],
-      avoid: [
-        'Unstructured inquiry without guidance',
-        'Off-curriculum extensions that confuse core objectives',
-      ],
-    },
   },
 
   INDIAN_ICSE: {
@@ -525,23 +451,6 @@ export const CURRICULUM_CONFIGS: Record<CurriculumType, CurriculumConfig> = {
       scoreDisplay: 'percentage',
       encouragementLevel: 'moderate',
       mistakeHandling: 'Detailed correction with comprehensive explanation. "Let me explain the correct approach in more detail..."',
-    },
-    suggestionFocus: {
-      primaryCategories: [
-        SuggestionCategory.STANDARDS_ALIGNMENT,
-        SuggestionCategory.PEDAGOGICAL_TECHNIQUE,
-        SuggestionCategory.CONTENT_GAP,
-      ],
-      emphasize: [
-        'Depth of understanding with structured practice',
-        'Clear explanations with examples',
-        'Language precision and terminology',
-        'Board-style assessment readiness',
-      ],
-      avoid: [
-        'Overly simplified explanations',
-        'Informal language in assessments',
-      ],
     },
   },
 
@@ -606,23 +515,6 @@ export const CURRICULUM_CONFIGS: Record<CurriculumType, CurriculumConfig> = {
       scoreDisplay: 'percentage',
       encouragementLevel: 'high',
       mistakeHandling: 'Supportive correction with encouragement. "Good effort! Let\'s review the correct approach together."',
-    },
-    suggestionFocus: {
-      primaryCategories: [
-        SuggestionCategory.DIFFERENTIATION,
-        SuggestionCategory.ENGAGEMENT_ENHANCEMENT,
-        SuggestionCategory.CONTENT_GAP,
-      ],
-      emphasize: [
-        'Language scaffolds and vocabulary clarity',
-        'Culturally relevant examples',
-        'Structured checks for understanding',
-        'Respectful, values-aligned engagement',
-      ],
-      avoid: [
-        'Culturally insensitive contexts',
-        'Ambiguous instructions without structure',
-      ],
     },
   },
 };
