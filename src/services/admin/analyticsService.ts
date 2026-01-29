@@ -1843,6 +1843,7 @@ function formatOperationName(operation: string): string {
   const operationNames: Record<string, string> = {
     'CONTENT_ANALYSIS': 'Content Analysis',
     'LESSON_GENERATION': 'Lesson Generation',
+    'LESSON_ENHANCEMENT_ANALYSIS': 'Lesson Enhancement Analysis',
     'QUIZ_GENERATION': 'Quiz Generation',
     'FLASHCARD_GENERATION': 'Flashcard Generation',
     'GRADING_SINGLE': 'Single Grading',
