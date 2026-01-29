@@ -14,8 +14,8 @@ const PRESENTON_BASE_URL =
   process.env.PRESENTON_BASE_URL || new URL(PRESENTON_API_URL).origin;
 const PRESENTON_API_KEY = process.env.PRESENTON_API_KEY; // Not needed for local self-hosted
 
-// Timeouts configurable via env vars (PPT generation can take 2-4 minutes)
-const PRESENTON_REQUEST_TIMEOUT_MS = parseInt(process.env.PRESENTON_REQUEST_TIMEOUT_MS || '180000', 10); // 3 minutes
+// Timeouts configurable via env vars (PPT generation can take 2-5 minutes)
+const PRESENTON_REQUEST_TIMEOUT_MS = parseInt(process.env.PRESENTON_REQUEST_TIMEOUT_MS || '300000', 10); // 5 minutes
 const PRESENTON_DOWNLOAD_TIMEOUT_MS = parseInt(process.env.PRESENTON_DOWNLOAD_TIMEOUT_MS || '60000', 10);
 const PRESENTON_MAX_RETRIES = 2;
 
