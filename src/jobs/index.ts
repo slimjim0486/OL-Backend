@@ -23,3 +23,12 @@ export {
 } from './documentAnalysisJob.js';
 
 export type { DocumentAnalysisJobData } from './documentAnalysisJob.js';
+
+export {
+  initializeLessonEnhancementJob,
+  shutdownLessonEnhancementJob,
+  queueLessonEnhancementJob,
+  getLessonEnhancementQueueStatus,
+} from './lessonEnhancementJob.js';
+
+export type { LessonEnhancementJobData } from './lessonEnhancementJob.js';

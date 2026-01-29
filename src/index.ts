@@ -62,6 +62,8 @@ import {
   shutdownExportJob,
   initializeDocumentAnalysisJob,
   shutdownDocumentAnalysisJob,
+  initializeLessonEnhancementJob,
+  shutdownLessonEnhancementJob,
 } from './jobs/index.js';
 
 // Validate environment
@@ -267,6 +269,14 @@ async function startServer(): Promise<void> {
       logger.warn('Document analysis job initialization skipped');
     }
 
+    // Initialize lesson enhancement analysis job queue (proactive suggestions)
+    try {
+      await initializeLessonEnhancementJob();
+      logger.info('Lesson enhancement job initialized');
+    } catch (error) {
+      logger.warn('Lesson enhancement job initialization skipped');
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
@@ -294,6 +304,7 @@ async function startServer(): Promise<void> {
           await shutdownMemoryAggregationJob();
           await shutdownExportJob();
           await shutdownDocumentAnalysisJob();
+          await shutdownLessonEnhancementJob();
           await prisma.$disconnect();
           await redis.quit();
           logger.info('Server shut down successfully');
