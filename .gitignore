@@ -50,3 +50,4 @@ credentials/
 # Marketing exports (contain PII - NEVER commit)
 exports/
 *-emails-*.csv
+
