@@ -451,6 +451,217 @@ export async function generateLessonPPTX(
   };
 }
 
+/**
+ * Format flashcard content into a prompt for Presenton
+ * Creates a study/review presentation with question-answer format
+ */
+function formatFlashcardContent(
+  content: TeacherContent,
+  options: PresentonExportOptions
+): string {
+  const flashcardData = content.flashcardContent as unknown as FlashcardContent;
+  const subject = (content.subject || 'OTHER').replace('_', ' ');
+  const cards = flashcardData?.cards || [];
+
+  const parts: string[] = [];
+
+  // Title and basic info
+  parts.push(`Title: ${flashcardData?.title || content.title} - Flashcard Study Deck`);
+  parts.push(`Subject: ${subject}, Grade ${content.gradeLevel}`);
+  parts.push(`Total Cards: ${cards.length}`);
+
+  // Instructions for the AI
+  parts.push(`\nPresentation Format: Create an interactive flashcard study presentation.`);
+  parts.push(`Each flashcard should be presented with the QUESTION/TERM prominently displayed,`);
+  parts.push(`followed by the ANSWER/DEFINITION on the next slide or revealed below.`);
+  parts.push(`Use engaging visuals and clear typography for easy studying.`);
+
+  // Group cards by category if available
+  const categorizedCards = new Map<string, Flashcard[]>();
+  cards.forEach(card => {
+    const category = card.category || 'General';
+    if (!categorizedCards.has(category)) {
+      categorizedCards.set(category, []);
+    }
+    categorizedCards.get(category)!.push(card);
+  });
+
+  // Output cards by category
+  parts.push(`\n--- FLASHCARD CONTENT ---\n`);
+
+  let cardIndex = 1;
+  for (const [category, categoryCards] of categorizedCards.entries()) {
+    if (categorizedCards.size > 1) {
+      parts.push(`\nCategory: ${category}`);
+      parts.push(`---`);
+    }
+
+    // Limit cards to prevent overly long prompts (max ~20 cards for PPTX)
+    const limitedCards = categoryCards.slice(0, Math.ceil(20 / categorizedCards.size));
+
+    limitedCards.forEach(card => {
+      parts.push(`\nCard ${cardIndex}:`);
+      parts.push(`FRONT (Question/Term): ${truncateText(card.front, 200)}`);
+      parts.push(`BACK (Answer/Definition): ${truncateText(card.back, 300)}`);
+      if (card.hint && options.includeTeacherNotes) {
+        parts.push(`Hint: ${truncateText(card.hint, 100)}`);
+      }
+      cardIndex++;
+    });
+  }
+
+  // Add study tips slide content
+  parts.push(`\n--- STUDY TIPS ---`);
+  parts.push(`Include a final slide with study tips:`);
+  parts.push(`- Review cards multiple times`);
+  parts.push(`- Test yourself by covering the answers`);
+  parts.push(`- Focus on cards you find challenging`);
+  parts.push(`- Practice in short, focused sessions`);
+
+  return parts.join('\n');
+}
+
+/**
+ * Calculate number of slides for flashcard presentation
+ */
+function calculateFlashcardSlideCount(content: TeacherContent, options: PresentonExportOptions): number {
+  const flashcardData = content.flashcardContent as unknown as FlashcardContent;
+  const cardCount = flashcardData?.cards?.length || 0;
+
+  // Base slides: title + instructions + study tips
+  let slides = 3;
+
+  // Each card gets 1-2 slides depending on style
+  if (options.slideStyle === 'focused') {
+    // Focused: Question slide + Answer slide for each card (but cap it)
+    slides += Math.min(cardCount * 2, 30);
+  } else {
+    // Dense: Multiple cards per slide (2-3 cards per slide)
+    slides += Math.min(Math.ceil(cardCount / 2), 15);
+  }
+
+  // Cap at reasonable limits
+  const minSlides = 6;
+  const maxSlides = options.slideStyle === 'dense' ? 18 : 35;
+
+  return Math.min(Math.max(slides, minSlides), maxSlides);
+}
+
+/**
+ * Generate PowerPoint for Flashcard Deck using Presenton API
+ */
+export async function generateFlashcardPPTX(
+  content: TeacherContent,
+  options: PresentonExportOptions
+): Promise<{ data: Buffer; filename: string; editUrl?: string }> {
+  if (!PRESENTON_API_KEY) {
+    throw new Error('PRESENTON_API_KEY is not configured');
+  }
+
+  // Verify this is a flashcard deck
+  const flashcardData = content.flashcardContent as unknown as FlashcardContent;
+  if (!flashcardData?.cards || flashcardData.cards.length === 0) {
+    throw new Error('No flashcards found in this content');
+  }
+
+  // Format the flashcard content into a prompt
+  const flashcardPrompt = formatFlashcardContent(content, options);
+
+  // Calculate appropriate slide count
+  const slideCount = calculateFlashcardSlideCount(content, options);
+
+  console.log(`[Presenton] Flashcard content length: ${flashcardPrompt.length} chars, slides: ${slideCount}, cards: ${flashcardData.cards.length}`);
+
+  // Prepare the API request
+  const requestBody: PresentonRequest = {
+    content: flashcardPrompt,
+    instructions: `Create an engaging flashcard study presentation for Grade ${content.gradeLevel} students.
+Format as a study/review deck where each card shows the question/term prominently, then reveals the answer.
+Use large, readable fonts and educational imagery. Make it visually appealing for classroom or self-study use.
+Include a title slide, the flashcards in an easy-to-study format, and end with study tips.`,
+    tone: 'educational',
+    verbosity: options.slideStyle === 'dense' ? 'concise' : 'standard',
+    web_search: false,
+    image_type: 'stock',
+    theme: options.theme,
+    n_slides: slideCount,
+    language: options.language || 'English',
+    template: 'orbit-learn-teacher',
+    include_table_of_contents: false,
+    include_title_slide: true,
+    export_as: 'pptx',
+  };
+
+  console.log(`[Presenton] Generating flashcard presentation with ${slideCount} slides for ${flashcardData.cards.length} cards...`);
+
+  // Call Presenton API
+  const response = await fetchWithRetry(PRESENTON_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${PRESENTON_API_KEY}`,
+    },
+    body: JSON.stringify(requestBody),
+  }, { timeoutMs: PRESENTON_REQUEST_TIMEOUT_MS });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[Presenton] Flashcard API error:', response.status, errorText);
+
+    if (response.status === 500) {
+      throw new Error('Presenton API is temporarily unavailable. Please try again in a moment.');
+    } else if (response.status === 401) {
+      throw new Error('Presenton API authentication failed. Please check the API key.');
+    } else if (response.status === 429) {
+      throw new Error('Presenton API rate limit exceeded. Please try again later.');
+    }
+
+    throw new Error(`Presenton API error: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json() as PresentonResponse;
+  console.log(`[Presenton] Flashcard presentation generated: ${result.presentation_id}, credits used: ${result.credits_consumed}`);
+
+  // Download the generated PPTX file
+  const fileUrl = result.path.startsWith('http')
+    ? result.path
+    : new URL(result.path, PRESENTON_BASE_URL).toString();
+  console.log(`[Presenton] Downloading flashcard PPTX from: ${fileUrl}`);
+
+  const fileResponse = await fetchWithRetry(
+    fileUrl,
+    { method: 'GET' },
+    { timeoutMs: PRESENTON_DOWNLOAD_TIMEOUT_MS }
+  );
+  if (!fileResponse.ok) {
+    throw new Error(`Failed to download PPTX: ${fileResponse.status}`);
+  }
+
+  const arrayBuffer = await fileResponse.arrayBuffer();
+  const pptxBuffer = Buffer.from(arrayBuffer);
+
+  // Clean title for filename
+  const cleanTitle = content.title
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 50);
+
+  // Generate edit URL if available
+  const editUrl = result.edit_path
+    ? (result.edit_path.startsWith('http')
+        ? result.edit_path
+        : new URL(result.edit_path, PRESENTON_BASE_URL).toString())
+    : undefined;
+
+  return {
+    data: pptxBuffer,
+    filename: `${cleanTitle} - Flashcards - Orbit Learn.pptx`,
+    editUrl,
+  };
+}
+
 export default {
   generateLessonPPTX,
+  generateFlashcardPPTX,
 };

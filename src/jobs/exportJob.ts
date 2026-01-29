@@ -8,7 +8,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import { createBullConnection } from '../config/redis.js';
 import { logger } from '../utils/logger.js';
 import { prisma } from '../config/database.js';
-import { generateLessonPPTX, PresentonExportOptions } from '../services/teacher/presentonService.js';
+import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../services/teacher/presentonService.js';
 import { exportContent, ExportOptions } from '../services/teacher/exportService.js';
 import { uploadFile } from '../services/storage/storageService.js';
 import { emailService } from '../services/email/emailService.js';
@@ -143,13 +143,18 @@ async function processExportJob(job: Job<ExportJobData, ExportJobResult>): Promi
     let editUrl: string | undefined;
 
     if (format === ExportFormat.PPTX) {
-      // Generate PPTX via Presenton
-      const result = await generateLessonPPTX(content, options as PresentonExportOptions);
+      // Generate PPTX via Presenton - use appropriate function based on content type
+      const isFlashcard = content.contentType === 'FLASHCARD_DECK';
+      const result = isFlashcard
+        ? await generateFlashcardPPTX(content, options as PresentonExportOptions)
+        : await generateLessonPPTX(content, options as PresentonExportOptions);
       fileBuffer = result.data;
       filename = result.filename;
       mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-      // Note: Presenton doesn't return presentationId in current implementation
-      // We could enhance presentonService to return it if needed
+      // Store edit URL if available (for flashcard presentations)
+      if ('editUrl' in result && typeof result.editUrl === 'string') {
+        editUrl = result.editUrl;
+      }
     } else {
       // Generate PDF
       const result = await exportContent(content, options as ExportOptions);

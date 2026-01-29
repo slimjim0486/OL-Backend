@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { authenticateTeacher, requireTeacher } from '../../middleware/teacherAuth.js';
 import { prisma } from '../../config/database.js';
 import { exportContent, exportMultipleContent, ExportOptions } from '../../services/teacher/exportService.js';
-import { generateLessonPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
+import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
 import * as googleDriveService from '../../services/teacher/googleDriveService.js';
 
 const router = Router();
@@ -366,16 +366,18 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
       });
     }
 
-    // Only lessons can be exported to PPTX
-    if (content.contentType !== 'LESSON') {
+    // Only lessons and flashcard decks can be exported to PPTX
+    if (content.contentType !== 'LESSON' && content.contentType !== 'FLASHCARD_DECK') {
       return res.status(400).json({
         success: false,
-        error: 'Only lessons can be exported to PowerPoint. Try PDF export for quizzes and flashcards.',
+        error: 'Only lessons and flashcard decks can be exported to PowerPoint. Try PDF export for quizzes.',
       });
     }
 
-    // Generate PPTX using Presenton API
-    const result = await generateLessonPPTX(content, options);
+    // Generate PPTX using Presenton API (different function for flashcards)
+    const result = content.contentType === 'FLASHCARD_DECK'
+      ? await generateFlashcardPPTX(content, options)
+      : await generateLessonPPTX(content, options);
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
@@ -800,11 +802,11 @@ router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
       });
     }
 
-    // Only lessons can be exported to PPTX
-    if (content.contentType !== 'LESSON') {
+    // Only lessons and flashcard decks can be exported to PPTX
+    if (content.contentType !== 'LESSON' && content.contentType !== 'FLASHCARD_DECK') {
       return res.status(400).json({
         success: false,
-        error: 'Only lessons can be exported to PowerPoint',
+        error: 'Only lessons and flashcard decks can be exported to PowerPoint',
       });
     }
 
@@ -835,6 +837,12 @@ router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
       select: { firstName: true },
     });
 
+    // Determine filename based on content type
+    const isFlashcard = content.contentType === 'FLASHCARD_DECK';
+    const filename = isFlashcard
+      ? `${content.title} - Flashcards - Orbit Learn.pptx`
+      : `${content.title} - Orbit Learn.pptx`;
+
     // Create export record
     const exportRecord = await prisma.teacherExport.create({
       data: {
@@ -842,7 +850,7 @@ router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
         contentId,
         contentTitle: content.title,
         format: ExportFormat.PPTX,
-        filename: `${content.title} - Orbit Learn.pptx`,
+        filename,
         status: ExportStatus.QUEUED,
       },
     });
