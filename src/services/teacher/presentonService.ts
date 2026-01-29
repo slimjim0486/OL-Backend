@@ -7,8 +7,61 @@
 import { TeacherContent, Subject } from '@prisma/client';
 
 // Presenton API configuration
-const PRESENTON_API_URL = process.env.PRESENTON_API_URL || 'https://api.presenton.ai/v1/presentation/generate';
+const PRESENTON_API_URL =
+  process.env.PRESENTON_API_URL ||
+  'https://api.presenton.ai/api/v1/ppt/presentation/generate';
+const PRESENTON_BASE_URL =
+  process.env.PRESENTON_BASE_URL || new URL(PRESENTON_API_URL).origin;
 const PRESENTON_API_KEY = process.env.PRESENTON_API_KEY; // Not needed for local self-hosted
+
+const PRESENTON_REQUEST_TIMEOUT_MS = 45000;
+const PRESENTON_DOWNLOAD_TIMEOUT_MS = 60000;
+const PRESENTON_MAX_RETRIES = 2;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const shouldRetryStatus = (status: number) => status >= 500 || status === 429;
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  {
+    retries = PRESENTON_MAX_RETRIES,
+    timeoutMs = PRESENTON_REQUEST_TIMEOUT_MS,
+  }: { retries?: number; timeoutMs?: number } = {}
+) {
+  let attempt = 0;
+  while (true) {
+    try {
+      const response = await fetchWithTimeout(url, options, timeoutMs);
+      if (response.ok || !shouldRetryStatus(response.status) || attempt >= retries) {
+        return response;
+      }
+    } catch (error) {
+      const isAbort = error instanceof Error && error.name === 'AbortError';
+      if (!isAbort && attempt >= retries) {
+        throw error;
+      }
+      if (isAbort && attempt >= retries) {
+        throw new Error('Presenton request timed out');
+      }
+    }
+
+    attempt += 1;
+    const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+    await sleep(delay);
+  }
+}
 
 // Export options interface
 export interface PresentonExportOptions {
@@ -338,14 +391,14 @@ export async function generateLessonPPTX(
   console.log(`[Presenton] Request body:`, JSON.stringify(requestBody, null, 2).substring(0, 500) + '...');
 
   // Call Presenton API
-  const response = await fetch(PRESENTON_API_URL, {
+  const response = await fetchWithRetry(PRESENTON_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${PRESENTON_API_KEY}`,
     },
     body: JSON.stringify(requestBody),
-  });
+  }, { timeoutMs: PRESENTON_REQUEST_TIMEOUT_MS });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -368,13 +421,16 @@ export async function generateLessonPPTX(
 
   // Download the generated PPTX file
   // Presenton returns a local path like "/app_data/exports/file.pptx" - convert to full URL
-  const presentonBaseUrl = PRESENTON_API_URL.replace('/api/v1/ppt/presentation/generate', '');
   const fileUrl = result.path.startsWith('http')
     ? result.path
-    : `${presentonBaseUrl}${result.path}`;
+    : new URL(result.path, PRESENTON_BASE_URL).toString();
   console.log(`[Presenton] Downloading PPTX from: ${fileUrl}`);
 
-  const fileResponse = await fetch(fileUrl);
+  const fileResponse = await fetchWithRetry(
+    fileUrl,
+    { method: 'GET' },
+    { timeoutMs: PRESENTON_DOWNLOAD_TIMEOUT_MS }
+  );
   if (!fileResponse.ok) {
     throw new Error(`Failed to download PPTX: ${fileResponse.status}`);
   }

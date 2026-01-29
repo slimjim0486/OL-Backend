@@ -54,10 +54,10 @@ export async function initializeExportJob(): Promise<void> {
       defaultJobOptions: {
         removeOnComplete: 50,
         removeOnFail: 100,
-        attempts: 2,
+        attempts: 3,
         backoff: {
           type: 'exponential',
-          delay: 10000, // 10 seconds initial delay
+          delay: 15000, // 15 seconds initial delay
         },
       },
     });
@@ -90,12 +90,16 @@ export async function initializeExportJob(): Promise<void> {
         error: err.message,
       });
 
-      // Update export status to failed
+      // Update export status to failed only after final attempt
       if (job?.data?.exportId) {
+        const attempts = job?.opts?.attempts ?? 1;
+        const attemptsMade = job?.attemptsMade ?? 0;
+        const isFinalAttempt = attemptsMade >= attempts;
+
         await prisma.teacherExport.update({
           where: { id: job.data.exportId },
           data: {
-            status: ExportStatus.FAILED,
+            status: isFinalAttempt ? ExportStatus.FAILED : ExportStatus.QUEUED,
             errorMessage: err.message,
           },
         });
@@ -231,20 +235,8 @@ async function processExportJob(job: Job<ExportJobData, ExportJobResult>): Promi
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Export job failed', { exportId, error: errorMessage });
 
-    // Update export status to failed
-    await prisma.teacherExport.update({
-      where: { id: exportId },
-      data: {
-        status: ExportStatus.FAILED,
-        errorMessage,
-      },
-    });
-
-    return {
-      success: false,
-      exportId,
-      error: errorMessage,
-    };
+    // Throw to let BullMQ handle retries and final failure state
+    throw new Error(errorMessage);
   }
 }
 
