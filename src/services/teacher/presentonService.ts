@@ -472,10 +472,10 @@ function formatFlashcardContent(
   parts.push(`Total Cards: ${cards.length}`);
 
   // Instructions for the AI
-  parts.push(`\nPresentation Format: Create a clean, text-focused flashcard study presentation.`);
+  parts.push(`\nPresentation Format: Create an interactive flashcard study presentation.`);
   parts.push(`Each flashcard should be presented with the QUESTION/TERM prominently displayed,`);
   parts.push(`followed by the ANSWER/DEFINITION on the next slide or revealed below.`);
-  parts.push(`Use clear typography and good contrast. NO IMAGES - text only for focused studying.`);
+  parts.push(`Use engaging visuals and clear typography for easy studying.`);
 
   // Group cards by category if available
   const categorizedCards = new Map<string, Flashcard[]>();
@@ -576,15 +576,14 @@ export async function generateFlashcardPPTX(
   // Prepare the API request
   const requestBody: PresentonRequest = {
     content: flashcardPrompt,
-    instructions: `Create a clean, text-focused flashcard study presentation for Grade ${content.gradeLevel} students.
+    instructions: `Create an engaging flashcard study presentation for Grade ${content.gradeLevel} students.
 Format as a study/review deck where each card shows the question/term prominently, then reveals the answer.
-Use large, readable fonts with strong typography and good contrast. Keep slides clean and distraction-free.
-DO NOT include any images, photos, or illustrations - this is a text-only study deck focused on content.
+Use large, readable fonts and educational imagery. Make it visually appealing for classroom or self-study use.
 Include a title slide, the flashcards in an easy-to-study format, and end with study tips.`,
     tone: 'educational',
     verbosity: options.slideStyle === 'dense' ? 'concise' : 'standard',
     web_search: false,
-    image_type: 'stock', // Note: Instructed AI to not use images
+    image_type: 'stock',
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',
