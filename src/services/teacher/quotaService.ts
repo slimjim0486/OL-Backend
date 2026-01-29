@@ -43,6 +43,7 @@ const TOKEN_COSTS = {
 // These estimates include both input and output tokens
 const OPERATION_ESTIMATES: Record<TokenOperation, number> = {
   CONTENT_ANALYSIS: 5000,        // ~2K input + ~3K output
+  LESSON_ENHANCEMENT_ANALYSIS: 3500, // ~1.5K input + ~2K output
   LESSON_GENERATION: 8000,       // Guide: ~5.5K, Full: ~12K (use average)
   QUIZ_GENERATION: 3000,         // ~1K input + ~2K output (10 questions)
   FLASHCARD_GENERATION: 2500,    // ~800 input + ~1.5K output (20 cards)
