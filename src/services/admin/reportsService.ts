@@ -587,14 +587,23 @@ export const reportsService = {
       // Calculate total tokens used
       const totalTokensUsed = teacher.tokenUsageLogs.reduce((sum, log) => sum + log.tokensUsed, 0);
 
-      // Count PPTX exports specifically
-      const pptxExportsCount = await prisma.teacherExport.count({
-        where: {
-          teacherId,
-          format: 'PPTX',
-          status: 'COMPLETED',
-        },
-      });
+      // Count exports by format (completed only)
+      const [pptxExportsCount, pdfExportsCount] = await Promise.all([
+        prisma.teacherExport.count({
+          where: {
+            teacherId,
+            format: 'PPTX',
+            status: 'COMPLETED',
+          },
+        }),
+        prisma.teacherExport.count({
+          where: {
+            teacherId,
+            format: 'PDF',
+            status: 'COMPLETED',
+          },
+        }),
+      ]);
 
       return {
         ...teacher,
@@ -610,6 +619,7 @@ export const reportsService = {
         iepGoalsCount: teacher._count.iepGoalSessions,
         exportsCount: teacher._count.exports,
         pptxExportsCount,
+        pdfExportsCount,
         recentTokensUsed: totalTokensUsed,
         quotaUsedPercent: Number(teacher.monthlyTokenQuota) > 0
           ? Math.round((Number(teacher.currentMonthUsage) / Number(teacher.monthlyTokenQuota)) * 100)
