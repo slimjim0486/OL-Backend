@@ -10,3 +10,4 @@ export { iepGoalService } from './iepGoalService.js';
 export { brainstormService } from './brainstormService.js';
 export { activityService } from './activityService.js';
 export { processTrialExpirations } from './trialService.js';
+export { lessonAnalysisService } from './lessonAnalysisService.js';

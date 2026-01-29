@@ -2,8 +2,10 @@
 import { prisma } from '../../config/database.js';
 import { TeacherContentType, ContentStatus, Subject, TokenOperation, SourceType } from '@prisma/client';
 import { quotaService } from './quotaService.js';
+import { lessonAnalysisService } from './lessonAnalysisService.js';
 import { logger } from '../../utils/logger.js';
 import { trackLessonCreated } from '../brevo/brevoTrackingService.js';
+import { queueLessonEnhancementJob } from '../../jobs/index.js';
 
 // ============================================
 // TYPES
@@ -130,6 +132,20 @@ export const contentService = {
         }).catch(err => logger.warn('Brevo tracking failed', { error: err.message }));
       } catch (err: any) {
         logger.warn('Failed to update teacher lesson count', { error: err.message });
+      }
+    }
+
+    // Queue proactive enhancement analysis for lessons
+    if (input.contentType === 'LESSON' && content.lessonContent) {
+      try {
+        const analysisId = await lessonAnalysisService.queueAnalysis(content.id, teacherId);
+        queueLessonEnhancementJob({
+          analysisId,
+          contentId: content.id,
+          teacherId,
+        }).catch((err) => logger.warn('Failed to queue enhancement job', { error: err.message }));
+      } catch (err: any) {
+        logger.warn('Failed to queue lesson enhancement analysis', { error: err.message });
       }
     }
 
@@ -295,6 +311,22 @@ export const contentService = {
       teacherId,
       fields: Object.keys(input),
     });
+
+    if (input.lessonContent !== undefined && existing.contentType === 'LESSON') {
+      try {
+        const isStale = await lessonAnalysisService.checkStaleness(contentId);
+        if (isStale) {
+          const analysisId = await lessonAnalysisService.refreshAnalysis(contentId, teacherId);
+          queueLessonEnhancementJob({
+            analysisId,
+            contentId,
+            teacherId,
+          }).catch((err) => logger.warn('Failed to queue enhancement job', { error: err.message }));
+        }
+      } catch (err: any) {
+        logger.warn('Failed to trigger re-analysis', { error: err.message });
+      }
+    }
 
     return content;
   },
