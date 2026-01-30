@@ -68,9 +68,9 @@ const CLOUD_PROMPTS = [
 async function generateCloudImage(prompt: string, outputPath: string): Promise<void> {
   console.log(`Generating: ${path.basename(outputPath)}...`);
 
-  // Use gemini-2.0-flash-exp which supports native image generation
+  // Use gemini-3-pro-image-preview for native image generation
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-3-pro-image-preview',
   });
 
   try {

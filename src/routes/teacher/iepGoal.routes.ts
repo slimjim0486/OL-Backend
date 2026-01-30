@@ -166,7 +166,7 @@ router.post(
         teacherId,
         operation: TokenOperation.IEP_GOAL_GENERATION,
         tokensUsed: 5000, // Estimated tokens
-        modelUsed: 'gemini-2.0-flash',
+        modelUsed: 'gemini-3-flash-preview',
         resourceType: 'iep_goal_preview',
       });
 
@@ -211,7 +211,7 @@ router.post(
         teacherId,
         operation: TokenOperation.IEP_GOAL_GENERATION,
         tokensUsed: 5000, // Estimated tokens
-        modelUsed: 'gemini-2.0-flash',
+        modelUsed: 'gemini-3-flash-preview',
         resourceType: 'iep_goal_session',
         resourceId: session.id,
       });
@@ -383,7 +383,7 @@ router.post(
         teacherId,
         operation: TokenOperation.IEP_GOAL_GENERATION,
         tokensUsed: 5000, // Estimated tokens
-        modelUsed: 'gemini-2.0-flash',
+        modelUsed: 'gemini-3-flash-preview',
         resourceType: 'iep_goal_regeneration',
         resourceId: session.id,
       });

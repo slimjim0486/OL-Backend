@@ -141,7 +141,7 @@ STYLE: Cinematic, editorial illustration with deep emotional resonance. Like a s
 async function generateImage(prompt: string): Promise<Buffer | null> {
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash-exp-image-generation',
+      model: 'gemini-3-pro-image-preview',
       generationConfig: {
         temperature: 1,
         topP: 0.95,

@@ -160,7 +160,7 @@ async function generateMailboxImage(definition: typeof MAILBOX_DEFINITIONS[0]): 
     console.log(`  Generating: ${definition.name} (${definition.id})...`);
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-pro-image-preview',
       contents: definition.prompt,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],

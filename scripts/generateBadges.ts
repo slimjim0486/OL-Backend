@@ -306,7 +306,7 @@ Generate a single circular badge icon that looks like a collectible achievement 
     console.log(`  Generating badge: ${badge.name} (${badge.id})...`);
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-pro-image-preview',
       contents: prompt,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],

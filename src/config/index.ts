@@ -69,7 +69,7 @@ export const config = {
       pro: 'gemini-3-pro-preview',         // Most advanced reasoning with thinking
       flash: 'gemini-3-flash-preview',     // Best speed + intelligence, superior search/grounding
       // Gemini 2.5 models for cost-efficient use cases
-      flashLite: 'gemini-2.5-flash-lite',  // Fastest, ultra cost-efficient
+      flashLite: 'gemini-3-flash-preview',  // Using Flash for cost-efficient tasks (2.5-flash-lite deprecated)
       image: 'gemini-3-pro-image-preview', // Image generation with better text rendering
     },
   },
