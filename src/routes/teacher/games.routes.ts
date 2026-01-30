@@ -26,12 +26,16 @@ const GAME_RESOURCE_TYPES = {
   connections: 'games_connections',
   icebreaker: 'games_icebreaker',
   vocabulary: 'games_vocabulary',
+  trivia: 'games_trivia',
+  crossword: 'games_crossword',
 } as const;
 
 const GAME_TOKEN_ESTIMATES = {
   connections: 1400,
   icebreaker: 900,
   vocabulary: 1200,
+  trivia: 1800,
+  crossword: 2500, // Pro model uses more tokens
 } as const;
 
 function validateBody<T>(schema: z.ZodSchema<T>) {
@@ -76,6 +80,19 @@ const vocabularySchema = z.object({
   gradeLevel: z.string().min(1).max(40).optional(),
   subject: z.string().min(2).max(80).optional(),
   count: z.coerce.number().int().min(4).max(12).default(6),
+});
+
+const triviaSchema = z.object({
+  topic: z.string().min(2).max(120).optional(),
+  theme: z.string().min(2).max(80).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  force: z.boolean().optional(),
+});
+
+const crosswordSchema = z.object({
+  topic: z.string().min(2).max(120).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  force: z.boolean().optional(),
 });
 
 /**
@@ -287,6 +304,157 @@ router.post('/vocabulary', validateBody(vocabularySchema), async (req: Request, 
     return res.status(500).json({
       success: false,
       error: 'Failed to generate vocabulary',
+    });
+  }
+});
+
+/**
+ * POST /api/teacher/games/trivia
+ * - Daily cached trivia when not forced and no topic
+ * - On-demand generation when forced or a topic is provided
+ */
+router.post('/trivia', validateBody(triviaSchema), async (req: Request, res: Response) => {
+  const teacherId = req.teacher!.id;
+  const input = req.body as z.infer<typeof triviaSchema>;
+
+  const wantsDaily = !input.force && !input.topic;
+
+  try {
+    if (wantsDaily) {
+      const daily = await gamesService.getDailyTrivia();
+      return res.json({
+        success: true,
+        data: daily.puzzle,
+        meta: {
+          source: daily.meta.source,
+          modelUsed: daily.meta.modelUsed,
+          daily: true,
+        },
+      });
+    }
+
+    await quotaService.enforceQuota(
+      teacherId,
+      TokenOperation.GAMES,
+      GAME_TOKEN_ESTIMATES.trivia
+    );
+
+    const generated = await gamesService.generateTriviaOnDemand({
+      topic: input.topic,
+      theme: input.theme,
+      difficulty: input.difficulty,
+    });
+
+    const tokensUsed = resolveTokensUsed(generated.tokensUsed, generated.prompt, generated.responseText);
+    if (tokensUsed) {
+      await quotaService.recordUsage({
+        teacherId,
+        operation: TokenOperation.GAMES,
+        tokensUsed,
+        modelUsed: generated.modelUsed,
+        resourceType: GAME_RESOURCE_TYPES.trivia,
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: generated.puzzle,
+      meta: {
+        source: generated.source,
+        modelUsed: generated.modelUsed,
+        tokensUsed: tokensUsed || undefined,
+        daily: false,
+      },
+    });
+  } catch (error) {
+    if (error instanceof PaymentRequiredError) {
+      return res.status(402).json({ success: false, error: error.message });
+    }
+
+    logger.error('Trivia route failed', {
+      teacherId,
+      topic: input.topic,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate trivia',
+    });
+  }
+});
+
+/**
+ * POST /api/teacher/games/crossword
+ * - Daily cached crossword when not forced and no topic
+ * - On-demand generation when forced or a topic is provided
+ */
+router.post('/crossword', validateBody(crosswordSchema), async (req: Request, res: Response) => {
+  const teacherId = req.teacher!.id;
+  const input = req.body as z.infer<typeof crosswordSchema>;
+
+  const wantsDaily = !input.force && !input.topic;
+
+  try {
+    if (wantsDaily) {
+      const daily = await gamesService.getDailyCrossword();
+      return res.json({
+        success: true,
+        data: daily.puzzle,
+        meta: {
+          source: daily.meta.source,
+          modelUsed: daily.meta.modelUsed,
+          daily: true,
+        },
+      });
+    }
+
+    await quotaService.enforceQuota(
+      teacherId,
+      TokenOperation.GAMES,
+      GAME_TOKEN_ESTIMATES.crossword
+    );
+
+    const generated = await gamesService.generateCrosswordOnDemand({
+      topic: input.topic,
+      difficulty: input.difficulty,
+    });
+
+    const tokensUsed = resolveTokensUsed(generated.tokensUsed, generated.prompt, generated.responseText);
+    if (tokensUsed) {
+      await quotaService.recordUsage({
+        teacherId,
+        operation: TokenOperation.GAMES,
+        tokensUsed,
+        modelUsed: generated.modelUsed,
+        resourceType: GAME_RESOURCE_TYPES.crossword,
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: generated.puzzle,
+      meta: {
+        source: generated.source,
+        modelUsed: generated.modelUsed,
+        tokensUsed: tokensUsed || undefined,
+        daily: false,
+      },
+    });
+  } catch (error) {
+    if (error instanceof PaymentRequiredError) {
+      return res.status(402).json({ success: false, error: error.message });
+    }
+
+    logger.error('Crossword route failed', {
+      teacherId,
+      topic: input.topic,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate crossword',
     });
   }
 });

@@ -2411,6 +2411,8 @@ enum TokenOperation {
 enum DailyGameType {
   CONNECTIONS
   ICEBREAKER
+  TRIVIA
+  CROSSWORD
 }
 
 enum ScoringType {
