@@ -532,13 +532,13 @@ router.post(
       const { pdfBase64, filename } = req.body;
 
       // Check file size (base64 is ~33% larger than original)
-      // 25MB PDF = ~33.3MB base64
-      const maxBase64Size = 34 * 1024 * 1024; // ~34MB base64 = ~25MB PDF
+      // 50MB PDF = ~67MB base64
+      const maxBase64Size = 67 * 1024 * 1024; // ~67MB base64 = ~50MB PDF
       if (pdfBase64.length > maxBase64Size) {
         res.status(400).json({
           success: false,
           error: 'PDF file too large',
-          message: 'PDF files must be under 25MB. Please compress your PDF or split it into smaller files.',
+          message: 'PDF files must be under 50MB. Please compress your PDF or split it into smaller files.',
         });
         return;
       }
@@ -598,13 +598,13 @@ router.post(
       const { pdfBase64, filename } = req.body;
 
       // Check file size (base64 is ~33% larger than original)
-      // 25MB PDF = ~33.3MB base64
-      const maxBase64Size = 34 * 1024 * 1024; // ~34MB base64 = ~25MB PDF
+      // 50MB PDF = ~67MB base64
+      const maxBase64Size = 67 * 1024 * 1024; // ~67MB base64 = ~50MB PDF
       if (pdfBase64.length > maxBase64Size) {
         res.status(400).json({
           success: false,
           error: 'PDF file too large',
-          message: 'PDF files must be under 25MB. Please compress your PDF or split it into smaller files.',
+          message: 'PDF files must be under 50MB. Please compress your PDF or split it into smaller files.',
         });
         return;
       }
@@ -686,13 +686,13 @@ router.post(
       const { pptBase64, filename, mimeType } = req.body;
 
       // Check file size (base64 is ~33% larger than original)
-      // 25MB PPT = ~33.3MB base64
-      const maxBase64Size = 34 * 1024 * 1024; // ~34MB base64 = ~25MB PPT
+      // 50MB PPT = ~67MB base64
+      const maxBase64Size = 67 * 1024 * 1024; // ~67MB base64 = ~50MB PPT
       if (pptBase64.length > maxBase64Size) {
         res.status(400).json({
           success: false,
           error: 'PowerPoint file too large',
-          message: 'PowerPoint files must be under 25MB. Please compress your file or split it into smaller presentations.',
+          message: 'PowerPoint files must be under 50MB. Please compress your file or split it into smaller presentations.',
         });
         return;
       }
@@ -761,13 +761,13 @@ router.post(
       const { pptBase64, filename, mimeType } = req.body;
 
       // Check file size (base64 is ~33% larger than original)
-      // 25MB PPT = ~33.3MB base64
-      const maxBase64Size = 34 * 1024 * 1024; // ~34MB base64 = ~25MB PPT
+      // 50MB PPT = ~67MB base64
+      const maxBase64Size = 67 * 1024 * 1024; // ~67MB base64 = ~50MB PPT
       if (pptBase64.length > maxBase64Size) {
         res.status(400).json({
           success: false,
           error: 'PowerPoint file too large',
-          message: 'PowerPoint files must be under 25MB. Please compress your file or split it into smaller presentations.',
+          message: 'PowerPoint files must be under 50MB. Please compress your file or split it into smaller presentations.',
         });
         return;
       }
