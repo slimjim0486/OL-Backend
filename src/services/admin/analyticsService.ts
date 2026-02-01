@@ -1598,6 +1598,8 @@ export const analyticsService = {
     minUsageEvents?: number;
     minContentCreated?: number;
     limit?: number;
+    includeAll?: boolean;
+    allLimit?: number;
   } = {}): Promise<{
     summary: {
       totalTeachers: number;
@@ -1623,15 +1625,33 @@ export const analyticsService = {
       daysSinceLastUsage: number | null;
       engagementTier: 'super' | 'regular' | 'light' | 'one-time';
     }[];
+    allTeachers?: {
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      country: string | null;
+      subscriptionTier: string;
+      distinctUsageDays: number;
+      totalUsageEvents: number;
+      totalTokensUsed: number;
+      contentCreated: number;
+      firstUsageDate: Date | null;
+      lastUsageDate: Date | null;
+      daysSinceLastUsage: number | null;
+      engagementTier: 'super' | 'regular' | 'light' | 'one-time';
+    }[];
   }> {
     const {
       minDistinctDays = 2,
       minUsageEvents = 1,
       minContentCreated = 1,
       limit = 100,
+      includeAll = false,
+      allLimit,
     } = options;
 
-    const cacheKey = `analytics:teacher:repeat:${minDistinctDays}d:${minUsageEvents}e:${minContentCreated}c:${limit}`;
+    const cacheKey = `analytics:teacher:repeat:${minDistinctDays}d:${minUsageEvents}e:${minContentCreated}c:${limit}:all:${includeAll ? '1' : '0'}:${allLimit ?? 'na'}`;
 
     const cached = await redis.get(cacheKey);
     if (cached !== null) {
@@ -1760,7 +1780,18 @@ export const analyticsService = {
     const lightUsers = teacherMetrics.filter(t => t.engagementTier === 'light').length;
     const oneTimeUsers = teacherMetrics.filter(t => t.engagementTier === 'one-time').length;
 
-    const result = {
+    const result: {
+      summary: {
+        totalTeachers: number;
+        repeatTeachers: number;
+        repeatRate: number;
+        superUsers: number;
+        regularUsers: number;
+        oneTimeUsers: number;
+      };
+      teachers: typeof repeatTeachers;
+      allTeachers?: typeof teacherMetrics;
+    } = {
       summary: {
         totalTeachers: teachers.length,
         repeatTeachers: repeatTeachers.length,
@@ -1773,6 +1804,11 @@ export const analyticsService = {
       },
       teachers: repeatTeachers.slice(0, limit),
     };
+
+    if (includeAll) {
+      const cap = typeof allLimit === 'number' ? allLimit : teacherMetrics.length;
+      result.allTeachers = teacherMetrics.slice(0, cap);
+    }
 
     await redis.setex(cacheKey, CACHE_TTL.OVERVIEW, JSON.stringify(result));
 
@@ -1843,13 +1879,18 @@ function formatOperationName(operation: string): string {
   const operationNames: Record<string, string> = {
     'CONTENT_ANALYSIS': 'Content Analysis',
     'LESSON_GENERATION': 'Lesson Generation',
-    'LESSON_ENHANCEMENT_ANALYSIS': 'Lesson Enhancement Analysis',
     'QUIZ_GENERATION': 'Quiz Generation',
     'FLASHCARD_GENERATION': 'Flashcard Generation',
+    'INFOGRAPHIC_GENERATION': 'Infographic Generation',
     'GRADING_SINGLE': 'Single Grading',
     'GRADING_BATCH': 'Batch Grading',
     'FEEDBACK_GENERATION': 'Feedback Generation',
-    'INFOGRAPHIC_GENERATION': 'Infographic Generation',
+    'CHAT': 'Chat',
+    'BRAINSTORM': 'Brainstorm',
+    'AUDIO_UPDATE': 'Audio Update',
+    'SUB_PLAN_GENERATION': 'Sub Plan Generation',
+    'IEP_GOAL_GENERATION': 'IEP Goal Generation',
+    'GAMES': 'Games',
     'OTHER': 'Other',
   };
   return operationNames[operation] || operation;

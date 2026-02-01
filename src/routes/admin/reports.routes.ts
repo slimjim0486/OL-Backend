@@ -21,6 +21,7 @@ const paginationSchema = z.object({
   sortBy: z.string().optional(),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
   subscriptionTier: z.string().optional(),
+  pricingTier: z.string().optional(),
   curriculumType: z.string().optional(),
   dateFrom: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
   dateTo: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
@@ -74,6 +75,7 @@ router.get(
         sortBy: req.query.sortBy as string | undefined,
         sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'desc',
         subscriptionTier: req.query.subscriptionTier as string | undefined,
+        pricingTier: req.query.pricingTier as string | undefined,
         dateFrom: req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined,
         dateTo: req.query.dateTo ? new Date(req.query.dateTo as string) : undefined,
       };

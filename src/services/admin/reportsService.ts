@@ -13,6 +13,7 @@ export interface ReportQueryOptions {
   sortOrder?: 'asc' | 'desc';
   // Filters
   subscriptionTier?: string;
+  pricingTier?: string;
   curriculumType?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -43,6 +44,22 @@ function calculateAge(dateOfBirth: Date): number {
   return age;
 }
 
+type TeacherPricingTier = 'GENERATE' | 'DOWNLOAD' | 'SUBSCRIBED';
+
+function getTeacherPricingTier(params: {
+  subscriptionTier?: string | null;
+  subscriptionStatus?: string | null;
+  stripeSubscriptionId?: string | null;
+  downloadPurchasesCount?: number;
+}): TeacherPricingTier {
+  const tier = String(params.subscriptionTier || '').toUpperCase();
+  const status = String(params.subscriptionStatus || '').toUpperCase();
+  const isSubscribed = status === 'ACTIVE' && (tier && tier !== 'FREE' || Boolean(params.stripeSubscriptionId));
+  if (isSubscribed) return 'SUBSCRIBED';
+  if ((params.downloadPurchasesCount || 0) > 0) return 'DOWNLOAD';
+  return 'GENERATE';
+}
+
 export const reportsService = {
   /**
    * Get all parents with pagination, search, and filters
@@ -55,6 +72,7 @@ export const reportsService = {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       subscriptionTier,
+      pricingTier,
       dateFrom,
       dateTo,
     } = options;
@@ -413,6 +431,7 @@ export const reportsService = {
 
     // Build where clause
     const where: Prisma.TeacherWhereInput = {};
+    const andConditions: Prisma.TeacherWhereInput[] = [];
 
     if (search) {
       where.OR = [
@@ -424,13 +443,50 @@ export const reportsService = {
     }
 
     if (subscriptionTier) {
-      where.subscriptionTier = subscriptionTier as any;
+      andConditions.push({ subscriptionTier: subscriptionTier as any });
+    }
+
+    if (pricingTier) {
+      const normalizedPricingTier = pricingTier.toUpperCase();
+      if (normalizedPricingTier === 'SUBSCRIBED') {
+        andConditions.push({
+          AND: [
+            { subscriptionStatus: 'ACTIVE' },
+            {
+              OR: [
+                { subscriptionTier: { not: 'FREE' } },
+                { stripeSubscriptionId: { not: null } },
+              ],
+            },
+          ],
+        });
+      } else if (normalizedPricingTier === 'DOWNLOAD') {
+        andConditions.push({
+          AND: [
+            { subscriptionTier: 'FREE' },
+            { stripeSubscriptionId: null },
+            { downloadPurchases: { some: {} } },
+          ],
+        });
+      } else if (normalizedPricingTier === 'GENERATE') {
+        andConditions.push({
+          AND: [
+            { subscriptionTier: 'FREE' },
+            { stripeSubscriptionId: null },
+            { downloadPurchases: { none: {} } },
+          ],
+        });
+      }
     }
 
     if (dateFrom || dateTo) {
       where.createdAt = {};
       if (dateFrom) where.createdAt.gte = dateFrom;
       if (dateTo) where.createdAt.lte = dateTo;
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     // Build orderBy
@@ -466,6 +522,7 @@ export const reportsService = {
             subscriptionTier: true,
             subscriptionStatus: true,
             stripeCustomerId: true,
+            stripeSubscriptionId: true,
             trialEndsAt: true,
             monthlyTokenQuota: true,
             currentMonthUsage: true,
@@ -479,11 +536,28 @@ export const reportsService = {
                 audioUpdates: true,
                 substitutePlans: true,
                 iepGoalSessions: true,
+                downloadPurchases: true,
               },
             },
           },
         }),
       ]);
+
+      const teacherIds = teachers.map(teacher => teacher.id);
+      const completedExports = teacherIds.length > 0
+        ? await prisma.teacherExport.groupBy({
+          by: ['teacherId'],
+          where: {
+            teacherId: { in: teacherIds },
+            status: 'COMPLETED',
+          },
+          _count: { _all: true },
+        })
+        : [];
+
+      const completedExportMap = new Map(
+        completedExports.map(item => [item.teacherId, item._count._all])
+      );
 
       const totalPages = Math.ceil(total / limit);
 
@@ -497,6 +571,14 @@ export const reportsService = {
           audioUpdatesCount: teacher._count.audioUpdates,
           subPlansCount: teacher._count.substitutePlans,
           iepGoalsCount: teacher._count.iepGoalSessions,
+          downloadPurchasesCount: teacher._count.downloadPurchases,
+          downloadsCount: completedExportMap.get(teacher.id) || 0,
+          pricingTier: getTeacherPricingTier({
+            subscriptionTier: teacher.subscriptionTier,
+            subscriptionStatus: teacher.subscriptionStatus,
+            stripeSubscriptionId: teacher.stripeSubscriptionId,
+            downloadPurchasesCount: teacher._count.downloadPurchases,
+          }),
           quotaUsedPercent: Number(teacher.monthlyTokenQuota) > 0
             ? Math.round((Number(teacher.currentMonthUsage) / Number(teacher.monthlyTokenQuota)) * 100)
             : 0,
@@ -575,6 +657,7 @@ export const reportsService = {
               substitutePlans: true,
               iepGoalSessions: true,
               exports: true,
+              downloadPurchases: true,
             },
           },
         },
@@ -618,9 +701,17 @@ export const reportsService = {
         subPlansCount: teacher._count.substitutePlans,
         iepGoalsCount: teacher._count.iepGoalSessions,
         exportsCount: teacher._count.exports,
+        downloadPurchasesCount: teacher._count.downloadPurchases,
         pptxExportsCount,
         pdfExportsCount,
+        downloadsCount: pdfExportsCount + pptxExportsCount,
         recentTokensUsed: totalTokensUsed,
+        pricingTier: getTeacherPricingTier({
+          subscriptionTier: teacher.subscriptionTier,
+          subscriptionStatus: teacher.subscriptionStatus,
+          stripeSubscriptionId: teacher.stripeSubscriptionId,
+          downloadPurchasesCount: teacher._count.downloadPurchases,
+        }),
         quotaUsedPercent: Number(teacher.monthlyTokenQuota) > 0
           ? Math.round((Number(teacher.currentMonthUsage) / Number(teacher.monthlyTokenQuota)) * 100)
           : 0,

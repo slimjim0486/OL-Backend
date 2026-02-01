@@ -792,16 +792,27 @@ router.get(
   '/teacher/repeat-users',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const minDistinctDays = parseInt(req.query.minDays as string) || 2;
-      const minUsageEvents = parseInt(req.query.minEvents as string) || 1;
-      const minContentCreated = parseInt(req.query.minContent as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 100;
+      const parseNumber = (value: unknown, fallback: number) => {
+        const parsed = Number(value);
+        return Number.isNaN(parsed) ? fallback : parsed;
+      };
+
+      const minDistinctDays = parseNumber(req.query.minDays, 2);
+      const minUsageEvents = parseNumber(req.query.minEvents, 1);
+      const minContentCreated = parseNumber(req.query.minContent, 1);
+      const limit = parseNumber(req.query.limit, 100);
+      const includeAll = String(req.query.includeAll || '').toLowerCase() === 'true';
+      const allLimit = req.query.allLimit !== undefined
+        ? parseNumber(req.query.allLimit, limit)
+        : undefined;
 
       const data = await analyticsService.getRepeatTeachers({
         minDistinctDays,
         minUsageEvents,
         minContentCreated,
         limit,
+        includeAll,
+        allLimit,
       });
 
       res.json({
