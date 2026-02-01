@@ -43,7 +43,6 @@ const TOKEN_COSTS = {
 // These estimates include both input and output tokens
 const OPERATION_ESTIMATES: Record<TokenOperation, number> = {
   CONTENT_ANALYSIS: 5000,        // ~2K input + ~3K output
-  LESSON_ENHANCEMENT_ANALYSIS: 3500, // ~1.5K input + ~2K output
   LESSON_GENERATION: 8000,       // Guide: ~5.5K, Full: ~12K (use average)
   QUIZ_GENERATION: 3000,         // ~1K input + ~2K output (10 questions)
   FLASHCARD_GENERATION: 2500,    // ~800 input + ~1.5K output (20 cards)
@@ -75,6 +74,10 @@ const TIER_CREDITS: Record<TeacherSubscriptionTier, number> = {
 
 // Maximum rollover cap (2x monthly allocation)
 const ROLLOVER_MULTIPLIER = 2;
+
+// Pricing model configuration (download-based monetization)
+const PRICING_MODEL = process.env.TEACHER_PRICING_MODEL || 'DOWNLOADS';
+const DOWNLOAD_PRICING_MODEL = PRICING_MODEL === 'DOWNLOADS';
 
 // Unlimited trial configuration
 const FREE_TRIAL_ENABLED = false;
@@ -175,6 +178,19 @@ export const quotaService = {
     estimatedTokens?: number
   ): Promise<QuotaCheckResult> {
     const estimate = estimatedTokens || OPERATION_ESTIMATES[operation] || 1000;
+    const costPerToken = TOKEN_COSTS.default / 1000;
+    const estimatedCost = estimate * costPerToken;
+
+    if (DOWNLOAD_PRICING_MODEL) {
+      return {
+        allowed: true,
+        remainingTokens: UNLIMITED_TOKENS,
+        remainingCredits: UNLIMITED_CREDITS,
+        estimatedCost,
+        quotaResetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        percentUsed: 0,
+      };
+    }
 
     // Get teacher with org info
     const teacher = await prisma.teacher.findUnique({
@@ -213,10 +229,6 @@ export const quotaService = {
       // Re-fetch updated values
       return this.checkQuota(teacherId, operation, estimatedTokens);
     }
-
-    // Calculate cost estimate using the appropriate model
-    const costPerToken = TOKEN_COSTS.default / 1000;
-    const estimatedCost = estimate * costPerToken;
 
     // Free-tier unlimited trial (skip quota checks)
     const freeTrial = getFreeTrialStatus(teacher);
@@ -401,11 +413,13 @@ export const quotaService = {
       });
 
       // Track credit usage in Brevo for behavioral triggers (B4, B5)
-      const updatedTeacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
-      if (updatedTeacher) {
-        trackCreditUsage(updatedTeacher).catch((err) => {
-          logger.warn('Brevo credit tracking failed', { error: err.message });
-        });
+      if (!DOWNLOAD_PRICING_MODEL) {
+        const updatedTeacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
+        if (updatedTeacher) {
+          trackCreditUsage(updatedTeacher).catch((err) => {
+            logger.warn('Brevo credit tracking failed', { error: err.message });
+          });
+        }
       }
     }
 
@@ -520,6 +534,44 @@ export const quotaService = {
     }
 
     const isOrgMember = !!teacher.organization;
+
+    if (DOWNLOAD_PRICING_MODEL) {
+      const now = new Date();
+      return {
+        pricingModel: 'DOWNLOADS',
+        isUnlimited: true,
+        isOrgMember,
+        organizationName: teacher.organization?.name || null,
+        subscriptionTier: isOrgMember
+          ? teacher.organization!.subscriptionTier
+          : teacher.subscriptionTier,
+        quota: {
+          monthlyLimit: '0',
+          used: '0',
+          remaining: '0',
+          percentUsed: 0,
+          resetDate: now,
+        },
+        credits: {
+          subscription: 0,
+          rollover: 0,
+          bonus: 0,
+          total: 0,
+          used: 0,
+          remaining: 0,
+        },
+        trial: {
+          isActive: false,
+          startedAt: null,
+          endsAt: null,
+          daysRemaining: null,
+          used: false,
+        },
+        trialEndsAt: null,
+        isInTrial: false,
+      };
+    }
+
     const monthlyLimit = isOrgMember
       ? teacher.organization!.monthlyTokenQuota
       : teacher.monthlyTokenQuota;
@@ -832,6 +884,18 @@ export const quotaService = {
       trialEndsAt?: Date;
     }
   ): Promise<void> {
+    if (DOWNLOAD_PRICING_MODEL) {
+      await prisma.teacher.update({
+        where: { id: teacherId },
+        data: {
+          subscriptionTier: newTier,
+          ...(options?.stripeSubscriptionId && { stripeSubscriptionId: options.stripeSubscriptionId }),
+          ...(options?.trialEndsAt && { trialEndsAt: options.trialEndsAt }),
+        },
+      });
+      return;
+    }
+
     const tierCredits = getTierCredits(newTier);
     const newTokenQuota = creditsToTokens(tierCredits);
 
@@ -1069,6 +1133,9 @@ function formatTierName(tier: TeacherSubscriptionTier): string {
  * Tracks sent notifications to avoid duplicates
  */
 async function checkAndSendCreditNotifications(teacherId: string): Promise<void> {
+  if (DOWNLOAD_PRICING_MODEL) {
+    return;
+  }
   // Get teacher info including usage and notification status
   const teacher = await prisma.teacher.findUnique({
     where: { id: teacherId },

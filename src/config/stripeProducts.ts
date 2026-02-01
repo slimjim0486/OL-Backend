@@ -1,23 +1,17 @@
 /**
  * Stripe Products Configuration - Teacher Portal
  *
- * This file contains all Stripe product and price IDs for the TEACHER subscription system.
- * These are separate from student/family subscriptions for the AI tutor section.
- *
- * Price IDs should be set in environment variables and loaded here.
- *
- * Teacher Pricing Structure (December 2025):
- * - FREE: $0/month - 30 credits (30K tokens)
- * - BASIC: $9.99/month or $95.90/year - 500 credits (500K tokens)
- * - PROFESSIONAL: $24.99/month or $239.90/year - 2,000 credits (2M tokens)
- *
- * Teacher Credit Packs (one-time):
- * - 100 credits: $4.99
- * - 300 credits: $12.99
- * - 500 credits: $19.99
+ * Pricing Model (Teacher Portal v2):
+ * - Free to generate + preview unlimited content
+ * - Pay-per-download:
+ *   - Lesson PDF: $1.99
+ *   - Full bundle: $2.99
+ * - Unlimited downloads subscription:
+ *   - $14.99/month
+ *   - $99/year
  */
 
-import { TeacherSubscriptionTier } from '@prisma/client';
+import { TeacherSubscriptionTier, TeacherDownloadProductType } from '@prisma/client';
 
 // =============================================================================
 // ENVIRONMENT VARIABLE LOADING
@@ -26,185 +20,154 @@ import { TeacherSubscriptionTier } from '@prisma/client';
 const env = process.env;
 
 // =============================================================================
-// SUBSCRIPTION PRODUCTS
+// SUBSCRIPTION PRODUCTS (Unlimited Downloads)
 // =============================================================================
 
 export interface SubscriptionProduct {
   name: string;
   tier: TeacherSubscriptionTier;
-  credits: number;
-  tokens: number;
   priceMonthly: number;    // USD
   priceAnnual: number;     // USD
   priceIdMonthly: string;
   priceIdAnnual: string;
   features: string[];
-  trialDays: number;
 }
+
+const unlimitedMonthlyPriceId =
+  env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY ||
+  env.STRIPE_PRICE_TEACHER_PRO_MONTHLY ||
+  env.STRIPE_PRICE_TEACHER_BASIC_MONTHLY ||
+  '';
+
+const unlimitedAnnualPriceId =
+  env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL ||
+  env.STRIPE_PRICE_TEACHER_PRO_ANNUAL ||
+  env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL ||
+  '';
+
+const UNLIMITED_PRODUCT: SubscriptionProduct = {
+  name: 'OrbitLearn Unlimited',
+  tier: 'PROFESSIONAL',
+  priceMonthly: 14.99,
+  priceAnnual: 99,
+  priceIdMonthly: unlimitedMonthlyPriceId,
+  priceIdAnnual: unlimitedAnnualPriceId,
+  features: [
+    'Unlimited downloads (all formats)',
+    'All answer keys, infographics, and exports',
+    'Google Slides + PowerPoint exports',
+    'Priority AI generation',
+    'Cancel anytime',
+  ],
+};
 
 export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, SubscriptionProduct> = {
   FREE: {
-    name: 'Teacher Starter',
+    name: 'Free to Create',
     tier: 'FREE',
-    credits: 30,
-    tokens: 30000,
     priceMonthly: 0,
     priceAnnual: 0,
-    priceIdMonthly: '',  // No subscription needed
+    priceIdMonthly: '',
     priceIdAnnual: '',
     features: [
-      '30 credits per month',
-      'Basic content generation',
-      'Quiz and flashcard creation',
-      'Community support',
+      'Generate unlimited lessons, quizzes, and flashcards',
+      'Full-quality in-app previews',
+      'Save everything to your library',
     ],
-    trialDays: 0,
   },
-  BASIC: {
-    name: 'Teacher Plus',
-    tier: 'BASIC',
-    credits: 500,
-    tokens: 500000,
-    priceMonthly: 9.99,
-    priceAnnual: 95.90,
-    priceIdMonthly: env.STRIPE_PRICE_TEACHER_BASIC_MONTHLY || '',
-    priceIdAnnual: env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL || '',
-    features: [
-      '500 credits per month',
-      'All content types',
-      'Full lesson generation',
-      'Credit rollover (up to 500)',
-      'Email support',
-    ],
-    trialDays: 0,
-  },
-  PROFESSIONAL: {
-    name: 'Teacher Pro',
-    tier: 'PROFESSIONAL',
-    credits: 2000,
-    tokens: 2000000,
-    priceMonthly: 24.99,
-    priceAnnual: 239.90,
-    priceIdMonthly: env.STRIPE_PRICE_TEACHER_PRO_MONTHLY || '',
-    priceIdAnnual: env.STRIPE_PRICE_TEACHER_PRO_ANNUAL || '',
-    features: [
-      '2,000 credits per month',
-      'All content types',
-      'Priority processing',
-      'AI-powered grading',
-      'Infographic generation',
-      'Credit rollover (up to 2,000)',
-      'Priority email support',
-    ],
-    trialDays: 0,
-  },
+  // Map legacy tiers to the Unlimited plan for compatibility
+  BASIC: UNLIMITED_PRODUCT,
+  PROFESSIONAL: UNLIMITED_PRODUCT,
 };
 
 // =============================================================================
-// CREDIT PACKS (ONE-TIME PURCHASES)
+// ONE-TIME DOWNLOAD PRODUCTS
 // =============================================================================
 
-export interface CreditPack {
-  id: string;
+export interface DownloadProduct {
   name: string;
-  credits: number;
-  price: number;           // USD
-  pricePerCredit: number;  // USD
-  savings: string;         // Display text
+  type: TeacherDownloadProductType;
+  price: number; // USD
   priceId: string;
+  includes: string[];
 }
 
-export const CREDIT_PACKS: CreditPack[] = [
-  {
-    id: 'teacher_pack_100',
-    name: 'Teacher Credit Pack - 100',
-    credits: 100,
-    price: 4.99,
-    pricePerCredit: 0.05,
-    savings: '',
-    priceId: env.STRIPE_PRICE_TEACHER_CREDITS_100 || '',
+export const DOWNLOAD_PRODUCTS: Record<TeacherDownloadProductType, DownloadProduct> = {
+  PDF: {
+    name: 'Lesson PDF Download',
+    type: 'PDF',
+    price: 1.99,
+    priceId: env.STRIPE_PRICE_TEACHER_PDF || '',
+    includes: ['Lesson PDF'],
   },
-  {
-    id: 'teacher_pack_300',
-    name: 'Teacher Credit Pack - 300',
-    credits: 300,
-    price: 12.99,
-    pricePerCredit: 0.043,
-    savings: 'Save 13%',
-    priceId: env.STRIPE_PRICE_TEACHER_CREDITS_300 || '',
+  BUNDLE: {
+    name: 'Full Lesson Bundle',
+    type: 'BUNDLE',
+    price: 2.99,
+    priceId: env.STRIPE_PRICE_TEACHER_BUNDLE || '',
+    includes: [
+      'Lesson PDF',
+      'Quiz + Answer Key',
+      'Flashcards',
+      'Infographic',
+      'Google Slides',
+      'PowerPoint',
+    ],
   },
-  {
-    id: 'teacher_pack_500',
-    name: 'Teacher Credit Pack - 500',
-    credits: 500,
-    price: 19.99,
-    pricePerCredit: 0.04,
-    savings: 'Save 20%',
-    priceId: env.STRIPE_PRICE_TEACHER_CREDITS_500 || '',
-  },
-];
+};
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
 /**
- * Get product by tier
+ * Get subscription product by tier
  */
 export function getProductByTier(tier: TeacherSubscriptionTier): SubscriptionProduct {
   return SUBSCRIPTION_PRODUCTS[tier];
 }
 
 /**
- * Get product by price ID
+ * Get subscription product by price ID (maps legacy prices to Unlimited)
  */
 export function getProductByPriceId(priceId: string): SubscriptionProduct | null {
-  for (const product of Object.values(SUBSCRIPTION_PRODUCTS)) {
-    if (product.priceIdMonthly === priceId || product.priceIdAnnual === priceId) {
-      return product;
-    }
+  if (!priceId) return null;
+
+  const legacyPriceIds = new Set([
+    env.STRIPE_PRICE_TEACHER_BASIC_MONTHLY,
+    env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL,
+    env.STRIPE_PRICE_TEACHER_PRO_MONTHLY,
+    env.STRIPE_PRICE_TEACHER_PRO_ANNUAL,
+    env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY,
+    env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL,
+  ].filter(Boolean));
+
+  if (legacyPriceIds.has(priceId)) {
+    return UNLIMITED_PRODUCT;
   }
+
   return null;
 }
 
 /**
- * Get credit pack by price ID
+ * Get download product by type
  */
-export function getCreditPackByPriceId(priceId: string): CreditPack | null {
-  return CREDIT_PACKS.find(pack => pack.priceId === priceId) || null;
+export function getDownloadProduct(type: TeacherDownloadProductType): DownloadProduct {
+  return DOWNLOAD_PRODUCTS[type];
 }
 
 /**
- * Get credit pack by ID
+ * Get download product by price ID
  */
-export function getCreditPackById(packId: string): CreditPack | null {
-  return CREDIT_PACKS.find(pack => pack.id === packId) || null;
+export function getDownloadProductByPriceId(priceId: string): DownloadProduct | null {
+  return Object.values(DOWNLOAD_PRODUCTS).find(product => product.priceId === priceId) || null;
 }
 
 /**
- * Check if a price ID is for a subscription
- */
-export function isSubscriptionPriceId(priceId: string): boolean {
-  return getProductByPriceId(priceId) !== null;
-}
-
-/**
- * Check if a price ID is for a credit pack
- */
-export function isCreditPackPriceId(priceId: string): boolean {
-  return getCreditPackByPriceId(priceId) !== null;
-}
-
-/**
- * Determine if a price ID is for an annual subscription
+ * Check if a price ID is for an annual subscription
  */
 export function isAnnualSubscription(priceId: string): boolean {
-  for (const product of Object.values(SUBSCRIPTION_PRODUCTS)) {
-    if (product.priceIdAnnual === priceId) {
-      return true;
-    }
-  }
-  return false;
+  return priceId === unlimitedAnnualPriceId || priceId === env.STRIPE_PRICE_TEACHER_PRO_ANNUAL || priceId === env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL;
 }
 
 /**
@@ -225,25 +188,18 @@ export function getTierFromPriceId(priceId: string): TeacherSubscriptionTier | n
 export function validateStripeConfig(): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
 
-  // Check subscription prices (only BASIC and PROFESSIONAL need Stripe)
-  if (!SUBSCRIPTION_PRODUCTS.BASIC.priceIdMonthly) {
-    missing.push('STRIPE_PRICE_TEACHER_BASIC_MONTHLY');
+  if (!unlimitedMonthlyPriceId) {
+    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY');
   }
-  if (!SUBSCRIPTION_PRODUCTS.BASIC.priceIdAnnual) {
-    missing.push('STRIPE_PRICE_TEACHER_BASIC_ANNUAL');
-  }
-  if (!SUBSCRIPTION_PRODUCTS.PROFESSIONAL.priceIdMonthly) {
-    missing.push('STRIPE_PRICE_TEACHER_PRO_MONTHLY');
-  }
-  if (!SUBSCRIPTION_PRODUCTS.PROFESSIONAL.priceIdAnnual) {
-    missing.push('STRIPE_PRICE_TEACHER_PRO_ANNUAL');
+  if (!unlimitedAnnualPriceId) {
+    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL');
   }
 
-  // Check credit pack prices
-  for (const pack of CREDIT_PACKS) {
-    if (!pack.priceId) {
-      missing.push(`STRIPE_PRICE_TEACHER_CREDITS_${pack.credits}`);
-    }
+  if (!DOWNLOAD_PRODUCTS.PDF.priceId) {
+    missing.push('STRIPE_PRICE_TEACHER_PDF');
+  }
+  if (!DOWNLOAD_PRODUCTS.BUNDLE.priceId) {
+    missing.push('STRIPE_PRICE_TEACHER_BUNDLE');
   }
 
   return {
@@ -258,13 +214,11 @@ export function validateStripeConfig(): { valid: boolean; missing: string[] } {
 
 export default {
   SUBSCRIPTION_PRODUCTS,
-  CREDIT_PACKS,
+  DOWNLOAD_PRODUCTS,
   getProductByTier,
   getProductByPriceId,
-  getCreditPackByPriceId,
-  getCreditPackById,
-  isSubscriptionPriceId,
-  isCreditPackPriceId,
+  getDownloadProduct,
+  getDownloadProductByPriceId,
   isAnnualSubscription,
   getTierFromPriceId,
   validateStripeConfig,

@@ -2,9 +2,9 @@
  * Teacher Subscription Service
  *
  * Handles Stripe subscription operations for teacher subscriptions:
- * - Creating checkout sessions for new subscriptions
- * - Managing subscription lifecycle (upgrades, downgrades, cancellations)
- * - Processing credit pack purchases
+ * - Creating checkout sessions for unlimited downloads
+ * - Managing subscription lifecycle (cancellations, renewals)
+ * - Processing per-lesson download purchases
  * - Customer portal access
  */
 
@@ -12,17 +12,17 @@ import Stripe from 'stripe';
 import { prisma } from '../../config/database.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
-import { TeacherSubscriptionTier, SubscriptionStatus } from '@prisma/client';
-import { ConflictError } from '../../middleware/errorHandler.js';
+import { TeacherSubscriptionTier, SubscriptionStatus, TeacherDownloadProductType } from '@prisma/client';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../middleware/errorHandler.js';
 import {
   getProductByTier,
   isAnnualSubscription,
   getTierFromPriceId,
   SUBSCRIPTION_PRODUCTS,
-  CREDIT_PACKS,
+  getDownloadProduct,
 } from '../../config/stripeProducts.js';
-import { creditsToTokens } from '../teacher/quotaService.js';
 import { referralService } from '../sharing/index.js';
+import { emailService } from '../email/emailService.js';
 
 // Initialize Stripe client
 const stripe = config.stripe.secretKey
@@ -94,20 +94,16 @@ function determineTierFromSubscription(subscription: Stripe.Subscription): Teach
   const tier = getTierFromPriceId(priceId);
   if (tier) return tier;
 
-  // Fallback: check price amount to determine tier
+  // Fallback: check price amount to determine tier (treat any paid plan as Unlimited)
   const price = subscription.items.data[0]?.price;
   if (price) {
     const amount = price.unit_amount || 0;
     const interval = price.recurring?.interval;
 
-    // Monthly pricing: BASIC = $9.99 (999 cents), PROFESSIONAL = $24.99 (2499 cents)
-    // Annual pricing: BASIC = $95.90 (9590 cents), PROFESSIONAL = $239.90 (23990 cents)
     if (interval === 'month') {
-      if (amount >= 2000) return 'PROFESSIONAL';
-      if (amount >= 500) return 'BASIC';
+      if (amount >= 500) return 'PROFESSIONAL';
     } else if (interval === 'year') {
-      if (amount >= 20000) return 'PROFESSIONAL';
-      if (amount >= 5000) return 'BASIC';
+      if (amount >= 5000) return 'PROFESSIONAL';
     }
   }
 
@@ -368,11 +364,6 @@ export const subscriptionService = {
       }
     }
 
-    // Add trial period if configured
-    if (product.trialDays > 0) {
-      sessionParams.subscription_data!.trial_period_days = product.trialDays;
-    }
-
     const session = await stripe.checkout.sessions.create(sessionParams);
 
     logger.info('Created checkout session', {
@@ -390,7 +381,7 @@ export const subscriptionService = {
   },
 
   /**
-   * Create a checkout session for a credit pack purchase
+   * Create a checkout session for a credit pack purchase (deprecated)
    */
   async createCreditPackCheckoutSession(
     teacherId: string,
@@ -398,17 +389,33 @@ export const subscriptionService = {
     successUrl: string,
     cancelUrl: string
   ): Promise<CheckoutSessionResult> {
+    logger.warn('Credit pack checkout requested after deprecation', {
+      teacherId,
+      packId,
+      successUrl,
+      cancelUrl,
+    });
+
+    throw new Error('Credit packs are no longer available. Please choose a download or unlimited plan instead.');
+  },
+
+  /**
+   * Create a checkout session for a one-time download purchase
+   */
+  async createDownloadCheckoutSession(
+    teacherId: string,
+    contentId: string,
+    productType: TeacherDownloadProductType,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<CheckoutSessionResult> {
     if (!stripe) {
       throw new Error('Stripe is not configured');
     }
 
-    const pack = CREDIT_PACKS.find(p => p.id === packId);
-    if (!pack) {
-      throw new Error(`Credit pack not found: ${packId}`);
-    }
-
-    if (!pack.priceId) {
-      throw new Error(`Price ID not configured for credit pack: ${packId}`);
+    const product = getDownloadProduct(productType);
+    if (!product?.priceId) {
+      throw new Error(`Price ID not configured for download product: ${productType}`);
     }
 
     const customerId = await this.getOrCreateCustomer(teacherId);
@@ -418,7 +425,7 @@ export const subscriptionService = {
       mode: 'payment',
       line_items: [
         {
-          price: pack.priceId,
+          price: product.priceId,
           quantity: 1,
         },
       ],
@@ -426,16 +433,16 @@ export const subscriptionService = {
       cancel_url: cancelUrl,
       metadata: {
         teacherId,
-        type: 'credit_pack',
-        packId,
-        credits: pack.credits.toString(),
+        contentId,
+        productType,
+        type: 'download_purchase',
       },
     });
 
-    logger.info('Created credit pack checkout session', {
+    logger.info('Created download purchase checkout session', {
       teacherId,
-      packId,
-      credits: pack.credits,
+      contentId,
+      productType,
       sessionId: session.id,
     });
 
@@ -515,16 +522,6 @@ export const subscriptionService = {
       });
     }
 
-    const product = getProductByTier(effectiveTier);
-    if (!product) {
-      logger.error('Could not find product for tier during sync', {
-        teacherId,
-        subscriptionId: subscription.id,
-        tier,
-      });
-      return;
-    }
-
     // Stripe API returns current_period_end as a number (Unix timestamp)
     // Handle both direct property and items-based period end
     let currentPeriodEnd: number | undefined;
@@ -561,16 +558,12 @@ export const subscriptionService = {
         ? SubscriptionStatus.ACTIVE
         : SubscriptionStatus.PAST_DUE;
 
-    // Calculate token quota
-    const tokenQuota = creditsToTokens(product.credits);
-
     logger.info('Syncing subscription from Stripe to database', {
       teacherId,
       subscriptionId: subscription.id,
       tier,
       status: subscription.status,
       subscriptionStatus,
-      tokenQuota,
       currentPeriodEnd,
       subscriptionExpiresAt,
     });
@@ -582,7 +575,6 @@ export const subscriptionService = {
         subscriptionStatus,
         stripeSubscriptionId: subscription.id,
         subscriptionExpiresAt,
-        monthlyTokenQuota: BigInt(tokenQuota),
         trialEndsAt,
       },
     });
@@ -890,8 +882,6 @@ export const subscriptionService = {
       });
     }
 
-    const product = getProductByTier(effectiveTier);
-
     // Calculate trial end if applicable
     let trialEndsAt: Date | null = null;
     if (subscription.trial_end) {
@@ -932,7 +922,6 @@ export const subscriptionService = {
         teacherId,
         subscriptionId: subscription.id,
         tier,
-        tokenQuota: creditsToTokens(product.credits),
         currentPeriodEnd,
         subscriptionExpiresAt,
       });
@@ -944,7 +933,6 @@ export const subscriptionService = {
           subscriptionStatus: subscription.status === 'active' || subscription.status === 'trialing' ? 'ACTIVE' : 'PAST_DUE',
           stripeSubscriptionId: subscription.id,
           subscriptionExpiresAt,
-          monthlyTokenQuota: BigInt(creditsToTokens(product.credits)),
           trialEndsAt,
         },
       });
@@ -1012,9 +1000,6 @@ export const subscriptionService = {
       return;
     }
 
-    // Revert to FREE tier
-    const freeProduct = getProductByTier('FREE');
-
     await prisma.teacher.update({
       where: { id: teacherId },
       data: {
@@ -1022,7 +1007,6 @@ export const subscriptionService = {
         subscriptionStatus: 'ACTIVE',
         stripeSubscriptionId: null,
         subscriptionExpiresAt: null,
-        monthlyTokenQuota: BigInt(creditsToTokens(freeProduct.credits)),
         trialEndsAt: null,
       },
     });
@@ -1054,51 +1038,72 @@ export const subscriptionService = {
       return;
     }
 
-    // Check if this is a credit pack purchase
-    if (session.metadata?.type === 'credit_pack') {
-      const credits = parseInt(session.metadata.credits || '0', 10);
-      const packId = session.metadata.packId;
+    // Check if this is a download purchase
+    if (session.metadata?.type === 'download_purchase') {
+      const contentId = session.metadata.contentId;
+      const productType = session.metadata.productType as TeacherDownloadProductType | undefined;
+      const amountCents = session.amount_total ?? 0;
 
-      if (!packId || credits <= 0) {
-        logger.warn('Credit pack checkout missing pack details', {
+      if (!contentId || !productType || !['PDF', 'BUNDLE'].includes(productType)) {
+        logger.warn('Download purchase checkout missing details', {
           teacherId,
           sessionId: session.id,
-          packId,
-          credits,
+          contentId,
+          productType,
         });
         return;
       }
 
       try {
-        await prisma.$transaction([
-          prisma.teacherCreditPackPurchase.create({
-            data: {
-              teacherId,
-              stripeSessionId: session.id,
-              packId,
-              credits,
-            },
-          }),
-          prisma.teacher.update({
-            where: { id: teacherId },
-            data: {
-              bonusCredits: { increment: credits },
-            },
-          }),
-        ]);
+        await prisma.teacherDownloadPurchase.create({
+          data: {
+            teacherId,
+            contentId,
+            productType,
+            amountCents,
+            stripeSessionId: session.id,
+          },
+        });
 
-        logger.info('Credit pack purchased', {
+        logger.info('Download purchase recorded', {
           teacherId,
-          packId,
-          credits,
+          contentId,
+          productType,
           sessionId: session.id,
         });
+
+        // Send purchase confirmation email
+        try {
+          const [teacher, content] = await Promise.all([
+            prisma.teacher.findUnique({
+              where: { id: teacherId },
+              select: { email: true, firstName: true },
+            }),
+            prisma.teacherContent.findUnique({
+              where: { id: contentId },
+              select: { title: true },
+            }),
+          ]);
+
+          if (teacher?.email) {
+            await emailService.sendTeacherDownloadPurchaseEmail(
+              teacher.email,
+              teacher.firstName || 'Teacher',
+              productType,
+              content?.title || 'Your Content',
+              amountCents
+            );
+          }
+        } catch (emailError) {
+          logger.error('Failed to send download purchase email', { emailError, teacherId });
+          // Don't throw - purchase was successful, email is secondary
+        }
       } catch (error: any) {
         if (error?.code === 'P2002') {
-          logger.warn('Credit pack purchase already processed', {
+          logger.warn('Download purchase already processed', {
             teacherId,
-            packId,
-            credits,
+            contentId,
+            productType,
             sessionId: session.id,
           });
           return;
@@ -1115,6 +1120,104 @@ export const subscriptionService = {
       sessionId: session.id,
       mode: session.mode,
     });
+  },
+
+  /**
+   * Confirm a download checkout session after redirect (webhook fallback)
+   */
+  async confirmDownloadCheckoutSession(
+    teacherId: string,
+    sessionId: string
+  ): Promise<{ status: 'recorded' | 'already_recorded' | 'pending'; contentId: string; productType: TeacherDownloadProductType }> {
+    if (!stripe) {
+      throw new Error('Stripe is not configured');
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.metadata?.type !== 'download_purchase') {
+      throw new ValidationError('Invalid checkout session type');
+    }
+
+    if (session.metadata?.teacherId && session.metadata.teacherId !== teacherId) {
+      throw new ForbiddenError('Checkout session does not belong to this teacher');
+    }
+
+    const contentId = session.metadata?.contentId;
+    const productType = session.metadata?.productType as TeacherDownloadProductType | undefined;
+
+    if (!contentId || !productType || !['PDF', 'BUNDLE'].includes(productType)) {
+      throw new ValidationError('Checkout session is missing purchase details');
+    }
+
+    const isPaid = session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
+    if (!isPaid || session.status !== 'complete') {
+      return { status: 'pending', contentId, productType };
+    }
+
+    const content = await prisma.teacherContent.findFirst({
+      where: { id: contentId, teacherId },
+      select: { id: true, title: true },
+    });
+
+    if (!content) {
+      throw new NotFoundError('Content not found. It may have been deleted.');
+    }
+
+    const amountCents = session.amount_total ?? 0;
+
+    try {
+      await prisma.teacherDownloadPurchase.create({
+        data: {
+          teacherId,
+          contentId,
+          productType,
+          amountCents,
+          stripeSessionId: session.id,
+        },
+      });
+
+      logger.info('Download purchase recorded via confirmation', {
+        teacherId,
+        contentId,
+        productType,
+        sessionId: session.id,
+      });
+
+      // Send purchase confirmation email
+      try {
+        const teacher = await prisma.teacher.findUnique({
+          where: { id: teacherId },
+          select: { email: true, firstName: true },
+        });
+
+        if (teacher?.email) {
+          await emailService.sendTeacherDownloadPurchaseEmail(
+            teacher.email,
+            teacher.firstName || 'Teacher',
+            productType,
+            content.title || 'Your Content',
+            amountCents
+          );
+        }
+      } catch (emailError) {
+        logger.error('Failed to send download purchase email via confirmation', { emailError, teacherId });
+        // Don't throw - purchase was successful, email is secondary
+      }
+
+      return { status: 'recorded', contentId, productType };
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        logger.info('Download purchase already recorded via confirmation', {
+          teacherId,
+          contentId,
+          productType,
+          sessionId: session.id,
+        });
+        return { status: 'already_recorded', contentId, productType };
+      }
+      throw error;
+    }
   },
 
   /**
@@ -1161,14 +1264,17 @@ export const subscriptionService = {
    * Get available plans for display
    */
   getAvailablePlans() {
-    return Object.values(SUBSCRIPTION_PRODUCTS).map(product => ({
+    const plans = [
+      SUBSCRIPTION_PRODUCTS.FREE,
+      SUBSCRIPTION_PRODUCTS.PROFESSIONAL,
+    ];
+
+    return plans.map(product => ({
       tier: product.tier,
       name: product.name,
-      credits: product.credits,
       priceMonthly: product.priceMonthly,
       priceAnnual: product.priceAnnual,
       features: product.features,
-      trialDays: product.trialDays,
     }));
   },
 
@@ -1176,14 +1282,7 @@ export const subscriptionService = {
    * Get available credit packs for display
    */
   getAvailableCreditPacks() {
-    return CREDIT_PACKS.map(pack => ({
-      id: pack.id,
-      name: pack.name,
-      credits: pack.credits,
-      price: pack.price,
-      pricePerCredit: pack.pricePerCredit,
-      savings: pack.savings,
-    }));
+    return [];
   },
 
   /**

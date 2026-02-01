@@ -1492,6 +1492,126 @@ Review your account settings at: ${config.frontendUrl}/parent/settings
   // =====================================================
 
   /**
+   * Teacher download purchase confirmation email
+   */
+  teacherDownloadPurchase: (
+    teacherName: string,
+    productType: 'PDF' | 'BUNDLE',
+    contentTitle: string,
+    amountPaid: string
+  ) => {
+    const isBundle = productType === 'BUNDLE';
+    const productName = isBundle ? 'Full Lesson Bundle' : 'Lesson PDF';
+    const includes = isBundle
+      ? ['Lesson PDF', 'Quiz + Answer Key', 'Flashcards', 'Infographic', 'Google Slides', 'PowerPoint']
+      : ['Lesson PDF'];
+
+    return {
+      subject: `✅ Purchase Confirmed: ${productName} - Orbit Learn`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Purchase Confirmation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
+          ✅ Purchase Confirmed!
+        </h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 22px;">Hi ${teacherName}!</h2>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Thank you for your purchase! Your download is now ready.
+        </p>
+
+        <!-- Purchase Details Box -->
+        <div style="background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%); border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #BBF7D0;">
+          <h3 style="color: #166534; margin: 0 0 16px 0; font-size: 18px;">📦 Order Details</h3>
+
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 12px;">
+            <tr>
+              <td style="color: #3D4F66; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #D1FAE5;">Product:</td>
+              <td style="color: #1E2A3A; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #D1FAE5; text-align: right; font-weight: 600;">${productName}</td>
+            </tr>
+            <tr>
+              <td style="color: #3D4F66; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #D1FAE5;">Content:</td>
+              <td style="color: #1E2A3A; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #D1FAE5; text-align: right; font-weight: 500;">${contentTitle}</td>
+            </tr>
+            <tr>
+              <td style="color: #3D4F66; font-size: 14px; padding: 8px 0;">Amount Paid:</td>
+              <td style="color: #166534; font-size: 16px; padding: 8px 0; text-align: right; font-weight: 700;">${amountPaid}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- What's Included -->
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0;">
+          <h4 style="color: #1E2A3A; margin: 0 0 12px 0; font-size: 15px;">📄 What's Included:</h4>
+          <ul style="margin: 0; padding-left: 20px; color: #3D4F66;">
+            ${includes.map(item => `<li style="padding: 4px 0;">${item}</li>`).join('')}
+          </ul>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${config.frontendUrl}/teacher/content"
+             style="display: inline-block; background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; padding: 16px 40px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(212,168,83,0.3);">
+            Download Now →
+          </a>
+        </div>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 14px; text-align: center;">
+          You can download your files anytime from your content library.
+        </p>
+
+        <!-- Footer -->
+        <div style="border-top: 1px solid #E5E7EB; margin-top: 32px; padding-top: 24px; text-align: center;">
+          <p style="color: #9CA3AF; font-size: 13px; margin: 0;">
+            Questions? Reply to this email or contact us at support@orbitlearn.app
+          </p>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
+      text: `
+Purchase Confirmed!
+
+Hi ${teacherName},
+
+Thank you for your purchase! Your download is now ready.
+
+ORDER DETAILS
+-------------
+Product: ${productName}
+Content: ${contentTitle}
+Amount Paid: ${amountPaid}
+
+What's Included:
+${includes.map(item => `- ${item}`).join('\n')}
+
+Download your files at: ${config.frontendUrl}/teacher/content
+
+Questions? Contact us at support@orbitlearn.app
+
+- The Orbit Learn Team
+      `,
+    };
+  },
+
+  /**
    * Teacher credit usage warning email (70% and 90% thresholds)
    */
   teacherCreditWarning: (
@@ -2690,6 +2810,51 @@ Details:
       return true;
     } catch (error) {
       logger.error('Error sending export ready email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send teacher download purchase confirmation email
+   */
+  async sendTeacherDownloadPurchaseEmail(
+    email: string,
+    teacherName: string,
+    productType: 'PDF' | 'BUNDLE',
+    contentTitle: string,
+    amountCents: number
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped teacher download purchase email to ${email}`);
+      return true;
+    }
+
+    try {
+      const amountPaid = `$${(amountCents / 100).toFixed(2)}`;
+      const template = templates.teacherDownloadPurchase(
+        teacherName,
+        productType,
+        contentTitle,
+        amountPaid
+      );
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send teacher download purchase email', { error, email });
+        return false;
+      }
+
+      logger.info(`Teacher download purchase email sent to ${email}`, { productType, contentTitle });
+      return true;
+    } catch (error) {
+      logger.error('Error sending teacher download purchase email', { error, email });
       return false;
     }
   },

@@ -301,8 +301,8 @@ model VoiceTranscriptionLog {
   transcriptionMs Int // Time taken to transcribe
 
   // AI metadata
-  modelUsed       String // "whisper-1"
-  confidenceScore Float? // 0-1 confidence from Whisper
+  modelUsed       String // "gpt-4o-mini-transcribe"
+  confidenceScore Float? // 0-1 confidence from transcription model
 
   // Context (what the transcription was for)
   contextType VoiceContextType
@@ -982,6 +982,9 @@ model Teacher {
   // Credit Pack Purchases
   creditPackPurchases TeacherCreditPackPurchase[]
 
+  // Download Purchases (per-lesson)
+  downloadPurchases TeacherDownloadPurchase[]
+
   // Onboarding
   tutorialCompletedAt DateTime? // When dashboard tutorial was completed (null = not completed)
 
@@ -1012,6 +1015,23 @@ model TeacherCreditPackPurchase {
   credits        Int
   createdAt      DateTime @default(now())
 
+  @@index([teacherId, createdAt])
+}
+
+model TeacherDownloadPurchase {
+  id              String                     @id @default(uuid())
+  teacherId       String
+  contentId       String
+  productType     TeacherDownloadProductType
+  amountCents     Int
+  stripeSessionId String                     @unique
+  createdAt       DateTime                   @default(now())
+
+  teacher Teacher        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  content TeacherContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, contentId])
+  @@index([contentId])
   @@index([teacherId, createdAt])
 }
 
@@ -1144,6 +1164,7 @@ model TeacherContent {
   // Relationships
   exports TeacherExport[]
   likes   ContentLike[]
+  downloadPurchases TeacherDownloadPurchase[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -2347,6 +2368,11 @@ enum TeacherSubscriptionTier {
   PROFESSIONAL // 2M tokens/month
 }
 
+enum TeacherDownloadProductType {
+  PDF
+  BUNDLE
+}
+
 enum TeacherRole {
   TEACHER
   DEPARTMENT_HEAD
@@ -2393,7 +2419,6 @@ enum DocumentAnalysisStatus {
 enum TokenOperation {
   CONTENT_ANALYSIS
   LESSON_GENERATION
-  LESSON_ENHANCEMENT_ANALYSIS
   QUIZ_GENERATION
   FLASHCARD_GENERATION
   INFOGRAPHIC_GENERATION

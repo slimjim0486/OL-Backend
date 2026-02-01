@@ -11,6 +11,8 @@ import { exportContent, exportMultipleContent, ExportOptions } from '../../servi
 import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
 import * as googleDriveService from '../../services/teacher/googleDriveService.js';
 import { uploadFile } from '../../services/storage/storageService.js';
+import { DOWNLOAD_PRODUCTS, SUBSCRIPTION_PRODUCTS } from '../../config/stripeProducts.js';
+import { checkDownloadAccess, getDownloadAccess } from '../../services/teacher/downloadAccessService.js';
 
 const router = Router();
 
@@ -54,6 +56,54 @@ const batchExportSchema = z.object({
 // ============================================
 // DOWNLOADS ROUTES (must come before /:contentId)
 // ============================================
+
+/**
+ * Check download access for a specific content item
+ * GET /api/teacher/export/access/:contentId
+ */
+router.get('/access/:contentId', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const { contentId } = req.params;
+
+    const content = await prisma.teacherContent.findFirst({
+      where: {
+        id: contentId,
+        teacherId,
+      },
+      select: { id: true },
+    });
+
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        error: 'Content not found',
+      });
+    }
+
+    const access = await getDownloadAccess(teacherId, contentId);
+    const subscriptionPlan = SUBSCRIPTION_PRODUCTS.PROFESSIONAL;
+
+    return res.json({
+      success: true,
+      data: {
+        ...access,
+        prices: {
+          pdf: Math.round(DOWNLOAD_PRODUCTS.PDF.price * 100),
+          bundle: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
+          subscription_monthly: Math.round(subscriptionPlan.priceMonthly * 100),
+          subscription_annual: Math.round(subscriptionPlan.priceAnnual * 100),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Access check error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check download access',
+    });
+  }
+});
 
 import { queueExportJob, ExportJobData } from '../../jobs/index.js';
 import { ExportFormat, ExportStatus } from '@prisma/client';
@@ -291,6 +341,22 @@ router.get('/:contentId', async (req: Request, res: Response) => {
       });
     }
 
+    const access = await checkDownloadAccess(
+      teacherId,
+      contentId,
+      content.contentType,
+      'pdf'
+    );
+
+    if (!access.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: 'Purchase required',
+        requiredProduct: access.requiredProduct,
+        price: access.priceCents,
+      });
+    }
+
     // Generate export
     const result = await exportContent(content, options);
 
@@ -372,6 +438,22 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: 'Only lessons and flashcard decks can be exported to PowerPoint. Try PDF export for quizzes.',
+      });
+    }
+
+    const access = await checkDownloadAccess(
+      teacherId,
+      contentId,
+      content.contentType,
+      'pptx'
+    );
+
+    if (!access.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: 'Purchase required',
+        requiredProduct: access.requiredProduct,
+        price: access.priceCents,
       });
     }
 
@@ -484,6 +566,27 @@ router.post('/batch', async (req: Request, res: Response) => {
       return res.status(404).json({
         success: false,
         error: 'No content found',
+      });
+    }
+
+    const teacher = await prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { subscriptionTier: true, subscriptionStatus: true, subscriptionExpiresAt: true },
+    });
+
+    // Only BASIC/PROFESSIONAL with active status count as subscribers
+    const isSubscriber = Boolean(
+      teacher?.subscriptionTier !== 'FREE' &&
+      teacher?.subscriptionStatus === 'ACTIVE' &&
+      (!teacher.subscriptionExpiresAt || teacher.subscriptionExpiresAt > new Date())
+    );
+
+    if (!isSubscriber) {
+      return res.status(403).json({
+        success: false,
+        error: 'Batch exports require Unlimited downloads. Export items individually or start Unlimited.',
+        requiredProduct: 'BUNDLE',
+        price: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
       });
     }
 
@@ -656,6 +759,22 @@ router.post('/:contentId/drive', async (req: Request, res: Response) => {
       });
     }
 
+    const access = await checkDownloadAccess(
+      teacherId,
+      contentId,
+      content.contentType,
+      'drive'
+    );
+
+    if (!access.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: 'Purchase required',
+        requiredProduct: access.requiredProduct,
+        price: access.priceCents,
+      });
+    }
+
     // Generate PDF
     const exportResult = await exportContent(content, options);
 
@@ -712,6 +831,27 @@ router.post('/batch/drive', async (req: Request, res: Response) => {
       return res.status(404).json({
         success: false,
         error: 'No content found',
+      });
+    }
+
+    const teacher = await prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { subscriptionTier: true, subscriptionStatus: true, subscriptionExpiresAt: true },
+    });
+
+    // Only BASIC/PROFESSIONAL with active status count as subscribers
+    const isSubscriber = Boolean(
+      teacher?.subscriptionTier !== 'FREE' &&
+      teacher?.subscriptionStatus === 'ACTIVE' &&
+      (!teacher.subscriptionExpiresAt || teacher.subscriptionExpiresAt > new Date())
+    );
+
+    if (!isSubscriber) {
+      return res.status(403).json({
+        success: false,
+        error: 'Batch exports require Unlimited downloads. Export items individually or start Unlimited.',
+        requiredProduct: 'BUNDLE',
+        price: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
       });
     }
 
@@ -875,6 +1015,22 @@ router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
       });
     }
 
+    const access = await checkDownloadAccess(
+      teacher.id,
+      contentId,
+      content.contentType,
+      'pptx'
+    );
+
+    if (!access.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: 'Purchase required',
+        requiredProduct: access.requiredProduct,
+        price: access.priceCents,
+      });
+    }
+
     // Check for existing in-progress export
     const existingExport = await prisma.teacherExport.findFirst({
       where: {
@@ -980,6 +1136,22 @@ router.post('/:contentId/pdf-async', async (req: Request, res: Response) => {
       return res.status(404).json({
         success: false,
         error: 'Content not found',
+      });
+    }
+
+    const access = await checkDownloadAccess(
+      teacher.id,
+      contentId,
+      content.contentType,
+      'pdf'
+    );
+
+    if (!access.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: 'Purchase required',
+        requiredProduct: access.requiredProduct,
+        price: access.priceCents,
       });
     }
 
