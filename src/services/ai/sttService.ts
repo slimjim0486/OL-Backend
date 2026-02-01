@@ -82,7 +82,7 @@ export const sttService = {
   },
 
   /**
-   * Transcribe audio buffer to text using OpenAI Whisper
+   * Transcribe audio buffer to text using OpenAI GPT-4o mini Transcribe
    * CRITICAL: Audio buffer is processed in-memory only, never written to disk
    *
    * @param audioBuffer - Raw audio data (will be zeroed after processing)
@@ -131,11 +131,12 @@ export const sttService = {
         { type: mimeType }
       );
 
-      // Call Whisper API with verbose_json for confidence scores
+      // Call OpenAI transcription API with logprobs for confidence scores
       const response = await client.audio.transcriptions.create({
         file: audioFile,
-        model: 'whisper-1',
-        response_format: 'verbose_json',
+        model: 'gpt-4o-mini-transcribe',
+        response_format: 'json',
+        include: ['logprobs'],
         language: options.language || undefined,
         // Prompts can help with domain-specific terms
         prompt: options.ageGroup === 'YOUNG'
@@ -146,26 +147,17 @@ export const sttService = {
       const transcriptionMs = Date.now() - startTime;
 
       // Extract text and calculate confidence
-      // Whisper verbose_json returns segments with confidence info
       const text = response.text.trim();
-      const durationMs = Math.round((response.duration || 0) * 1000);
+      const durationMs = Math.round(((response as any).duration || 0) * 1000);
 
-      // Calculate average confidence from segments if available
+      // Calculate average confidence from token logprobs if available
       let confidence = 0.85; // Default confidence
-      if ('segments' in response && Array.isArray(response.segments)) {
-        const segments = response.segments as Array<{ avg_logprob?: number; no_speech_prob?: number }>;
-        if (segments.length > 0) {
-          // Convert log probability to confidence (0-1 range)
-          const avgLogProb = segments.reduce((sum, seg) => sum + (seg.avg_logprob || -1), 0) / segments.length;
+      if ('logprobs' in response && Array.isArray(response.logprobs)) {
+        const tokenLogprobs = response.logprobs as Array<{ logprob?: number }>;
+        if (tokenLogprobs.length > 0) {
+          const avgLogProb = tokenLogprobs.reduce((sum, token) => sum + (token.logprob ?? -1), 0) / tokenLogprobs.length;
           // Log probs are negative, closer to 0 = higher confidence
-          // Typical range is -1 to 0, map to 0.5 to 1.0
           confidence = Math.min(1.0, Math.max(0.5, 1 + avgLogProb));
-
-          // Reduce confidence if high no-speech probability
-          const avgNoSpeechProb = segments.reduce((sum, seg) => sum + (seg.no_speech_prob || 0), 0) / segments.length;
-          if (avgNoSpeechProb > 0.5) {
-            confidence *= (1 - avgNoSpeechProb);
-          }
         }
       }
 
@@ -176,7 +168,7 @@ export const sttService = {
           childId: options.childId,
           audioLengthMs: durationMs || estimatedDurationMs,
           transcriptionMs,
-          modelUsed: 'whisper-1',
+          modelUsed: 'gpt-4o-mini-transcribe',
           contextType: options.contextType,
           contextId: options.contextId,
           confidenceScore: confidence,
@@ -197,7 +189,7 @@ export const sttService = {
         text,
         confidence,
         durationMs: durationMs || estimatedDurationMs,
-        language: response.language,
+        language: (response as { language?: string }).language,
       };
     } catch (error) {
       // Log error without exposing sensitive details

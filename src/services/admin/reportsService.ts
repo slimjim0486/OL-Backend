@@ -423,6 +423,7 @@ export const reportsService = {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       subscriptionTier,
+      pricingTier,
       dateFrom,
       dateTo,
     } = options;
