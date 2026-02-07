@@ -180,9 +180,19 @@ export const subscriptionService = {
       throw new Error('Teacher not found');
     }
 
-    // Return existing customer ID if present
+    // Validate existing customer ID against current Stripe account
     if (teacher.stripeCustomerId) {
-      return teacher.stripeCustomerId;
+      try {
+        await stripe.customers.retrieve(teacher.stripeCustomerId);
+        return teacher.stripeCustomerId;
+      } catch (err: any) {
+        // Customer doesn't exist in current Stripe account (e.g., switched from test to live)
+        logger.warn('Stored Stripe customer ID is invalid, creating new customer', {
+          teacherId,
+          oldCustomerId: teacher.stripeCustomerId,
+          error: err.code || err.message,
+        });
+      }
     }
 
     // Create new Stripe customer
@@ -195,10 +205,14 @@ export const subscriptionService = {
       },
     });
 
-    // Save customer ID to database
+    // Save new customer ID and clear stale subscription data from old Stripe account
     await prisma.teacher.update({
       where: { id: teacherId },
-      data: { stripeCustomerId: customer.id },
+      data: {
+        stripeCustomerId: customer.id,
+        stripeSubscriptionId: null,
+        subscriptionExpiresAt: null,
+      },
     });
 
     logger.info('Created Stripe customer for teacher', {

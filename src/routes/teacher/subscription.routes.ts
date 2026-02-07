@@ -4,14 +4,13 @@
  * Handles subscription management for teachers:
  * - Get subscription status and plans
  * - Create checkout sessions for subscriptions
- * - Create checkout sessions for credit pack purchases
+ * - (Deprecated) Credit pack endpoints retained for compatibility
  * - Access customer portal
  * - Cancel/resume subscriptions
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { subscriptionService } from '../../services/stripe/subscriptionService.js';
-import { quotaService } from '../../services/teacher/quotaService.js';
 import { authenticateTeacher, requireTeacher, requireVerifiedEmail } from '../../middleware/teacherAuth.js';
 import { TeacherSubscriptionTier } from '@prisma/client';
 import { validateStripeConfig } from '../../config/stripeProducts.js';
@@ -44,7 +43,7 @@ router.get('/plans', async (req: Request, res: Response, next: NextFunction) => 
 
 /**
  * GET /api/teacher/subscription/credit-packs
- * Get available credit packs (public)
+ * Deprecated: credit packs removed in download-based pricing model
  */
 router.get('/credit-packs', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -119,19 +118,14 @@ router.get(
   requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const [subscriptionInfo, quotaInfo] = await Promise.all([
-        subscriptionService.getSubscriptionInfo(req.teacher!.id),
-        quotaService.getQuotaInfo(req.teacher!.id),
-      ]);
+      const subscriptionInfo = await subscriptionService.getSubscriptionInfo(req.teacher!.id);
 
       res.json({
         success: true,
         data: {
           subscription: subscriptionInfo,
-          credits: quotaInfo.credits,
-          currentTier: quotaInfo.subscriptionTier,
-          isInTrial: quotaInfo.isInTrial,
-          trialEndsAt: quotaInfo.trialEndsAt,
+          currentTier: subscriptionInfo?.tier || 'FREE',
+          pricingModel: 'DOWNLOADS',
         },
       });
     } catch (error) {
@@ -142,7 +136,7 @@ router.get(
 
 /**
  * POST /api/teacher/subscription/checkout
- * Create a checkout session for subscription
+ * Create a checkout session for subscription (Unlimited downloads)
  * Requires verified email to prevent fraud
  *
  * Optional: pass promoCode (e.g., "EARLYBIRD30") to auto-apply discount
@@ -154,15 +148,16 @@ router.post(
   requireVerifiedEmail,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { tier, isAnnual = false, successUrl, cancelUrl, promoCode } = req.body;
+      const { tier, plan, isAnnual = false, successUrl, cancelUrl, promoCode } = req.body;
 
-      // Validate tier
-      if (!tier || !['BASIC', 'PROFESSIONAL'].includes(tier)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid subscription tier. Must be BASIC or PROFESSIONAL.',
-        });
-      }
+      // Normalize billing period
+      const normalizedPlan = typeof plan === 'string' ? plan.toLowerCase() : null;
+      const annualBilling = normalizedPlan === 'annual' ? true : Boolean(isAnnual);
+
+      // Accept legacy tiers but map all paid tiers to Unlimited
+      const requestedTier = (tier && ['BASIC', 'PROFESSIONAL'].includes(tier))
+        ? tier
+        : 'PROFESSIONAL';
 
       // Validate URLs
       if (!successUrl || !cancelUrl) {
@@ -182,8 +177,8 @@ router.post(
 
       const result = await subscriptionService.createCheckoutSession(
         req.teacher!.id,
-        tier as TeacherSubscriptionTier,
-        isAnnual,
+        requestedTier as TeacherSubscriptionTier,
+        annualBilling,
         successUrl,
         cancelUrl,
         promoCode // Pass promo code to service
@@ -201,7 +196,7 @@ router.post(
 
 /**
  * POST /api/teacher/subscription/credit-pack/checkout
- * Create a checkout session for credit pack purchase
+ * Deprecated: credit packs removed in download-based pricing model
  * Requires verified email to prevent fraud
  */
 router.post(
@@ -211,42 +206,9 @@ router.post(
   requireVerifiedEmail,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { packId, successUrl, cancelUrl } = req.body;
-
-      // Validate pack ID
-      if (!packId || !['teacher_pack_100', 'teacher_pack_300', 'teacher_pack_500'].includes(packId)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid credit pack ID.',
-        });
-      }
-
-      // Validate URLs
-      if (!successUrl || !cancelUrl) {
-        return res.status(400).json({
-          success: false,
-          error: 'Success and cancel URLs are required.',
-        });
-      }
-
-      // Check Stripe configuration
-      if (!subscriptionService.isConfigured()) {
-        return res.status(503).json({
-          success: false,
-          error: 'Payment system is not configured.',
-        });
-      }
-
-      const result = await subscriptionService.createCreditPackCheckoutSession(
-        req.teacher!.id,
-        packId,
-        successUrl,
-        cancelUrl
-      );
-
-      res.json({
-        success: true,
-        data: result,
+      res.status(410).json({
+        success: false,
+        error: 'Credit packs are no longer available.',
       });
     } catch (error) {
       next(error);
