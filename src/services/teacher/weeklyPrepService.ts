@@ -12,6 +12,7 @@ import { config } from '../../config/index.js';
 import { agentMemoryService } from './agentMemoryService.js';
 import { contextAssemblerService } from './contextAssemblerService.js';
 import { contentGenerationService } from './contentGenerationService.js';
+import { reinforcementService } from './reinforcementService.js';
 import { logger } from '../../utils/logger.js';
 
 // ============================================
@@ -449,14 +450,11 @@ async function approveMaterial(materialId: string, teacherId: string): Promise<v
     data: { approvedCount },
   });
 
-  // Record reinforcement signal
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordStyleSignal(agent.id, {
-      dimension: 'general',
-      value: 'approved',
-      source: 'weekly_prep_approval',
-      timestamp: new Date().toISOString(),
+    await reinforcementService.recordApprovalSignal(agent.id, {
+      contentType: mapWeeklyMaterialToContentType(material.materialType),
+      subject: material.subject,
     });
   }
 }
@@ -469,6 +467,14 @@ async function approveAllMaterials(prepId: string, teacherId: string): Promise<n
     where: { id: prepId, agentId: agent.id },
   });
   if (!prep) throw new Error('Weekly prep not found');
+
+  const materialsToApprove = await prisma.agentMaterial.findMany({
+    where: {
+      weeklyPrepId: prepId,
+      status: MaterialStatus.GENERATED,
+    },
+    select: { id: true, materialType: true, subject: true },
+  });
 
   const result = await prisma.agentMaterial.updateMany({
     where: {
@@ -487,6 +493,19 @@ async function approveAllMaterials(prepId: string, teacherId: string): Promise<n
     data: { approvedCount, status: WeeklyPrepStatus.APPROVED },
   });
 
+  // Reinforcement: record approvals per material so we can learn content-type/subject patterns.
+  for (const m of materialsToApprove) {
+    await reinforcementService.recordApprovalSignal(
+      agent.id,
+      {
+        contentType: mapWeeklyMaterialToContentType(m.materialType),
+        subject: m.subject,
+      },
+      { skipAggregate: true }
+    );
+  }
+  await reinforcementService.maybeAutoAggregate(agent.id);
+
   return result.count;
 }
 
@@ -496,7 +515,7 @@ async function updateMaterial(
   editedContent: any,
   teacherNotes?: string
 ): Promise<void> {
-  await verifyMaterialOwnership(materialId, teacherId);
+  const material = await verifyMaterialOwnership(materialId, teacherId);
 
   await prisma.agentMaterial.update({
     where: { id: materialId },
@@ -507,14 +526,14 @@ async function updateMaterial(
     },
   });
 
-  // Record edit signal
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordStyleSignal(agent.id, {
-      dimension: 'general',
-      value: 'edited',
-      source: 'weekly_prep_edit',
-      timestamp: new Date().toISOString(),
+    const baseline = material.editedContent ?? material.content;
+    const originalText = materialContentToText(baseline);
+    const editedText = materialContentToText(editedContent);
+    await reinforcementService.recordEditSignals(agent.id, originalText, editedText, {
+      contentType: mapWeeklyMaterialToContentType(material.materialType),
+      subject: material.subject,
     });
   }
 }
@@ -562,14 +581,11 @@ async function regenerateMaterial(
     throw err;
   }
 
-  // Record regeneration signal
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordStyleSignal(agent.id, {
-      dimension: 'general',
-      value: feedbackNote || 'regenerated',
-      source: 'weekly_prep_regeneration',
-      timestamp: new Date().toISOString(),
+    await reinforcementService.recordRegenerationSignal(agent.id, feedbackNote, {
+      contentType: mapWeeklyMaterialToContentType(material.materialType),
+      subject: material.subject,
     });
   }
 }
@@ -664,6 +680,30 @@ function extractStudentGroups(classrooms: any[]): Array<{ name: string; level: s
     }
   }
   return groups;
+}
+
+function mapWeeklyMaterialToContentType(type: MaterialType): string {
+  switch (type) {
+    case MaterialType.QUIZ:
+      return 'quiz';
+    case MaterialType.FLASHCARDS:
+      return 'flashcard';
+    case MaterialType.LESSON:
+      return 'lesson';
+    // Most weekly materials are "lesson-like" in how teachers edit them (structure, scaffolding, tone).
+    default:
+      return 'lesson';
+  }
+}
+
+function materialContentToText(content: any): string {
+  if (content == null) return '';
+  if (typeof content === 'string') return content;
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return String(content);
+  }
 }
 
 // ============================================

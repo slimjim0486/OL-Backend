@@ -15,6 +15,8 @@ import {
 import { prisma } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
 
+export type OnboardingResetFromStep = 'identity' | 'classroom' | 'curriculum';
+
 // ============================================
 // TYPES
 // ============================================
@@ -168,6 +170,30 @@ async function completeSetupStep(
   return prisma.teacherAgent.update({
     where: { teacherId },
     data: updateData,
+  });
+}
+
+async function resetOnboarding(
+  teacherId: string,
+  fromStep: OnboardingResetFromStep = 'identity'
+): Promise<TeacherAgent> {
+  const agent = await getOrCreateAgent(teacherId);
+
+  // Resetting should not delete memory by default; it just re-opens the onboarding gate.
+  // Map the desired starting step to the status *before* that step begins.
+  const setupStatus =
+    fromStep === 'identity'
+      ? AgentSetupStatus.NOT_STARTED
+      : fromStep === 'classroom'
+        ? AgentSetupStatus.IDENTITY_COMPLETE
+        : AgentSetupStatus.CLASSROOM_COMPLETE; // fromStep === 'curriculum'
+
+  return prisma.teacherAgent.update({
+    where: { id: agent.id },
+    data: {
+      setupStatus,
+      onboardingComplete: false,
+    },
   });
 }
 
@@ -487,6 +513,7 @@ export const agentMemoryService = {
   updateIdentity,
   completeSetupStep,
   updateTeacherNameIfBlank,
+  resetOnboarding,
   // Layer 2: Style
   getStyleProfile,
   recordStyleSignal,

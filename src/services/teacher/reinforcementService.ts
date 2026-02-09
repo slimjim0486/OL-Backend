@@ -15,6 +15,78 @@ export interface FeedbackContext {
   subject?: string; // 'MATH' | 'ELA' etc.
 }
 
+/**
+ * Lightweight reinforcement helpers (no AgentInteraction mutation).
+ * Use these for flows where we don't have an `interactionId` (e.g., Weekly Prep material review).
+ */
+async function recordApprovalSignal(
+  agentId: string,
+  ctx?: FeedbackContext,
+  opts?: { skipAggregate?: boolean }
+): Promise<void> {
+  const signal: StyleSignal = {
+    dimension: 'general',
+    value: 'approved',
+    source: 'approval',
+    timestamp: new Date().toISOString(),
+    contentType: ctx?.contentType,
+    subject: ctx?.subject,
+  };
+
+  await agentMemoryService.recordStyleSignal(agentId, signal);
+  if (!opts?.skipAggregate) {
+    await maybeAutoAggregate(agentId);
+  }
+}
+
+async function recordRegenerationSignal(
+  agentId: string,
+  feedbackNote?: string,
+  ctx?: FeedbackContext,
+  opts?: { skipAggregate?: boolean }
+): Promise<void> {
+  const signal: StyleSignal = {
+    dimension: 'general',
+    value: feedbackNote || 'regenerated',
+    source: 'regeneration',
+    timestamp: new Date().toISOString(),
+    contentType: ctx?.contentType,
+    subject: ctx?.subject,
+  };
+
+  await agentMemoryService.recordStyleSignal(agentId, signal);
+  if (!opts?.skipAggregate) {
+    await maybeAutoAggregate(agentId);
+  }
+}
+
+async function recordEditSignals(
+  agentId: string,
+  original: string,
+  edited: string,
+  ctx?: FeedbackContext,
+  opts?: { skipAggregate?: boolean }
+): Promise<void> {
+  const signals = extractStyleSignals(original, edited, ctx);
+  if (signals.length === 0) {
+    // Still record "an edit happened" even if our heuristics didn't detect a directional preference.
+    await agentMemoryService.recordStyleSignal(agentId, {
+      dimension: 'general',
+      value: 'edited',
+      source: 'edit',
+      timestamp: new Date().toISOString(),
+      contentType: ctx?.contentType,
+      subject: ctx?.subject,
+    });
+  }
+  for (const signal of signals) {
+    await agentMemoryService.recordStyleSignal(agentId, signal);
+  }
+  if (!opts?.skipAggregate) {
+    await maybeAutoAggregate(agentId);
+  }
+}
+
 // Style dimensions tracked
 const STYLE_DIMENSIONS = [
   'lessonLength',
@@ -412,6 +484,9 @@ export const reinforcementService = {
   recordApproval,
   recordEdit,
   recordRegeneration,
+  recordApprovalSignal,
+  recordEditSignals,
+  recordRegenerationSignal,
   extractStyleSignals,
   updateStyleProfile,
   maybeAutoAggregate,

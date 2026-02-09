@@ -77,6 +77,10 @@ const onboardingMessageSchema = z.object({
   message: z.string().min(1, 'Message is required'),
 });
 
+const onboardingResetSchema = z.object({
+  fromStep: z.enum(['identity', 'classroom', 'curriculum']).optional(),
+});
+
 const classroomSchema = z.object({
   name: z.string().min(1),
   gradeLevel: z.string().optional(),
@@ -232,6 +236,21 @@ router.patch(
 // ============================================================================
 // Onboarding Chat
 // ============================================================================
+
+router.post(
+  '/onboarding/reset',
+  validateBody(onboardingResetSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = (req as any).teacher.id;
+      const fromStep = (req.body?.fromStep as any) || 'identity';
+      const agent = await agentMemoryService.resetOnboarding(teacherId, fromStep);
+      res.json({ success: true, agent });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.post(
   '/onboarding/message',
