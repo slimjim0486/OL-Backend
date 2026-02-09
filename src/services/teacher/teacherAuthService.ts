@@ -1193,7 +1193,7 @@ export const teacherAuthService = {
         if (subscriptionService.isConfigured()) {
           const stripe = (await import('stripe')).default;
           const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', {
-            apiVersion: '2025-11-17.clover',
+            apiVersion: '2025-02-24.acacia',
           });
           // Cancel immediately, not at period end
           await stripeClient.subscriptions.cancel(teacher.stripeSubscriptionId);

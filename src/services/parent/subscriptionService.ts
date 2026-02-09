@@ -29,7 +29,7 @@ import { referralService } from '../sharing/index.js';
 // Initialize Stripe client
 const stripe = config.stripe.secretKey
   ? new Stripe(config.stripe.secretKey, {
-      apiVersion: '2025-11-17.clover',
+      apiVersion: '2025-02-24.acacia',
     })
   : null;
 
@@ -332,7 +332,7 @@ export const familySubscriptionService = {
     let currentPeriodEnd: number | undefined;
     if ((subscription as any).current_period_end) {
       currentPeriodEnd = (subscription as any).current_period_end;
-    } else if (subscription.items?.data?.[0]?.current_period_end) {
+    } else if ((subscription.items?.data?.[0] as any)?.current_period_end) {
       currentPeriodEnd = (subscription.items.data[0] as any).current_period_end;
     }
 

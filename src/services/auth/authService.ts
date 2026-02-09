@@ -1272,7 +1272,7 @@ export const authService = {
         const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
         if (stripeSecretKey) {
           const stripeClient = new stripe(stripeSecretKey, {
-            apiVersion: '2025-11-17.clover',
+            apiVersion: '2025-02-24.acacia',
           });
           // Cancel immediately, not at period end
           await stripeClient.subscriptions.cancel(parent.stripeSubscriptionId);

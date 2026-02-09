@@ -27,7 +27,7 @@ import { emailService } from '../email/emailService.js';
 // Initialize Stripe client
 const stripe = config.stripe.secretKey
   ? new Stripe(config.stripe.secretKey, {
-      apiVersion: '2025-11-17.clover',
+      apiVersion: '2025-02-24.acacia',
     })
   : null;
 
@@ -546,7 +546,7 @@ export const subscriptionService = {
 
     if ((subscription as any).current_period_end) {
       currentPeriodEnd = (subscription as any).current_period_end;
-    } else if (subscription.items?.data?.[0]?.current_period_end) {
+    } else if ((subscription.items?.data?.[0] as any)?.current_period_end) {
       currentPeriodEnd = (subscription.items.data[0] as any).current_period_end;
     }
 
@@ -915,7 +915,7 @@ export const subscriptionService = {
       currentPeriodEnd = (subscription as any).current_period_end;
     }
     // Fallback to items data
-    else if (subscription.items?.data?.[0]?.current_period_end) {
+    else if ((subscription.items?.data?.[0] as any)?.current_period_end) {
       currentPeriodEnd = (subscription.items.data[0] as any).current_period_end;
     }
 
