@@ -95,6 +95,7 @@ const curriculumUpdateSchema = z.object({
   standardsSkipped: z.array(z.string()).optional(),
   pacingGuide: z.any().optional(),
   currentWeek: z.number().int().min(1).optional(),
+  topicProgress: z.any().optional(),
 });
 
 const createSessionSchema = z.object({

@@ -3006,6 +3006,10 @@ model CurriculumState {
   pacingGuide Json?
   currentWeek Int @default(1)
 
+  // Teacher-provided topic progress (freeform, used to avoid repeating onboarding questions)
+  // Structure: { coveredTopics: [...], currentTopic: "...", upNextTopics: [...] }
+  topicProgress Json @default("{}")
+
   // Gap analysis
   // Structure: [{ standardId, description, severity: "critical"|"moderate"|"minor" }]
   identifiedGaps Json @default("[]")
@@ -3303,4 +3307,3 @@ enum ReviewStatus {
   REVIEWED
   SHARED
 }
-

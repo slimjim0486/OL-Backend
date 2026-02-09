@@ -44,7 +44,7 @@ const STEP_ORDER: OnboardingStepName[] = ['identity', 'classroom', 'curriculum',
 const STEP_PROMPTS: Record<OnboardingStepName, string> = {
   identity: `Hi! I'm your AI teaching assistant. I'd love to get to know you so I can help you create better content for your students.
 
-Tell me about yourself — what's your name, what school do you teach at, what grades and subjects do you teach, and what curriculum do you follow? Feel free to share as much or as little as you'd like!`,
+Tell me about yourself — what school do you teach at, what grades and subjects do you teach, and which curriculum framework do you follow (American, British, IB, etc.)? Feel free to share as much or as little as you'd like!`,
 
   classroom: `Great, thanks for sharing that! Now let me learn about your classroom.
 
@@ -52,7 +52,9 @@ How many students do you have? Do you use any grouping system (like leveled grou
 
   curriculum: `Perfect! One last thing — where are you in your curriculum right now?
 
-What topics or standards have you covered so far this year? What are you working on this week? If you have a pacing guide, you can upload it and I'll extract the details automatically.`,
+This is about what you're teaching right now (units/topics), not the curriculum framework.
+
+What topics or standards have you covered so far this year? What are you working on this week? What's coming up next?`,
 
   confirmation: `Here's a summary of what I've learned about you. Does everything look right? You can say "looks good" to finish, or tell me what needs to be changed.`,
 };
@@ -120,6 +122,53 @@ async function processOnboardingResponse(
   const agent = await agentMemoryService.getOrCreateAgent(teacherId);
 
   try {
+    // Confirmation is special: don't finalize unless the teacher explicitly confirms.
+    if (step === 'confirmation') {
+      const normalized = userMessage.trim().toLowerCase();
+      const confirmed =
+        normalized === 'looks good' ||
+        normalized === 'looks great' ||
+        normalized === 'all good' ||
+        normalized === 'yes' ||
+        normalized === 'yep' ||
+        normalized === 'correct' ||
+        normalized === 'confirmed';
+
+      if (confirmed) {
+        await agentMemoryService.completeSetupStep(teacherId, STEP_TO_STATUS.confirmation);
+        return {
+          parsedData: { confirmed: true },
+          agentMessage: "Perfect. You're all set. How can I help you today?",
+          nextStep: null,
+          isComplete: true,
+        };
+      }
+
+      // Treat the message as corrections: try extracting updates from identity/classroom/curriculum
+      const [idData, classroomData, curriculumData] = await Promise.all([
+        extractStructuredData('identity', userMessage),
+        extractStructuredData('classroom', userMessage),
+        extractStructuredData('curriculum', userMessage),
+      ]);
+
+      await populateMemoryLayer(teacherId, agent.id, 'identity', idData);
+      await populateMemoryLayer(teacherId, agent.id, 'classroom', classroomData);
+      await populateMemoryLayer(teacherId, agent.id, 'curriculum', curriculumData);
+
+      const agentMessage = await generateConfirmationMessage(teacherId);
+      return {
+        parsedData: { identity: idData, classroom: classroomData, curriculum: curriculumData },
+        agentMessage,
+        nextStep: {
+          step: 'confirmation',
+          prompt: STEP_PROMPTS.confirmation,
+          progress: 100,
+          isComplete: false,
+        },
+        isComplete: false,
+      };
+    }
+
     // Extract structured data from user message using Gemini
     const parsedData = await extractStructuredData(step, userMessage);
 
@@ -140,7 +189,12 @@ async function processOnboardingResponse(
       agentMessage = await generateConfirmationMessage(teacherId);
     } else {
       const nextStepName = STEP_ORDER[nextStepIndex];
-      agentMessage = await generateTransitionMessage(step, nextStepName, parsedData);
+      // For confirmation step, show the actual profile summary instead of a generic transition
+      if (nextStepName === 'confirmation') {
+        agentMessage = await generateConfirmationMessage(teacherId);
+      } else {
+        agentMessage = await generateTransitionMessage(step, nextStepName, parsedData);
+      }
       nextStep = {
         step: nextStepName,
         prompt: STEP_PROMPTS[nextStepName],
@@ -155,8 +209,13 @@ async function processOnboardingResponse(
       nextStep,
       isComplete,
     };
-  } catch (error) {
-    logger.error('Onboarding response processing failed', { error, teacherId, step });
+  } catch (error: any) {
+    logger.error('Onboarding response processing failed', {
+      errorMessage: error?.message || String(error),
+      errorStack: error?.stack,
+      teacherId,
+      step
+    });
     return {
       parsedData: {},
       agentMessage: `I had trouble understanding that. Could you try rephrasing? ${STEP_PROMPTS[step]}`,
@@ -182,6 +241,8 @@ async function extractStructuredData(
   const schemas: Record<OnboardingStepName, string> = {
     identity: `Extract from the teacher's message:
 {
+  "firstName": "string or null",
+  "lastName": "string or null",
   "schoolName": "string or null",
   "schoolType": "public|private|charter|homeschool or null",
   "gradesTaught": ["array of grade levels mentioned, e.g., '3rd', 'Year 5'"],
@@ -206,7 +267,9 @@ async function extractStructuredData(
 {
   "subjects": [{
     "subject": "MATH|SCIENCE|ENGLISH|etc",
+    "coveredTopics": ["topics they've already covered this year (freeform strings)"],
     "currentTopic": "what they're teaching now",
+    "upNextTopics": ["what's coming up next (freeform strings)"],
     "standardsTaught": ["any standards mentioned"],
     "currentWeek": "week number if mentioned, null otherwise"
   }]
@@ -223,7 +286,7 @@ async function extractStructuredData(
     safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 500,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
     },
   });
@@ -231,7 +294,12 @@ async function extractStructuredData(
   const prompt = `${schemas[step]}\n\nTeacher's message: "${userMessage}"\n\nExtract the data as JSON. Use null for anything not mentioned.`;
 
   const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  let text = result.response.text().trim();
+  // Strip markdown code fences if present
+  if (text.startsWith('```')) {
+    text = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  }
+  logger.info('Gemini onboarding extraction result', { step, rawText: text.substring(0, 500) });
   return JSON.parse(text);
 }
 
@@ -247,13 +315,19 @@ async function populateMemoryLayer(
 ): Promise<void> {
   switch (step) {
     case 'identity': {
+      await agentMemoryService.updateTeacherNameIfBlank(teacherId, {
+        firstName: typeof data.firstName === 'string' ? data.firstName : undefined,
+        lastName: typeof data.lastName === 'string' ? data.lastName : undefined,
+      });
+
       await agentMemoryService.updateIdentity(teacherId, {
         schoolName: data.schoolName || undefined,
         schoolType: data.schoolType || undefined,
-        gradesTaught: data.gradesTaught || [],
-        subjectsTaught: (data.subjectsTaught || []).filter((s: string) =>
-          Object.values(Subject).includes(s as Subject)
-        ),
+        gradesTaught: Array.isArray(data.gradesTaught) && data.gradesTaught.length ? data.gradesTaught : undefined,
+        subjectsTaught: Array.isArray(data.subjectsTaught) && data.subjectsTaught.length
+          ? data.subjectsTaught
+              .filter((s: string) => Object.values(Subject).includes(s as Subject))
+          : undefined,
         curriculumType: data.curriculumType && Object.values(CurriculumType).includes(data.curriculumType)
           ? data.curriculumType
           : undefined,
@@ -265,9 +339,28 @@ async function populateMemoryLayer(
 
     case 'classroom': {
       const classrooms = data.classrooms || [];
+      const existing = await agentMemoryService.getClassroomContexts(agentId);
+
       for (const classroom of classrooms) {
+        const incomingName =
+          typeof classroom.name === 'string' && classroom.name.trim() ? classroom.name.trim() : '';
+
+        // Heuristics to avoid creating duplicate "My Classroom" rows during retries/corrections.
+        const matched =
+          incomingName
+            ? existing.find((c) => c.name.toLowerCase() === incomingName.toLowerCase())
+            : undefined;
+        const singleFallback = !matched && existing.length === 1 ? existing[0] : undefined;
+
+        const resolvedId = matched?.id || singleFallback?.id;
+        const resolvedName =
+          incomingName && incomingName.toLowerCase() !== 'my classroom'
+            ? incomingName
+            : matched?.name || singleFallback?.name || incomingName || 'My Classroom';
+
         await agentMemoryService.upsertClassroomContext(agentId, {
-          name: classroom.name || 'My Classroom',
+          ...(resolvedId ? { id: resolvedId } : {}),
+          name: resolvedName,
           gradeLevel: classroom.gradeLevel,
           subject: classroom.subject && Object.values(Subject).includes(classroom.subject)
             ? classroom.subject
@@ -283,11 +376,27 @@ async function populateMemoryLayer(
       const subjects = data.subjects || [];
       for (const subj of subjects) {
         if (subj.subject && Object.values(Subject).includes(subj.subject)) {
+          const topicProgress: Record<string, any> = {};
+          if (typeof subj.currentTopic === 'string' && subj.currentTopic.trim()) {
+            topicProgress.currentTopic = subj.currentTopic.trim();
+          }
+          if (Array.isArray(subj.coveredTopics) && subj.coveredTopics.length) {
+            topicProgress.coveredTopics = subj.coveredTopics.filter(Boolean).map((t: any) => String(t)).slice(0, 200);
+          }
+          if (Array.isArray(subj.upNextTopics) && subj.upNextTopics.length) {
+            topicProgress.upNextTopics = subj.upNextTopics.filter(Boolean).map((t: any) => String(t)).slice(0, 200);
+          }
+
           await agentMemoryService.updateCurriculumState(agentId, subj.subject, {
             subject: subj.subject,
             schoolYear: getCurrentSchoolYear(),
-            standardsTaught: subj.standardsTaught || [],
-            currentWeek: subj.currentWeek || 1,
+            standardsTaught: Array.isArray(subj.standardsTaught) && subj.standardsTaught.length
+              ? subj.standardsTaught
+              : undefined,
+            currentWeek: typeof subj.currentWeek === 'number' && subj.currentWeek >= 1
+              ? subj.currentWeek
+              : undefined,
+            topicProgress: Object.keys(topicProgress).length ? topicProgress : undefined,
           });
         }
       }
@@ -315,7 +424,7 @@ async function generateTransitionMessage(
       safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 200,
+        maxOutputTokens: 1024,
       },
     });
 
@@ -335,17 +444,41 @@ Keep it natural and conversational. Don't be overly enthusiastic.`;
 }
 
 async function generateConfirmationMessage(teacherId: string): Promise<string> {
-  const agent = await agentMemoryService.getAgent(teacherId);
+  const agent = await agentMemoryService.getAgent(teacherId) as any;
   if (!agent) return "You're all set! I'm ready to help you create content.";
 
-  const parts: string[] = ["Here's what I know about you:"];
+  const parts: string[] = ["Here's what I know about you:\n"];
 
-  if (agent.schoolName) parts.push(`- School: ${agent.schoolName}`);
-  if (agent.gradesTaught?.length) parts.push(`- Grades: ${agent.gradesTaught.join(', ')}`);
-  if (agent.subjectsTaught?.length) parts.push(`- Subjects: ${agent.subjectsTaught.join(', ')}`);
-  if (agent.curriculumType) parts.push(`- Curriculum: ${agent.curriculumType}`);
+  if (agent.schoolName) parts.push(`**School:** ${agent.schoolName}`);
+  if (agent.gradesTaught?.length) parts.push(`**Grades:** ${agent.gradesTaught.join(', ')}`);
+  if (agent.subjectsTaught?.length) parts.push(`**Subjects:** ${agent.subjectsTaught.join(', ')}`);
+  if (agent.curriculumType) parts.push(`**Curriculum:** ${agent.curriculumType}`);
 
-  parts.push("\nI'm all set to help you create personalized content! You can start a conversation anytime — just tell me what you need.");
+  // Include classroom info
+  if (agent.classrooms?.length) {
+    for (const c of agent.classrooms) {
+      const classInfo: string[] = [];
+      if (c.studentCount) classInfo.push(`${c.studentCount} students`);
+      if (c.gradeLevel) classInfo.push(`Grade ${c.gradeLevel}`);
+      if (classInfo.length) parts.push(`**Classroom:** ${classInfo.join(', ')}`);
+      if (c.studentGroups && Array.isArray(c.studentGroups) && c.studentGroups.length) {
+        const groups = c.studentGroups.map((g: any) => g.name || g.level).join(', ');
+        parts.push(`**Student Groups:** ${groups}`);
+      }
+    }
+  }
+
+  // Include curriculum info
+  if (agent.curriculumStates?.length) {
+    for (const cs of agent.curriculumStates) {
+      const tp = (cs as any).topicProgress;
+      const currentTopic =
+        tp && typeof tp === 'object' && typeof tp.currentTopic === 'string' ? tp.currentTopic.trim() : '';
+      if (currentTopic) parts.push(`**Currently teaching (${cs.subject}):** ${currentTopic}`);
+    }
+  }
+
+  parts.push("\nDoes everything look right? Say **\"looks good\"** to finish setup, or tell me what needs to be changed.");
 
   return parts.join('\n');
 }
@@ -364,7 +497,7 @@ async function parsePacingGuide(
     safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 2000,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
     },
   });

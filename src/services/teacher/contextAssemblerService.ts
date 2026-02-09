@@ -214,6 +214,25 @@ function buildCurriculumContext(
     if (state.gradeLevel) lines.push(`  Grade: ${state.gradeLevel}`);
     lines.push(`  Current week: ${state.currentWeek}`);
 
+    const topicProgress = state.topicProgress as any;
+    if (topicProgress && typeof topicProgress === 'object') {
+      if (typeof topicProgress.currentTopic === 'string' && topicProgress.currentTopic.trim()) {
+        lines.push(`  Current topic: ${truncate(topicProgress.currentTopic.trim(), 120)}`);
+      }
+      if (Array.isArray(topicProgress.coveredTopics) && topicProgress.coveredTopics.length) {
+        const covered = topicProgress.coveredTopics.filter(Boolean).slice(0, 5);
+        if (covered.length) {
+          lines.push(`  Covered topics (${topicProgress.coveredTopics.length}): ${covered.join(', ')}${topicProgress.coveredTopics.length > 5 ? '...' : ''}`);
+        }
+      }
+      if (Array.isArray(topicProgress.upNextTopics) && topicProgress.upNextTopics.length) {
+        const upNext = topicProgress.upNextTopics.filter(Boolean).slice(0, 4);
+        if (upNext.length) {
+          lines.push(`  Up next: ${upNext.join(', ')}${topicProgress.upNextTopics.length > 4 ? '...' : ''}`);
+        }
+      }
+    }
+
     if (state.standardsTaught?.length) {
       lines.push(`  Standards taught (${state.standardsTaught.length}): ${state.standardsTaught.slice(0, 5).join(', ')}${state.standardsTaught.length > 5 ? '...' : ''}`);
     }

@@ -54,6 +54,7 @@ export interface CurriculumStateInput {
   standardsSkipped?: string[];
   pacingGuide?: any;
   currentWeek?: number;
+  topicProgress?: any;
   identifiedGaps?: any;
 }
 
@@ -86,6 +87,11 @@ export interface AgentMemorySnapshot {
   classrooms: ClassroomContext[];
   curriculumStates: CurriculumState[];
   recentInteractions: AgentInteraction[];
+}
+
+export interface TeacherNameUpdate {
+  firstName?: string;
+  lastName?: string;
 }
 
 // ============================================
@@ -162,6 +168,32 @@ async function completeSetupStep(
   return prisma.teacherAgent.update({
     where: { teacherId },
     data: updateData,
+  });
+}
+
+async function updateTeacherNameIfBlank(
+  teacherId: string,
+  data: TeacherNameUpdate
+): Promise<void> {
+  const nextFirst = typeof data.firstName === 'string' ? data.firstName.trim() : '';
+  const nextLast = typeof data.lastName === 'string' ? data.lastName.trim() : '';
+  if (!nextFirst && !nextLast) return;
+
+  const teacher = await prisma.teacher.findUnique({
+    where: { id: teacherId },
+    select: { firstName: true, lastName: true },
+  });
+  if (!teacher) return;
+
+  // Only fill missing values to avoid accidentally overwriting a verified profile.
+  const update: Record<string, string> = {};
+  if (!teacher.firstName && nextFirst) update.firstName = nextFirst;
+  if (!teacher.lastName && nextLast) update.lastName = nextLast;
+  if (!Object.keys(update).length) return;
+
+  await prisma.teacher.update({
+    where: { id: teacherId },
+    data: update,
   });
 }
 
@@ -338,6 +370,7 @@ async function updateCurriculumState(
       standardsSkipped: data.standardsSkipped,
       pacingGuide: data.pacingGuide,
       currentWeek: data.currentWeek,
+      topicProgress: data.topicProgress,
       identifiedGaps: data.identifiedGaps,
     },
     create: {
@@ -350,6 +383,7 @@ async function updateCurriculumState(
       standardsSkipped: data.standardsSkipped || [],
       pacingGuide: data.pacingGuide,
       currentWeek: data.currentWeek || 1,
+      topicProgress: data.topicProgress || {},
       identifiedGaps: data.identifiedGaps || [],
     },
   });
@@ -452,6 +486,7 @@ export const agentMemoryService = {
   getAgent,
   updateIdentity,
   completeSetupStep,
+  updateTeacherNameIfBlank,
   // Layer 2: Style
   getStyleProfile,
   recordStyleSignal,
