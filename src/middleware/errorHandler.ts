@@ -8,6 +8,7 @@ import { logger } from '../utils/logger.js';
 export class AppError extends Error {
   statusCode: number;
   isOperational: boolean;
+  code?: string;
 
   constructor(message: string, statusCode: number = 500) {
     super(message);
@@ -102,6 +103,8 @@ export function errorHandler(
     res.status(err.statusCode).json({
       success: false,
       error: err.message,
+      ...((err as any).code ? { code: (err as any).code } : {}),
+      ...((err as any).requiredTier ? { requiredTier: (err as any).requiredTier } : {}),
       ...(err instanceof ValidationError && err.details ? { details: err.details } : {}),
     });
     return;

@@ -94,16 +94,20 @@ function determineTierFromSubscription(subscription: Stripe.Subscription): Teach
   const tier = getTierFromPriceId(priceId);
   if (tier) return tier;
 
-  // Fallback: check price amount to determine tier (treat any paid plan as Unlimited)
+  // Fallback: check price amount to determine tier (used for legacy/misconfigured price IDs)
   const price = subscription.items.data[0]?.price;
   if (price) {
     const amount = price.unit_amount || 0;
     const interval = price.recurring?.interval;
 
     if (interval === 'month') {
-      if (amount >= 500) return 'PROFESSIONAL';
+      // Teacher: ~$14.99/mo, Teacher Pro: ~$29.99/mo
+      if (amount >= 2500) return 'PROFESSIONAL';
+      if (amount >= 1000) return 'BASIC';
     } else if (interval === 'year') {
-      if (amount >= 5000) return 'PROFESSIONAL';
+      // Teacher: ~$119.88/yr (legacy: $99/yr), Teacher Pro: ~$239.88/yr
+      if (amount >= 20000) return 'PROFESSIONAL';
+      if (amount >= 8000) return 'BASIC';
     }
   }
 
@@ -1280,10 +1284,13 @@ export const subscriptionService = {
   getAvailablePlans() {
     const plans = [
       SUBSCRIPTION_PRODUCTS.FREE,
+      SUBSCRIPTION_PRODUCTS.BASIC,
       SUBSCRIPTION_PRODUCTS.PROFESSIONAL,
     ];
 
-    return plans.map(product => ({
+    return plans
+      .filter(product => product.tier === 'FREE' || (product.priceIdMonthly && product.priceIdAnnual))
+      .map(product => ({
       tier: product.tier,
       name: product.name,
       priceMonthly: product.priceMonthly,

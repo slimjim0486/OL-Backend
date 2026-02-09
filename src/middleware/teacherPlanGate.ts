@@ -1,0 +1,110 @@
+import { Request, Response, NextFunction } from 'express';
+import { TeacherRole, TeacherSubscriptionTier } from '@prisma/client';
+import { prisma } from '../config/database.js';
+import { ForbiddenError, PaymentRequiredError } from './errorHandler.js';
+
+const TIER_RANK: Record<TeacherSubscriptionTier, number> = {
+  FREE: 0,
+  BASIC: 1,
+  PROFESSIONAL: 2,
+};
+
+export class TeacherPlanRequiredError extends PaymentRequiredError {
+  code: string;
+  requiredTier: TeacherSubscriptionTier;
+
+  constructor(requiredTier: TeacherSubscriptionTier, message?: string) {
+    const planName =
+      requiredTier === 'PROFESSIONAL'
+        ? 'Teacher Pro'
+        : requiredTier === 'BASIC'
+          ? 'Teacher'
+          : 'Subscription';
+
+    super(message || `${planName} subscription required.`);
+    this.code = requiredTier === 'PROFESSIONAL' ? 'PRO_REQUIRED' : 'SUBSCRIPTION_REQUIRED';
+    this.requiredTier = requiredTier;
+  }
+}
+
+function isActiveTrial(teacher: {
+  subscriptionTier: TeacherSubscriptionTier;
+  organizationId: string | null;
+  trialEndsAt: Date | null;
+  trialUsed: boolean | null;
+}): boolean {
+  if (teacher.subscriptionTier !== 'FREE') return false;
+  if (teacher.organizationId) return false;
+  if (!teacher.trialEndsAt) return false;
+  if (teacher.trialUsed) return false;
+  return teacher.trialEndsAt.getTime() > Date.now();
+}
+
+function hasActivePaidSubscription(teacher: {
+  subscriptionTier: TeacherSubscriptionTier;
+  subscriptionStatus: string;
+  subscriptionExpiresAt: Date | null;
+}): boolean {
+  if (teacher.subscriptionTier === 'FREE') return false;
+  if (teacher.subscriptionStatus !== 'ACTIVE') return false;
+  if (teacher.subscriptionExpiresAt && teacher.subscriptionExpiresAt.getTime() <= Date.now()) return false;
+  return true;
+}
+
+export function requireTeacherTier(minTier: TeacherSubscriptionTier) {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.teacher) {
+        throw new ForbiddenError('Teacher authentication required');
+      }
+
+      const teacher = await prisma.teacher.findUnique({
+        where: { id: req.teacher.id },
+        select: {
+          id: true,
+          organizationId: true,
+          role: true,
+          subscriptionTier: true,
+          subscriptionStatus: true,
+          subscriptionExpiresAt: true,
+          trialEndsAt: true,
+          trialUsed: true,
+        },
+      });
+
+      if (!teacher) {
+        throw new ForbiddenError('Teacher not found');
+      }
+
+      // Enterprise/org teachers are handled separately and should not be blocked by individual plan gates.
+      if (teacher.organizationId) {
+        return next();
+      }
+
+      // Allow super admins to access everything.
+      if (teacher.role === TeacherRole.SUPER_ADMIN) {
+        return next();
+      }
+
+      // Free-tier trials (if enabled elsewhere) should have full feature access during the trial window.
+      if (isActiveTrial(teacher)) {
+        return next();
+      }
+
+      const activeSubscription = hasActivePaidSubscription(teacher);
+      const currentRank = TIER_RANK[teacher.subscriptionTier];
+      const requiredRank = TIER_RANK[minTier];
+
+      if (!activeSubscription || currentRank < requiredRank) {
+        throw new TeacherPlanRequiredError(minTier);
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export const requireTeacherPro = requireTeacherTier('PROFESSIONAL');
+

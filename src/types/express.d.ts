@@ -24,6 +24,8 @@ declare global {
         email: string;
         organizationId?: string;
         role: TeacherRole;
+        schoolId?: string;
+        enterpriseRole?: string;
       };
 
       // Authenticated admin (VC Analytics Dashboard)

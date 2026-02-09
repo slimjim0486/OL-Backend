@@ -1,5 +1,5 @@
 /**
- * Script to generate images for the two new blog posts
+ * Script to generate blog post images for new articles using Gemini 3 Pro Image
  * Run with: npx tsx scripts/generateNewBlogImages.ts
  */
 
@@ -21,50 +21,65 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// Output directory for generated images
-const OUTPUT_DIR = path.join(__dirname, '../../frontend/public/images/blog');
+const OUTPUT_DIR = path.join(__dirname, '../../marketing/generated-assets/blog');
 
-// New blog post image prompts
-const NEW_BLOG_IMAGE_PROMPTS = [
+const BLOG_IMAGE_PROMPTS = [
   {
-    name: 'bilingual-children-gulf',
-    altText: 'Multi-generational Gulf family sharing a bilingual learning moment with Arabic and English books',
-    prompt: `Create a warm, emotionally resonant illustration for a blog post about bilingual children in Gulf families.
+    name: 'iep-goal-writing-weekend',
+    altText: 'Special education teacher working late at kitchen table surrounded by IEP documents and student files',
+    prompt: `Create an emotionally resonant, photorealistic editorial illustration of a special education teacher overwhelmed by IEP paperwork late at night.
 
-SCENE COMPOSITION: A cozy Middle Eastern living room with a multi-generational family moment. A young child (around 7 years old) sits between their parent and grandparent. On the coffee table, there are both Arabic and English children's books visible. The child has a thoughtful, slightly uncertain expression - caught between two worlds but surrounded by love.
+SCENE COMPOSITION: A dedicated SPED teacher (woman, early 30s) sits at her kitchen table late at night, surrounded by stacks of IEP documents, student files, and legal paperwork. The scene captures the exhausting reality of IEP season that every special education teacher knows too well.
 
-THE FAMILY: A mother or father in their 30s-40s, dressed in a mix of modern and traditional Gulf attire. A grandmother or grandfather in traditional Emirati/Gulf clothing (kandura, abaya, or similar). The child in casual modern clothes. All have warm, supportive expressions.
+THE TEACHER: She looks tired but deeply caring - perhaps rubbing her eyes or resting her forehead on her hand. She is wearing comfortable home clothes (a cozy sweater). Her reading glasses are pushed up on her head. Despite the exhaustion, there is determination in her posture - she cares about getting these goals right for her students.
 
-ENVIRONMENT: A warm, inviting Gulf-style living room - comfortable majlis seating with traditional cushions, modern touches mixed with cultural elements. A traditional Arabic coffee pot (dallah) on the table alongside children's books in both Arabic and English scripts.
+THE EVIDENCE OF IEP WORK: The kitchen table tells the story:
+- Multiple IEP binders/folders in different colors (one per student)
+- A laptop open to what appears to be a document template
+- Sticky notes with handwritten goals and benchmarks
+- A legal pad with crossed-out attempts at writing measurable goals
+- Printed assessment data and progress monitoring charts
+- A cold mug of coffee or tea
+- Perhaps a small stack of SMART goal reference guides
 
-EMOTIONAL TONE: The core message is "two languages, one loving family." The image should feel hopeful and supportive, not stressful. Show the beauty and complexity of bilingual upbringing - the child is cherished regardless of which language they speak.
+EMOTIONAL UNDERTONE: This image should make every SPED teacher feel seen. The weight of writing legally binding documents for each student, the pressure to get the language exactly right, the endless hours outside of contract time. But also the love - she does this because these students matter.
 
-LIGHTING: Warm, golden evening light suggesting a comfortable family gathering. Soft and embracing.
+LIGHTING: Warm kitchen light mixed with cool laptop glow. The rest of the house is dark - everyone else is asleep. A single lamp illuminates her workspace. The lighting creates an intimate, slightly melancholy but dignified atmosphere.
 
-COLOR PALETTE: Warm, nurturing colors - golden yellows, soft teals, warm browns, cream tones. Cozy and inviting with subtle Gulf cultural elements.
+COLOR PALETTE: Warm amber tones from the lamp, cool blue from the laptop, muted earth tones for the IEP folders. Overall warm but with a sense of quiet exhaustion. Teal and cream accents would complement the Orbit Learn brand.
 
-STYLE: Modern illustration style, slightly stylized but not cartoonish. Soft edges, expressive faces, professional quality suitable for a blog header. The atmosphere should feel like home and belonging.`,
+STYLE: Warm editorial photography style - like a documentary photograph for a feature story about special education teachers. Emotionally powerful, dignified, and deeply relatable. Professional quality for a blog header image.`,
   },
   {
-    name: 'neurodiverse-learning-support',
-    altText: 'Parent and child having a breakthrough learning moment with supportive tools and technology',
-    prompt: `Create an empowering, emotionally resonant illustration for a blog post about supporting neurodiverse children with learning differences.
+    name: 'lesson-planning-time-tracking',
+    altText: 'Teacher looking at time-tracking data on laptop surrounded by lesson planning materials showing hours spent',
+    prompt: `Create an emotionally powerful, photorealistic editorial illustration of a teacher confronting the shocking reality of how much time they spend on lesson planning.
 
-SCENE COMPOSITION: A bright, organized home study space where a parent and child (around 9-10 years old) are working together. The child's face shows a moment of "aha!" understanding - that breakthrough moment when something finally clicks. Around them are various learning tools: colorful visual aids, a tablet showing an educational app, fidget tools on the desk, noise-canceling headphones nearby.
+SCENE COMPOSITION: A teacher (man or woman, mid-30s) sits at their desk staring at a laptop screen that shows time-tracking data - charts, hours logged, totals that tell a sobering story. Their expression shows a mix of realization and frustration - the I knew it was bad but not THIS bad moment.
 
-THE CHILD: A confident, engaged child (Middle Eastern or South Asian features to represent Gulf region families) showing genuine excitement at understanding something. NOT struggling or sad - this is the "after" moment of success. Eyes bright, maybe pointing at something on the tablet with pride.
+THE TEACHER: They look like they have just had a realization moment - but not a happy one. Perhaps leaning back slightly in their chair, one hand covering their mouth in surprise, or fingers pressed to their temple. They are dressed casually (weekend clothes - this is their free time being consumed). Any ethnicity, relatable and authentic.
 
-THE PARENT: Patient, supportive body language without hovering. Perhaps sitting beside the child at eye level, showing encouragement and joy at the child's success. Their expression shows pride and relief.
+THE DATA STORY: The laptop screen is the focal point:
+- A time-tracking app or spreadsheet showing hours
+- Bar charts or pie charts that visually communicate too many hours
+- The total is clearly alarming (though not readable as specific text)
+- The screen glow illuminates their face with the harsh truth
 
-LEARNING ENVIRONMENT: A home study space that feels organized but not clinical - colorful but calming. Visual schedule or chart on the wall, good lighting, plants adding life. The space feels designed for success.
+THE PLANNING EVIDENCE: Around the desk, the artifacts of lesson planning are everywhere:
+- Open textbooks and curriculum guides
+- A planner or calendar with every evening blocked for planning
+- Printed worksheets and handouts in various stages of creation
+- A timer or stopwatch (representing the tracking)
+- Multiple tabs/browsers open on the laptop
+- A notepad with a time log (hash marks or tallied hours)
 
-EMOTIONAL TONE: The core message is "different, not less" - showing a child who is thriving with the right support. Hope, capability, breakthrough, and joy. This is NOT about struggle - it's about success.
+EMOTIONAL UNDERTONE: This is the moment of reckoning - when a teacher finally quantifies what they have always felt. The image should evoke I need to see this from every teacher who visits the blog. It is uncomfortable but validating.
 
-LIGHTING: Bright, optimistic light streaming through a window suggesting possibility and hope. Warm and energizing.
+LIGHTING: Bright laptop screen as the main light source, with warm desk lamp providing secondary light. The contrast between the harsh digital reality on screen and the warm human at the desk creates visual tension. Late afternoon or evening light from a window.
 
-COLOR PALETTE: Uplifting colors - soft purples, calming blues, warm oranges and yellows. The palette should feel hopeful and modern.
+COLOR PALETTE: Cool blues from the screen data, warm browns and oranges from the desk environment. The contrast between cold data and warm humanity. Teal and sage green accents to complement the Orbit Learn brand.
 
-STYLE: Modern, clean illustration style - welcoming and professional. Soft but clear edges, expressive faces showing genuine emotion. Professional quality suitable for a blog header about neurodiversity and learning differences.`,
+STYLE: Modern editorial photography style - like a compelling feature image for an education publication. Should feel like a real moment captured, not staged. Professional quality for a blog header image about teacher time and burnout.`,
   },
 ];
 
@@ -80,10 +95,10 @@ async function generateImage(prompt: string): Promise<Buffer | null> {
       },
     });
 
-    const enhancedPrompt = `${prompt}
+    const enhancedPrompt = prompt + `
 
 UNIVERSAL REQUIREMENTS FOR THIS IMAGE:
-- The image must be completely safe and appropriate for children of all ages
+- The image must be completely safe and appropriate for all audiences
 - Do NOT include any readable text, words, letters, or numbers in the image
 - All characters should appear friendly, warm, and welcoming
 - Include diverse representation where multiple people are shown
@@ -91,7 +106,7 @@ UNIVERSAL REQUIREMENTS FOR THIS IMAGE:
 - Render with consistent lighting and color grading throughout the scene
 - Aspect ratio should be landscape (16:9 or similar) suitable for blog headers`;
 
-    console.log(`  Generating with prompt: "${prompt.substring(0, 60)}..."`);
+    console.log('  Generating with prompt: "' + prompt.substring(0, 80) + '..."');
 
     const result = await model.generateContent({
       contents: [
@@ -131,9 +146,8 @@ UNIVERSAL REQUIREMENTS FOR THIS IMAGE:
 
 async function main() {
   console.log('New Blog Post Image Generator\n');
-  console.log(`Output directory: ${OUTPUT_DIR}\n`);
+  console.log('Output directory: ' + OUTPUT_DIR + '\n');
 
-  // Create output directory if it doesn't exist
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     console.log('Created output directory\n');
@@ -141,46 +155,43 @@ async function main() {
 
   const results: { name: string; altText: string; success: boolean; path?: string }[] = [];
 
-  for (let i = 0; i < NEW_BLOG_IMAGE_PROMPTS.length; i++) {
-    const { name, altText, prompt } = NEW_BLOG_IMAGE_PROMPTS[i];
-    console.log(`[${i + 1}/${NEW_BLOG_IMAGE_PROMPTS.length}] Generating: ${name}`);
-    console.log(`  Alt text: "${altText}"`);
+  for (let i = 0; i < BLOG_IMAGE_PROMPTS.length; i++) {
+    const item = BLOG_IMAGE_PROMPTS[i];
+    console.log('[' + (i + 1) + '/' + BLOG_IMAGE_PROMPTS.length + '] Generating: ' + item.name);
+    console.log('  Alt text: "' + item.altText + '"');
 
-    const imageBuffer = await generateImage(prompt);
+    const imageBuffer = await generateImage(item.prompt);
 
     if (imageBuffer) {
-      const outputPath = path.join(OUTPUT_DIR, `${name}.jpg`);
+      const outputPath = path.join(OUTPUT_DIR, item.name + '.jpg');
       fs.writeFileSync(outputPath, imageBuffer);
-      console.log(`  ✓ Saved: ${outputPath}\n`);
-      results.push({ name, altText, success: true, path: outputPath });
+      console.log('  Saved: ' + outputPath + '\n');
+      results.push({ name: item.name, altText: item.altText, success: true, path: outputPath });
     } else {
-      console.log(`  ✗ Failed to generate: ${name}\n`);
-      results.push({ name, altText, success: false });
+      console.log('  Failed to generate: ' + item.name + '\n');
+      results.push({ name: item.name, altText: item.altText, success: false });
     }
 
-    // Add delay between requests to avoid rate limiting
-    if (i < NEW_BLOG_IMAGE_PROMPTS.length - 1) {
+    if (i < BLOG_IMAGE_PROMPTS.length - 1) {
       console.log('  Waiting 5 seconds before next request...\n');
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
 
-  // Summary
-  console.log('\n' + '='.repeat(60));
-  console.log('Generation Summary:');
+  console.log('\nGeneration Summary:');
   console.log('='.repeat(60));
   const successful = results.filter((r) => r.success).length;
   const failed = results.filter((r) => !r.success).length;
-  console.log(`✓ Successful: ${successful}`);
-  console.log(`✗ Failed: ${failed}`);
+  console.log('Successful: ' + successful);
+  console.log('Failed: ' + failed);
 
   if (successful > 0) {
     console.log('\nGenerated images:');
     results
       .filter((r) => r.success)
       .forEach((r) => {
-        console.log(`  ✓ ${r.name}.jpg`);
-        console.log(`    Alt: "${r.altText}"`);
+        console.log('  ' + r.name + '.jpg');
+        console.log('    Alt: "' + r.altText + '"');
       });
   }
 
@@ -188,7 +199,7 @@ async function main() {
     console.log('\nFailed images:');
     results
       .filter((r) => !r.success)
-      .forEach((r) => console.log(`  ✗ ${r.name}`));
+      .forEach((r) => console.log('  - ' + r.name));
   }
 
   console.log('\nDone!');

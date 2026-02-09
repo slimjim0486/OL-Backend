@@ -42,6 +42,8 @@ import webhookRoutes from './routes/webhook.routes.js';
 // Cron Jobs
 import { scheduleBrevoInactivityChecks } from './jobs/brevoInactivityChecks.js';
 import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
+import { scheduleWeeklyPrepDelivery } from './jobs/scheduledWeeklyPrepJob.js';
+import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/monthlyReviewJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -62,6 +64,10 @@ import {
   shutdownExportJob,
   initializeDocumentAnalysisJob,
   shutdownDocumentAnalysisJob,
+  initializeWeeklyPrepJob,
+  shutdownWeeklyPrepJob,
+  initializeGradingBatchJob,
+  shutdownGradingBatchJob,
 } from './jobs/index.js';
 
 // Validate environment
@@ -267,6 +273,22 @@ async function startServer(): Promise<void> {
       logger.warn('Document analysis job initialization skipped');
     }
 
+    // Initialize weekly prep job queue (async weekly material generation)
+    try {
+      await initializeWeeklyPrepJob();
+      logger.info('Weekly prep job initialized');
+    } catch (error) {
+      logger.warn('Weekly prep job initialization skipped');
+    }
+
+    // Initialize batch grading job queue (async grading)
+    try {
+      await initializeGradingBatchJob();
+      logger.info('Batch grading job initialized');
+    } catch (error) {
+      logger.warn('Batch grading job initialization skipped');
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
@@ -282,6 +304,13 @@ async function startServer(): Promise<void> {
       scheduleDailyGamesRefresh();
       logger.info('Daily games refresh scheduled for 00:05 UTC');
 
+      // Schedule weekly prep delivery (checks every 30 min for teachers' preferred times)
+      scheduleWeeklyPrepDelivery();
+
+      // Schedule monthly review auto-generation (1st of month, 6 AM UTC)
+      scheduleMonthlyReviewJob();
+      logger.info('Monthly review job scheduled');
+
     });
 
     // Graceful shutdown
@@ -294,6 +323,9 @@ async function startServer(): Promise<void> {
           await shutdownMemoryAggregationJob();
           await shutdownExportJob();
           await shutdownDocumentAnalysisJob();
+          await shutdownWeeklyPrepJob();
+          await shutdownGradingBatchJob();
+          shutdownMonthlyReviewJob();
           await prisma.$disconnect();
           await redis.quit();
           logger.info('Server shut down successfully');

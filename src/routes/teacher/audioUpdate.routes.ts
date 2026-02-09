@@ -2,11 +2,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { audioUpdateService } from '../../services/teacher/audioUpdateService.js';
 import { authenticateTeacher, requireTeacher } from '../../middleware/teacherAuth.js';
+import { requireTeacherPro } from '../../middleware/teacherPlanGate.js';
 import { validateInput } from '../../middleware/validateInput.js';
 import { z } from 'zod';
 import { AudioStatus } from '@prisma/client';
 
 const router = Router();
+
+// All routes require teacher auth.
+router.use(authenticateTeacher);
+router.use(requireTeacher);
 
 // ============================================
 // VALIDATION SCHEMAS
@@ -57,8 +62,6 @@ const listAudioUpdatesQuerySchema = z.object({
  */
 router.get(
   '/voices',
-  authenticateTeacher,
-  requireTeacher,
   async (req: Request, res: Response, _next: NextFunction) => {
     const language = (req.query.language as string) || 'en';
     const voices = audioUpdateService.getVoiceOptions(language);
@@ -74,14 +77,15 @@ router.get(
   }
 );
 
+// Everything below is a Teacher Pro feature.
+router.use(requireTeacherPro);
+
 /**
  * GET /api/teacher/audio-updates
  * List all audio updates for the authenticated teacher
  */
 router.get(
   '/',
-  authenticateTeacher,
-  requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query = listAudioUpdatesQuerySchema.parse(req.query);
@@ -116,8 +120,6 @@ router.get(
  */
 router.post(
   '/',
-  authenticateTeacher,
-  requireTeacher,
   validateInput(createAudioUpdateSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -143,8 +145,6 @@ router.post(
  */
 router.get(
   '/:id',
-  authenticateTeacher,
-  requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const audioUpdate = await audioUpdateService.getAudioUpdate(
@@ -176,8 +176,6 @@ router.get(
  */
 router.patch(
   '/:id',
-  authenticateTeacher,
-  requireTeacher,
   validateInput(updateAudioUpdateSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -211,8 +209,6 @@ router.patch(
  */
 router.delete(
   '/:id',
-  authenticateTeacher,
-  requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await audioUpdateService.deleteAudioUpdate(
@@ -243,8 +239,6 @@ router.delete(
  */
 router.post(
   '/:id/regenerate',
-  authenticateTeacher,
-  requireTeacher,
   validateInput(regenerateScriptSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -278,8 +272,6 @@ router.post(
  */
 router.post(
   '/:id/generate-audio',
-  authenticateTeacher,
-  requireTeacher,
   validateInput(generateAudioSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -340,8 +332,6 @@ router.post(
  */
 router.post(
   '/:id/publish',
-  authenticateTeacher,
-  requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const existing = await audioUpdateService.getAudioUpdate(
@@ -388,8 +378,6 @@ router.post(
  */
 router.post(
   '/:id/unpublish',
-  authenticateTeacher,
-  requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const audioUpdate = await audioUpdateService.updateAudioUpdate(

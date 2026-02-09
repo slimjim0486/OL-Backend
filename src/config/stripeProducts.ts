@@ -1,14 +1,14 @@
 /**
  * Stripe Products Configuration - Teacher Portal
  *
- * Pricing Model (Teacher Portal v2):
+ * Pricing Model (Teacher Portal):
  * - Free to generate + preview unlimited content
  * - Pay-per-download:
  *   - Lesson PDF: $1.99
  *   - Full bundle: $2.99
- * - Unlimited downloads subscription:
- *   - $14.99/month
- *   - $99/year
+ * - Subscriptions:
+ *   - Teacher (BASIC): $14.99/month or $119.88/year
+ *   - Teacher Pro (PROFESSIONAL): $29.99/month or $239.88/year
  */
 
 import { TeacherSubscriptionTier, TeacherDownloadProductType } from '@prisma/client';
@@ -20,7 +20,7 @@ import { TeacherSubscriptionTier, TeacherDownloadProductType } from '@prisma/cli
 const env = process.env;
 
 // =============================================================================
-// SUBSCRIPTION PRODUCTS (Unlimited Downloads)
+// SUBSCRIPTION PRODUCTS
 // =============================================================================
 
 export interface SubscriptionProduct {
@@ -33,30 +33,48 @@ export interface SubscriptionProduct {
   features: string[];
 }
 
-const unlimitedMonthlyPriceId =
-  env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY ||
-  env.STRIPE_PRICE_TEACHER_PRO_MONTHLY ||
+// Teacher plan (BASIC). Falls back to legacy "UNLIMITED" price IDs if present.
+const teacherMonthlyPriceId =
   env.STRIPE_PRICE_TEACHER_BASIC_MONTHLY ||
+  env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY ||
   '';
 
-const unlimitedAnnualPriceId =
-  env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL ||
-  env.STRIPE_PRICE_TEACHER_PRO_ANNUAL ||
+const teacherAnnualPriceId =
   env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL ||
+  env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL ||
   '';
 
-const UNLIMITED_PRODUCT: SubscriptionProduct = {
-  name: 'OrbitLearn Unlimited',
-  tier: 'PROFESSIONAL',
+const TEACHER_PRODUCT: SubscriptionProduct = {
+  name: 'Teacher',
+  tier: 'BASIC',
   priceMonthly: 14.99,
-  priceAnnual: 99,
-  priceIdMonthly: unlimitedMonthlyPriceId,
-  priceIdAnnual: unlimitedAnnualPriceId,
+  priceAnnual: 119.88,
+  priceIdMonthly: teacherMonthlyPriceId,
+  priceIdAnnual: teacherAnnualPriceId,
   features: [
     'Unlimited downloads (all formats)',
-    'All answer keys, infographics, and exports',
+    'All answer keys + infographics',
     'Google Slides + PowerPoint exports',
-    'Priority AI generation',
+    'Cancel anytime',
+  ],
+};
+
+// Teacher Pro plan (PROFESSIONAL).
+const teacherProMonthlyPriceId = env.STRIPE_PRICE_TEACHER_PRO_MONTHLY || '';
+const teacherProAnnualPriceId = env.STRIPE_PRICE_TEACHER_PRO_ANNUAL || '';
+
+const TEACHER_PRO_PRODUCT: SubscriptionProduct = {
+  name: 'Teacher Pro',
+  tier: 'PROFESSIONAL',
+  priceMonthly: 29.99,
+  priceAnnual: 239.88,
+  priceIdMonthly: teacherProMonthlyPriceId,
+  priceIdAnnual: teacherProAnnualPriceId,
+  features: [
+    'Everything in Teacher',
+    'AI grading + batch processing',
+    'Audio class updates',
+    'Advanced analytics + year-end handover PDF',
     'Cancel anytime',
   ],
 };
@@ -75,9 +93,8 @@ export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, Subscription
       'Save everything to your library',
     ],
   },
-  // Map legacy tiers to the Unlimited plan for compatibility
-  BASIC: UNLIMITED_PRODUCT,
-  PROFESSIONAL: UNLIMITED_PRODUCT,
+  BASIC: TEACHER_PRODUCT,
+  PROFESSIONAL: TEACHER_PRO_PRODUCT,
 };
 
 // =============================================================================
@@ -133,17 +150,22 @@ export function getProductByTier(tier: TeacherSubscriptionTier): SubscriptionPro
 export function getProductByPriceId(priceId: string): SubscriptionProduct | null {
   if (!priceId) return null;
 
-  const legacyPriceIds = new Set([
-    env.STRIPE_PRICE_TEACHER_BASIC_MONTHLY,
-    env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL,
-    env.STRIPE_PRICE_TEACHER_PRO_MONTHLY,
-    env.STRIPE_PRICE_TEACHER_PRO_ANNUAL,
+  // Explicit mapping first
+  if (priceId === teacherMonthlyPriceId || priceId === teacherAnnualPriceId) {
+    return TEACHER_PRODUCT;
+  }
+  if (priceId === teacherProMonthlyPriceId || priceId === teacherProAnnualPriceId) {
+    return TEACHER_PRO_PRODUCT;
+  }
+
+  // Legacy mapping: old "UNLIMITED" price IDs count as the Teacher plan (BASIC)
+  const legacyTeacherPriceIds = new Set([
     env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY,
     env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL,
   ].filter(Boolean));
 
-  if (legacyPriceIds.has(priceId)) {
-    return UNLIMITED_PRODUCT;
+  if (legacyTeacherPriceIds.has(priceId)) {
+    return TEACHER_PRODUCT;
   }
 
   return null;
@@ -167,7 +189,9 @@ export function getDownloadProductByPriceId(priceId: string): DownloadProduct | 
  * Check if a price ID is for an annual subscription
  */
 export function isAnnualSubscription(priceId: string): boolean {
-  return priceId === unlimitedAnnualPriceId || priceId === env.STRIPE_PRICE_TEACHER_PRO_ANNUAL || priceId === env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL;
+  return priceId === teacherAnnualPriceId ||
+    priceId === teacherProAnnualPriceId ||
+    priceId === env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL;
 }
 
 /**
@@ -188,11 +212,17 @@ export function getTierFromPriceId(priceId: string): TeacherSubscriptionTier | n
 export function validateStripeConfig(): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
 
-  if (!unlimitedMonthlyPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY');
+  if (!teacherMonthlyPriceId) {
+    missing.push('STRIPE_PRICE_TEACHER_BASIC_MONTHLY');
   }
-  if (!unlimitedAnnualPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL');
+  if (!teacherAnnualPriceId) {
+    missing.push('STRIPE_PRICE_TEACHER_BASIC_ANNUAL');
+  }
+  if (!teacherProMonthlyPriceId) {
+    missing.push('STRIPE_PRICE_TEACHER_PRO_MONTHLY');
+  }
+  if (!teacherProAnnualPriceId) {
+    missing.push('STRIPE_PRICE_TEACHER_PRO_ANNUAL');
   }
 
   if (!DOWNLOAD_PRODUCTS.PDF.priceId) {

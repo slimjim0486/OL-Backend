@@ -1934,6 +1934,94 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
 - The Orbit Learn Team
     `,
   }),
+
+  /**
+   * Weekly Prep Digest — sent when a scheduled weekly prep is ready for review
+   */
+  weeklyPrepDigest: (
+    teacherName: string,
+    weekLabel: string,
+    materialCount: number,
+    dayBreakdown: Record<string, number>,
+    reviewUrl: string
+  ) => {
+    const dayRows = Object.entries(dayBreakdown)
+      .map(
+        ([day, count]) =>
+          `<tr><td style="padding: 8px 16px; color: #4b5563; font-size: 15px; border-bottom: 1px solid #f3f4f6;">${day}</td><td style="padding: 8px 16px; color: #5B21B6; font-weight: 600; font-size: 15px; text-align: right; border-bottom: 1px solid #f3f4f6;">${count} materials</td></tr>`
+      )
+      .join('');
+
+    const dayText = Object.entries(dayBreakdown)
+      .map(([day, count]) => `  ${day}: ${count} materials`)
+      .join('\n');
+
+    return {
+      subject: `Your weekly prep is ready — ${weekLabel}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Prep Ready</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">Your Weekly Prep is Ready!</h1>
+        <p style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 16px;">${weekLabel}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <h2 style="color: #1e1b4b; margin-top: 0; font-size: 20px;">Hi ${teacherName}!</h2>
+        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+          Your AI assistant has finished generating <strong>${materialCount} materials</strong> for the week. Here's the breakdown:
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #F9FAFB; border-radius: 12px; overflow: hidden; margin: 24px 0;">
+          <tr style="background: #EDE9FE;">
+            <td style="padding: 10px 16px; color: #5B21B6; font-weight: 600; font-size: 14px;">Day</td>
+            <td style="padding: 10px 16px; color: #5B21B6; font-weight: 600; font-size: 14px; text-align: right;">Materials</td>
+          </tr>
+          ${dayRows}
+        </table>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${reviewUrl}" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 50px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
+            Review & Approve
+          </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-bottom: 0; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          You received this because you set up weekly prep scheduling.<br>
+          <span style="color: #a78bfa;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
+      text: `
+Your Weekly Prep is Ready — ${weekLabel}
+
+Hi ${teacherName}!
+
+Your AI assistant has finished generating ${materialCount} materials for the week.
+
+Day-by-day breakdown:
+${dayText}
+
+Review & approve your materials at: ${reviewUrl}
+
+— The Orbit Learn Team
+      `,
+    };
+  },
 };
 
 export const emailService = {
@@ -2855,6 +2943,52 @@ Details:
       return true;
     } catch (error) {
       logger.error('Error sending teacher download purchase email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send weekly prep digest email when scheduled prep is ready
+   */
+  async sendWeeklyPrepDigestEmail(
+    email: string,
+    teacherName: string,
+    weekLabel: string,
+    materialCount: number,
+    dayBreakdown: Record<string, number>,
+    reviewUrl: string
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped weekly prep digest email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.weeklyPrepDigest(
+        teacherName,
+        weekLabel,
+        materialCount,
+        dayBreakdown,
+        reviewUrl
+      );
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send weekly prep digest email', { error, email });
+        return false;
+      }
+
+      logger.info(`Weekly prep digest email sent to ${email}`, { weekLabel, materialCount });
+      return true;
+    } catch (error) {
+      logger.error('Error sending weekly prep digest email', { error, email });
       return false;
     }
   },

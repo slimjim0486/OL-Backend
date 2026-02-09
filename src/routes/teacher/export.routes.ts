@@ -82,7 +82,8 @@ router.get('/access/:contentId', async (req: Request, res: Response) => {
     }
 
     const access = await getDownloadAccess(teacherId, contentId);
-    const subscriptionPlan = SUBSCRIPTION_PRODUCTS.PROFESSIONAL;
+    const teacherPlan = SUBSCRIPTION_PRODUCTS.BASIC;
+    const proPlan = SUBSCRIPTION_PRODUCTS.PROFESSIONAL;
 
     return res.json({
       success: true,
@@ -91,8 +92,12 @@ router.get('/access/:contentId', async (req: Request, res: Response) => {
         prices: {
           pdf: Math.round(DOWNLOAD_PRODUCTS.PDF.price * 100),
           bundle: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
-          subscription_monthly: Math.round(subscriptionPlan.priceMonthly * 100),
-          subscription_annual: Math.round(subscriptionPlan.priceAnnual * 100),
+          // Legacy keys (used by existing paywall UI): Teacher plan pricing
+          subscription_monthly: Math.round(teacherPlan.priceMonthly * 100),
+          subscription_annual: Math.round(teacherPlan.priceAnnual * 100),
+          // New keys: Teacher Pro pricing
+          pro_subscription_monthly: Math.round(proPlan.priceMonthly * 100),
+          pro_subscription_annual: Math.round(proPlan.priceAnnual * 100),
         },
       },
     });

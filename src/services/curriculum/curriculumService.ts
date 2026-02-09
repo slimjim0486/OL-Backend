@@ -41,8 +41,11 @@ export interface StandardWithContext {
  * - Math & English: US_COMMON_CORE
  * - Science: US_NGSS
  * - Social Studies: US_C3
+ * For IB curriculum, grade level determines jurisdiction:
+ * - Grade < 6 (PYP): IB_PYP
+ * - Grade >= 6 (MYP/DP): IB_MYP_DP
  */
-function getJurisdictionCode(curriculumType: CurriculumType, subject?: Subject): string {
+function getJurisdictionCode(curriculumType: CurriculumType, subject?: Subject, gradeLevel?: number): string {
   // Handle US curriculum with subject-specific jurisdictions
   if (curriculumType === 'AMERICAN' && subject) {
     if (subject === 'SCIENCE') {
@@ -53,6 +56,14 @@ function getJurisdictionCode(curriculumType: CurriculumType, subject?: Subject):
     }
     // Math, English, and others use Common Core
     return 'US_COMMON_CORE';
+  }
+
+  // Handle IB curriculum with grade-based jurisdiction split
+  if (curriculumType === 'IB') {
+    if (gradeLevel !== undefined && gradeLevel >= 6) {
+      return 'IB_MYP_DP';
+    }
+    return 'IB_PYP';
   }
 
   const mapping: Record<CurriculumType, string> = {
@@ -113,7 +124,7 @@ async function queryStandardsFromDB(
   subject: Subject,
   gradeLevel: number
 ): Promise<StandardWithContext[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject, gradeLevel);
 
   const standards = await prisma.learningStandard.findMany({
     where: {
@@ -150,7 +161,7 @@ async function queryAdjacentStandardsFromDB(
   subject: Subject,
   gradeLevel: number
 ): Promise<StandardWithContext[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject, gradeLevel);
 
   // Include grade-1, grade, grade+1
   const gradeLevels = [
@@ -195,7 +206,7 @@ async function queryStrandsFromDB(
   subject: Subject,
   gradeLevel: number
 ): Promise<string[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject, gradeLevel);
 
   const standards = await prisma.learningStandard.findMany({
     where: {
@@ -464,7 +475,7 @@ export async function getStandardsByStrand(
   gradeLevel: number,
   strand: string
 ): Promise<StandardWithContext[]> {
-  const jurisdictionCode = getJurisdictionCode(curriculumType, subject);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, subject, gradeLevel);
 
   const standards = await prisma.learningStandard.findMany({
     where: {
@@ -538,7 +549,7 @@ export async function getAvailableSubjects(
     return standardSets.map(s => s.subject);
   }
 
-  const jurisdictionCode = getJurisdictionCode(curriculumType);
+  const jurisdictionCode = getJurisdictionCode(curriculumType, undefined, gradeLevel);
 
   const standardSets = await prisma.standardSet.findMany({
     where: {
@@ -568,7 +579,7 @@ export async function countStandards(
     where.standardSet = {};
 
     if (curriculumType) {
-      where.standardSet.jurisdiction = { code: getJurisdictionCode(curriculumType, subject) };
+      where.standardSet.jurisdiction = { code: getJurisdictionCode(curriculumType, subject, gradeLevel) };
     }
     if (subject) {
       where.standardSet.subject = subject;
@@ -802,9 +813,12 @@ export async function getStandardsForChild(childId: string) {
   }
 
   // For US curriculum, there are multiple jurisdictions
+  // For IB, use grade-appropriate jurisdiction
   const jurisdictionCodes = child.curriculumType === 'AMERICAN'
     ? ['US_COMMON_CORE', 'US_NGSS', 'US_C3']
-    : [getJurisdictionCode(child.curriculumType)];
+    : child.curriculumType === 'IB'
+      ? (child.gradeLevel >= 6 ? ['IB_MYP_DP', 'IB_PYP'] : ['IB_PYP'])
+      : [getJurisdictionCode(child.curriculumType, undefined, child.gradeLevel)];
 
   // Get all subjects available for this grade
   const subjects = await getAvailableSubjects(child.curriculumType, child.gradeLevel);

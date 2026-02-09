@@ -15,6 +15,8 @@ export interface TeacherAccessTokenPayload {
   email: string;
   orgId?: string;        // Organization ID if applicable
   role: TeacherRole;
+  schoolId?: string;     // Enterprise: School ID if applicable
+  entRole?: string;      // Enterprise: EnterpriseRole if applicable
   iat: number;
   exp: number;
 }
@@ -74,6 +76,8 @@ export async function authenticateTeacher(
       email: payload.email,
       organizationId: payload.orgId,
       role: payload.role,
+      schoolId: payload.schoolId,
+      enterpriseRole: payload.entRole,
     };
 
     next();
@@ -142,6 +146,8 @@ export async function optionalTeacherAuth(
       email: payload.email,
       organizationId: payload.orgId,
       role: payload.role,
+      schoolId: payload.schoolId,
+      enterpriseRole: payload.entRole,
     };
 
     next();
@@ -314,6 +320,8 @@ export function generateTeacherAccessToken(teacher: {
   email: string;
   organizationId?: string | null;
   role: TeacherRole;
+  schoolId?: string | null;
+  enterpriseRole?: string | null;
 }): string {
   const payload: Omit<TeacherAccessTokenPayload, 'iat' | 'exp'> = {
     sub: teacher.id,
@@ -324,6 +332,14 @@ export function generateTeacherAccessToken(teacher: {
 
   if (teacher.organizationId) {
     payload.orgId = teacher.organizationId;
+  }
+
+  if (teacher.schoolId) {
+    payload.schoolId = teacher.schoolId;
+  }
+
+  if (teacher.enterpriseRole && teacher.enterpriseRole !== 'TEACHER') {
+    payload.entRole = teacher.enterpriseRole;
   }
 
   return jwt.sign(payload, config.jwtAccessSecret, {

@@ -1000,6 +1000,15 @@ model Teacher {
   // Brevo trigger logs
   triggerLogs TeacherTriggerLog[]
 
+  // AI Assistant Agent
+  agentProfile TeacherAgent?
+
+  // Communications (parent emails, report card comments)
+  communications TeacherCommunication[]
+
+  // Review summaries (monthly/yearly)
+  reviewSummaries TeacherReviewSummary[]
+
   @@index([email])
   @@index([organizationId])
   @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
@@ -1356,9 +1365,6 @@ model Classroom {
   accessCode String  @unique
   isActive   Boolean @default(true)
 
-  // Future: Link to Child accounts via Parent consent
-  // students         ClassroomStudent[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1390,6 +1396,13 @@ model TeacherAudioUpdate {
 
   // Source lessons
   lessonIds String[] // IDs of TeacherContent used to generate this update
+
+  // Source: where this audio was generated from
+  source String? // "manual" | "weekly_prep" — null = manual (legacy)
+
+  // Weekly Prep link (1:1 optional)
+  weeklyPrepId String?          @unique
+  weeklyPrep   AgentWeeklyPrep? @relation(fields: [weeklyPrepId], references: [id], onDelete: SetNull)
 
   // Status tracking
   status AudioStatus @default(DRAFT)
@@ -1807,6 +1820,13 @@ model LearningStandard {
 
   // Non-statutory guidance (British NC specific)
   guidance String? @db.Text // Notes and guidance (non-statutory)
+
+  // Enterprise: Enhanced metadata for curriculum intelligence
+  dokLevel            Int?       // Depth of Knowledge (1-4)
+  prerequisites       String[]   // Standard IDs that should be taught first
+  progressesTo        String[]   // Standard IDs this progresses toward
+  commonMisconceptions String[]  // Common student misconceptions
+  teachingStrategies  String[]   // Effective teaching strategies
 
   // Ancestor trail (for search/display)
   ancestorDescriptions String[] // ["Number and Operations", "Base Ten"]
@@ -2407,6 +2427,9 @@ enum ContentStatus {
   REVIEW
   PUBLISHED
   ARCHIVED
+  PENDING_REVIEW  // Enterprise: submitted for approval
+  APPROVED        // Enterprise: approved by dept head/admin
+  REJECTED        // Enterprise: rejected with feedback
 }
 
 enum DocumentAnalysisStatus {
@@ -2431,6 +2454,12 @@ enum TokenOperation {
   SUB_PLAN_GENERATION // Emergency substitute teacher plans
   IEP_GOAL_GENERATION // SMART IEP goals and accommodations
   GAMES // Teacher games generation and daily refresh
+  AGENT_CHAT // AI assistant chat conversations
+  WEEKLY_PREP // Weekly preparation suggestions
+  AGENT_MATERIAL // Agent-generated teaching materials
+  PARENT_EMAIL_GENERATION // Parent communication emails
+  REPORT_COMMENT_GENERATION // Report card comments
+  REVIEW_SUMMARY_GENERATION // Monthly/yearly review summaries
 }
 
 enum DailyGameType {
@@ -2477,6 +2506,65 @@ enum LessonAudioStatus {
   GENERATING // Audio generation in progress
   READY // Audio ready for playback
   FAILED // Generation failed
+}
+
+// ============================================
+// TEACHER AI ASSISTANT ENUMS
+// ============================================
+
+enum AgentSetupStatus {
+  NOT_STARTED
+  IDENTITY_COMPLETE
+  CLASSROOM_COMPLETE
+  CURRICULUM_COMPLETE
+  FULLY_SETUP
+}
+
+enum AgentInteractionType {
+  CHAT
+  CONTENT_GENERATION
+  WEEKLY_PREP
+  FEEDBACK
+  PLANNING
+  GRADING
+  COMMUNICATION
+  PROACTIVE_SUGGESTION
+}
+
+enum AgentTone {
+  PROFESSIONAL
+  FRIENDLY
+  CONCISE
+  ENCOURAGING
+}
+
+enum WeeklyPrepStatus {
+  GENERATING
+  READY
+  REVIEWING
+  APPROVED
+  FAILED
+}
+
+enum MaterialStatus {
+  PENDING
+  GENERATING
+  GENERATED
+  APPROVED
+  EDITED
+  REGENERATING
+  FAILED
+}
+
+enum MaterialType {
+  WARM_UP
+  LESSON
+  WORKSHEET
+  EXIT_TICKET
+  QUIZ
+  FLASHCARDS
+  ACTIVITY
+  HOMEWORK
 }
 
 // ============================================
@@ -2696,6 +2784,7 @@ enum ExportStatus {
 enum ExportFormat {
   PDF
   PPTX
+  QTI
 }
 
 // Teacher export records - tracks all exports for the Downloads section
@@ -2783,3 +2872,435 @@ model TeacherTriggerLog {
   @@index([triggerName])
   @@index([teacherId, triggerName])
 }
+
+// ============================================
+// TEACHER AI ASSISTANT - AGENT MEMORY SYSTEM
+// ============================================
+
+// Core agent identity, 1:1 with Teacher
+model TeacherAgent {
+  id        String @id @default(uuid())
+  teacherId String @unique
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Setup progress
+  setupStatus        AgentSetupStatus @default(NOT_STARTED)
+  onboardingComplete Boolean          @default(false)
+
+  // Layer 1: Identity
+  schoolName         String?
+  schoolType         String? // "public", "private", "charter", "homeschool"
+  gradesTaught       String[] // ["3rd", "4th"] or ["Year 3", "Year 4"]
+  subjectsTaught     Subject[]
+  curriculumType     CurriculumType?
+  yearsExperience    Int?
+  teachingPhilosophy String?   @db.Text
+
+  // Scheduling preferences
+  preferredPlanningDay  String? // "sunday", "monday", etc.
+  preferredDeliveryTime String? // "07:00", "18:00", etc.
+  timezone              String  @default("America/New_York")
+
+  // Agent personality
+  agentTone AgentTone @default(FRIENDLY)
+
+  // Relations
+  styleProfile     TeacherStyleProfile?
+  classrooms       ClassroomContext[]
+  curriculumStates CurriculumState[]
+  interactions     AgentInteraction[]
+  chatSessions     AgentChatSession[]
+  weeklyPreps      AgentWeeklyPrep[]
+  reviewSummaries  TeacherReviewSummary[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@index([setupStatus])
+}
+
+// Learned preferences from teacher signals, 1:1 with TeacherAgent
+model TeacherStyleProfile {
+  id      String @id @default(uuid())
+  agentId String @unique
+  agent   TeacherAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Aggregated preferences (JSON for flexibility)
+  // Structure: { lessonLength: "detailed", detailLevel: "high", vocabularyLevel: "grade-appropriate" }
+  preferences     Json @default("{}")
+
+  // Confidence scores per preference dimension
+  // Structure: { lessonLength: 0.8, detailLevel: 0.6 }
+  confidenceScores Json @default("{}")
+
+  // Signal counters
+  totalApprovals     Int @default(0)
+  totalEdits         Int @default(0)
+  totalRegenerations Int @default(0)
+
+  // Raw style signals (rolling window, max 100)
+  // Structure: [{ dimension, value, source, timestamp }]
+  styleSignals Json @default("[]")
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agentId])
+}
+
+// Student groups and schedule context, 1:many with TeacherAgent
+model ClassroomContext {
+  id      String @id @default(uuid())
+  agentId String
+  agent   TeacherAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Classroom identity
+  name       String // "Mrs. Smith's 3rd Grade" or "Period 2 - Math"
+  gradeLevel String? // "3rd Grade", "Year 5"
+  subject    Subject?
+  studentCount Int?
+
+  // Flexible data (JSON for varying structures)
+  // Structure: [{ name: "Blue Group", level: "advanced", count: 8, notes: "..." }]
+  studentGroups Json @default("[]")
+
+  // Schedule info
+  // Structure: { monday: [{ time: "9:00", duration: 45, subject: "MATH" }], ... }
+  schedule Json @default("{}")
+
+  // Available resources
+  // Structure: { hasSmartboard: true, hasTablets: false, textbooks: ["Go Math Grade 3"] }
+  resources Json @default("{}")
+
+  isActive Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agentId])
+  @@index([agentId, isActive])
+}
+
+// Standards tracking per subject/year, 1:many with TeacherAgent
+model CurriculumState {
+  id      String @id @default(uuid())
+  agentId String
+  agent   TeacherAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Scope
+  subject    Subject
+  gradeLevel String? // "3rd Grade", "Year 5"
+  schoolYear String // "2025-2026"
+
+  // Standards progress
+  standardsTaught   String[] // Standard IDs or notations that have been taught
+  standardsAssessed String[] // Standards that have been assessed
+  standardsSkipped  String[] // Standards intentionally skipped
+
+  // Pacing guide
+  // Structure: { weeks: [{ weekNumber: 1, topics: [...], standards: [...] }] }
+  pacingGuide Json?
+  currentWeek Int @default(1)
+
+  // Gap analysis
+  // Structure: [{ standardId, description, severity: "critical"|"moderate"|"minor" }]
+  identifiedGaps Json @default("[]")
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([agentId, subject, schoolYear])
+  @@index([agentId])
+  @@index([agentId, subject])
+}
+
+// Append-only activity log for the agent
+model AgentInteraction {
+  id      String @id @default(uuid())
+  agentId String
+  agent   TeacherAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Interaction details
+  type      AgentInteractionType
+  summary   String?  @db.Text // Brief description of what happened
+  input     String?  @db.Text // Teacher's input/request
+
+  // Output reference (polymorphic)
+  outputType String? // "lesson", "quiz", "flashcards", "sub_plan", "iep", "chat"
+  outputId   String? // ID of the generated content
+
+  // Teacher feedback signals
+  wasApproved     Boolean?
+  wasEdited       Boolean?
+  wasRegenerated  Boolean?
+
+  // AI metadata
+  tokensUsed Int     @default(0)
+  modelUsed  String?
+
+  // Snapshot of context used (for debugging/replay)
+  contextSnapshot Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([agentId, createdAt])
+  @@index([agentId, type])
+  @@index([agentId, outputType, createdAt])
+}
+
+// Chat sessions for the AI assistant
+model AgentChatSession {
+  id      String @id @default(uuid())
+  agentId String
+  agent   TeacherAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Session metadata
+  title       String?
+  subject     Subject?
+  totalTokens Int     @default(0)
+  isPinned    Boolean @default(false)
+
+  // Messages
+  messages AgentChatMessage[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agentId, createdAt])
+  @@index([agentId, isPinned])
+}
+
+// Individual chat messages
+model AgentChatMessage {
+  id        String @id @default(uuid())
+  sessionId String
+  session   AgentChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Message content
+  role    MessageRole
+  content String      @db.Text
+
+  // Action tracking (for tool-use messages)
+  actionType   String? // "generate_lesson", "generate_quiz", etc.
+  actionResult Json?   // Result metadata from tool execution
+  actionStatus String? // "pending", "completed", "failed"
+
+  // AI metadata
+  model  String?
+  tokens Int     @default(0)
+
+  // Attached images
+  imageUrls String[] @default([])
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+// ============================================
+// WEEKLY PREP PACKAGE
+// ============================================
+
+model AgentWeeklyPrep {
+  id      String       @id @default(uuid())
+  agentId String
+  agent   TeacherAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Week identification
+  weekLabel     String  // e.g., "Week of Feb 10, 2026"
+  weekStartDate DateTime
+  schoolYear    String? // e.g., "2025-2026"
+
+  // The structured plan from Gemini (days → subjects → material slots)
+  plan Json? // { days: [{ dayOfWeek, date, subjects: [...] }], weekSummary, totalMaterialCount }
+
+  // Status
+  status WeeklyPrepStatus @default(GENERATING)
+
+  // Generation progress counters
+  totalMaterials Int @default(0)
+  generatedCount Int @default(0)
+  approvedCount  Int @default(0)
+  failedCount    Int @default(0)
+
+  // Token tracking
+  planTokensUsed     Int @default(0)
+  materialTokensUsed Int @default(0)
+  totalTokensUsed    Int @default(0)
+
+  // Trigger source
+  triggeredBy String @default("manual") // "manual" | "scheduled" | "chat"
+
+  // Relations
+  materials   AgentMaterial[]
+  audioUpdate TeacherAudioUpdate?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agentId, createdAt])
+  @@index([agentId, weekStartDate])
+  @@index([status])
+}
+
+model AgentMaterial {
+  id            String          @id @default(uuid())
+  weeklyPrepId  String
+  weeklyPrep    AgentWeeklyPrep @relation(fields: [weeklyPrepId], references: [id], onDelete: Cascade)
+
+  // Day placement
+  dayOfWeek Int      // 0=Monday, 1=Tuesday, 2=Wednesday, 3=Thursday, 4=Friday
+  dayDate   DateTime
+  sortOrder Int      @default(0)
+  subject   String   // e.g., "MATH", "ENGLISH"
+
+  // Material details
+  materialType MaterialType
+  title        String
+  description  String?  @db.Text
+
+  // Context from the planning step (topic, standards, notes)
+  planContext Json? // { topic, standards, notes, ... }
+
+  // Generated content (structure varies by materialType)
+  content Json?
+
+  // Differentiated versions (above/on-level/below/ELL)
+  differentiatedContent Json? // { above: {}, onLevel: {}, below: {}, ellScaffolding?: {} }
+
+  // Teacher interaction
+  status        MaterialStatus @default(PENDING)
+  teacherNotes  String?        @db.Text
+  editedContent Json?          // Preserves original in content, stores teacher edits here
+
+  // AI metadata
+  tokensUsed  Int     @default(0)
+  modelUsed   String?
+  generatedAt DateTime?
+  approvedAt  DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([weeklyPrepId, dayOfWeek, sortOrder])
+  @@index([weeklyPrepId, status])
+}
+
+// ============================================
+// TEACHER PORTAL - COMMUNICATIONS (Parent Email + Report Card Comments)
+// ============================================
+
+model TeacherCommunication {
+  id        String  @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Communication type
+  type CommunicationType
+
+  // Content
+  title   String
+  content String @db.Text // Generated email or report card comment
+
+  // Context
+  subject      String? // Academic subject
+  studentGroup String? // Target student group
+  gradeLevel   String?
+
+  // Generation parameters
+  parameters Json // Input params for regeneration
+
+  // AI metadata
+  tokensUsed Int     @default(0)
+  modelUsed  String?
+
+  // Status
+  status CommunicationStatus @default(DRAFT)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@index([teacherId, type])
+}
+
+enum CommunicationType {
+  PARENT_EMAIL
+  REPORT_CARD_COMMENT
+}
+
+enum CommunicationStatus {
+  DRAFT
+  APPROVED
+  SENT
+}
+
+// ============================================
+// TEACHER PORTAL - REVIEW SUMMARIES (Monthly/Yearly)
+// ============================================
+
+model TeacherReviewSummary {
+  id        String       @id @default(uuid())
+  teacherId String
+  teacher   Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  agentId   String
+  agent     TeacherAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Review period
+  type        ReviewType
+  periodLabel String  // "January 2026", "2025-2026 School Year"
+  periodStart DateTime
+  periodEnd   DateTime
+  schoolYear  String? // "2025-2026"
+
+  // Generated content
+  executiveSummary   String @db.Text
+  lessonsDelivered   Json   // { total, bySubject: { MATH: 15, ... } }
+  assessmentsGiven   Json   // { total, byType: { quiz: 10, ... } }
+  standardsCovered   Json   // { total, newlyMastered, gaps }
+  studentGrowth      Json   // { summary, highlights }
+  attentionAreas     Json   // [{ area, description, suggestedAction }]
+  upcomingFocus      Json   // [{ topic, rationale }]
+  recommendations    Json   // [{ recommendation, priority }]
+  handoverNotes      String? @db.Text // For yearly reviews - next teacher info
+
+  // AI metadata
+  tokensUsed Int     @default(0)
+  modelUsed  String?
+
+  // Status
+  status ReviewStatus @default(DRAFT)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([agentId, type, periodStart])
+  @@index([teacherId])
+  @@index([teacherId, type])
+  @@index([agentId, type, periodStart])
+}
+
+enum ReviewType {
+  MONTHLY
+  SEMESTER
+  YEARLY
+}
+
+enum ReviewStatus {
+  DRAFT
+  REVIEWED
+  SHARED
+}
+

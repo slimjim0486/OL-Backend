@@ -56,6 +56,12 @@ const OPERATION_ESTIMATES: Record<TokenOperation, number> = {
   SUB_PLAN_GENERATION: 4000,     // ~1.5K input + ~2.5K output (sub plan ~40 credits)
   IEP_GOAL_GENERATION: 5000,     // ~1.5K input + ~3.5K output (IEP goals ~50 credits)
   GAMES: 1200,                   // ~400 input + ~800 output (games + daily refresh)
+  AGENT_CHAT: 500,               // ~200 input + ~300 output (agent chat turn)
+  WEEKLY_PREP: 500,              // ~200 input + ~300 output (weekly prep planning)
+  AGENT_MATERIAL: 500,           // ~200 input + ~300 output (agent material generation)
+  PARENT_EMAIL_GENERATION: 2000,  // ~800 input + ~1.2K output (parent email)
+  REPORT_COMMENT_GENERATION: 3000, // ~1K input + ~2K output (report card comments)
+  REVIEW_SUMMARY_GENERATION: 5000, // ~2K input + ~3K output (monthly/yearly review)
 };
 
 // =============================================================================

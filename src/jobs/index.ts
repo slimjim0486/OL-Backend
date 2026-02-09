@@ -23,3 +23,32 @@ export {
 } from './documentAnalysisJob.js';
 
 export type { DocumentAnalysisJobData } from './documentAnalysisJob.js';
+
+export {
+  initializeWeeklyPrepJob,
+  shutdownWeeklyPrepJob,
+  queueWeeklyPrep,
+  getWeeklyPrepQueueStatus,
+} from './weeklyPrepJob.js';
+
+export type { WeeklyPrepJobData } from './weeklyPrepJob.js';
+
+export {
+  scheduleWeeklyPrepDelivery,
+  runScheduledWeeklyPreps,
+} from './scheduledWeeklyPrepJob.js';
+
+export {
+  scheduleMonthlyReviewJob,
+  shutdownMonthlyReviewJob,
+  triggerMonthlyReviews,
+} from './monthlyReviewJob.js';
+
+export {
+  initializeGradingBatchJob,
+  shutdownGradingBatchJob,
+  queueGradingBatchJob,
+  getGradingBatchQueueStatus,
+} from './gradingBatchJob.js';
+
+export type { GradingBatchJobData } from './gradingBatchJob.js';

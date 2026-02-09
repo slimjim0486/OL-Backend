@@ -154,10 +154,11 @@ router.post(
       const normalizedPlan = typeof plan === 'string' ? plan.toLowerCase() : null;
       const annualBilling = normalizedPlan === 'annual' ? true : Boolean(isAnnual);
 
-      // Accept legacy tiers but map all paid tiers to Unlimited
-      const requestedTier = (tier && ['BASIC', 'PROFESSIONAL'].includes(tier))
+      // Back-compat: if tier is omitted (legacy "unlimited" checkout), default to Teacher (BASIC).
+      // Supported paid tiers: BASIC (Teacher) and PROFESSIONAL (Teacher Pro).
+      const requestedTier = (typeof tier === 'string' && ['BASIC', 'PROFESSIONAL'].includes(tier))
         ? tier
-        : 'PROFESSIONAL';
+        : 'BASIC';
 
       // Validate URLs
       if (!successUrl || !cancelUrl) {
