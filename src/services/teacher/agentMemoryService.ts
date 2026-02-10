@@ -17,6 +17,25 @@ import { logger } from '../../utils/logger.js';
 
 export type OnboardingResetFromStep = 'identity' | 'classroom' | 'curriculum';
 
+// If production DB migrations lag behind schema.prisma, Prisma will throw P2022 when selecting
+// missing columns (e.g. `CurriculumState.topicProgress`). Cache the presence check so we avoid
+// repeatedly executing failing queries (and spamming logs) after the first detection.
+let topicProgressColumnAvailable: boolean | null = null;
+
+function shouldOmitTopicProgress(): boolean {
+  return topicProgressColumnAvailable === false;
+}
+
+function markTopicProgressMissing(): void {
+  topicProgressColumnAvailable = false;
+}
+
+function markTopicProgressPresent(): void {
+  if (topicProgressColumnAvailable !== false) {
+    topicProgressColumnAvailable = true;
+  }
+}
+
 function isMissingTopicProgressColumnError(error: any): boolean {
   const msg = String(error?.message || '');
   return (
@@ -163,8 +182,19 @@ async function getOrCreateAgent(teacherId: string): Promise<TeacherAgent> {
 }
 
 async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
+  if (shouldOmitTopicProgress()) {
+    return (await prisma.teacherAgent.findUnique({
+      where: { teacherId },
+      include: {
+        styleProfile: true,
+        classrooms: { where: { isActive: true } },
+        curriculumStates: { select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS },
+      },
+    })) as any;
+  }
+
   try {
-    return await prisma.teacherAgent.findUnique({
+    const agent = await prisma.teacherAgent.findUnique({
       where: { teacherId },
       include: {
         styleProfile: true,
@@ -172,8 +202,11 @@ async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
         curriculumStates: true,
       },
     });
+    markTopicProgressPresent();
+    return agent;
   } catch (error: any) {
     if (!isMissingTopicProgressColumnError(error)) throw error;
+    markTopicProgressMissing();
 
     logger.warn('DB schema missing CurriculumState.topicProgress; falling back to safe select', {
       teacherId,
@@ -403,13 +436,24 @@ async function deleteClassroomContext(agentId: string, classroomId: string): Pro
 // ============================================
 
 async function getCurriculumStates(agentId: string): Promise<CurriculumState[]> {
+  if (shouldOmitTopicProgress()) {
+    return (await prisma.curriculumState.findMany({
+      where: { agentId },
+      orderBy: { subject: 'asc' },
+      select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS,
+    })) as any;
+  }
+
   try {
-    return await prisma.curriculumState.findMany({
+    const states = await prisma.curriculumState.findMany({
       where: { agentId },
       orderBy: { subject: 'asc' },
     });
+    markTopicProgressPresent();
+    return states;
   } catch (error: any) {
     if (!isMissingTopicProgressColumnError(error)) throw error;
+    markTopicProgressMissing();
     logger.warn('DB schema missing CurriculumState.topicProgress; curriculumStates fallback select', {
       agentId,
     });
@@ -427,14 +471,27 @@ async function getCurriculumState(
   schoolYear?: string
 ): Promise<CurriculumState | null> {
   const year = schoolYear || getCurrentSchoolYear();
+
+  if (shouldOmitTopicProgress()) {
+    return (await prisma.curriculumState.findUnique({
+      where: {
+        agentId_subject_schoolYear: { agentId, subject, schoolYear: year },
+      },
+      select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS,
+    })) as any;
+  }
+
   try {
-    return await prisma.curriculumState.findUnique({
+    const state = await prisma.curriculumState.findUnique({
       where: {
         agentId_subject_schoolYear: { agentId, subject, schoolYear: year },
       },
     });
+    markTopicProgressPresent();
+    return state;
   } catch (error: any) {
     if (!isMissingTopicProgressColumnError(error)) throw error;
+    markTopicProgressMissing();
     logger.warn('DB schema missing CurriculumState.topicProgress; curriculumState fallback select', {
       agentId,
       subject,
@@ -455,8 +512,38 @@ async function updateCurriculumState(
   data: Partial<CurriculumStateInput>
 ): Promise<CurriculumState> {
   const schoolYear = data.schoolYear || getCurrentSchoolYear();
+
+  if (shouldOmitTopicProgress()) {
+    return (await prisma.curriculumState.upsert({
+      where: {
+        agentId_subject_schoolYear: { agentId, subject, schoolYear },
+      },
+      update: {
+        gradeLevel: data.gradeLevel,
+        standardsTaught: data.standardsTaught,
+        standardsAssessed: data.standardsAssessed,
+        standardsSkipped: data.standardsSkipped,
+        pacingGuide: data.pacingGuide,
+        currentWeek: data.currentWeek,
+        identifiedGaps: data.identifiedGaps,
+      },
+      create: {
+        agentId,
+        subject,
+        schoolYear,
+        gradeLevel: data.gradeLevel,
+        standardsTaught: data.standardsTaught || [],
+        standardsAssessed: data.standardsAssessed || [],
+        standardsSkipped: data.standardsSkipped || [],
+        pacingGuide: data.pacingGuide,
+        currentWeek: data.currentWeek || 1,
+        identifiedGaps: data.identifiedGaps || [],
+      },
+    })) as any;
+  }
+
   try {
-    return await prisma.curriculumState.upsert({
+    const updated = await prisma.curriculumState.upsert({
       where: {
         agentId_subject_schoolYear: { agentId, subject, schoolYear },
       },
@@ -484,8 +571,11 @@ async function updateCurriculumState(
         identifiedGaps: data.identifiedGaps || [],
       },
     });
+    markTopicProgressPresent();
+    return updated;
   } catch (error: any) {
     if (!isMissingTopicProgressColumnError(error)) throw error;
+    markTopicProgressMissing();
 
     logger.warn('DB schema missing CurriculumState.topicProgress; retrying upsert without topicProgress', {
       agentId,
@@ -584,28 +674,47 @@ async function getRecentInteractions(
 
 async function getFullMemorySnapshot(teacherId: string): Promise<AgentMemorySnapshot | null> {
   let agent: any;
-  try {
+  if (shouldOmitTopicProgress()) {
     agent = await prisma.teacherAgent.findUnique({
       where: { teacherId },
       include: {
         styleProfile: true,
         classrooms: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
-        curriculumStates: { orderBy: { subject: 'asc' } },
+        curriculumStates: {
+          select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS,
+          orderBy: { subject: 'asc' } as any,
+        },
       },
     });
-  } catch (error: any) {
-    if (!isMissingTopicProgressColumnError(error)) throw error;
-    logger.warn('DB schema missing CurriculumState.topicProgress; snapshot fallback select', {
-      teacherId,
-    });
-    agent = await prisma.teacherAgent.findUnique({
-      where: { teacherId },
-      include: {
-        styleProfile: true,
-        classrooms: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
-        curriculumStates: { select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS, orderBy: { subject: 'asc' } as any },
-      },
-    });
+  } else {
+    try {
+      agent = await prisma.teacherAgent.findUnique({
+        where: { teacherId },
+        include: {
+          styleProfile: true,
+          classrooms: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
+          curriculumStates: { orderBy: { subject: 'asc' } },
+        },
+      });
+      markTopicProgressPresent();
+    } catch (error: any) {
+      if (!isMissingTopicProgressColumnError(error)) throw error;
+      markTopicProgressMissing();
+      logger.warn('DB schema missing CurriculumState.topicProgress; snapshot fallback select', {
+        teacherId,
+      });
+      agent = await prisma.teacherAgent.findUnique({
+        where: { teacherId },
+        include: {
+          styleProfile: true,
+          classrooms: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
+          curriculumStates: {
+            select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS,
+            orderBy: { subject: 'asc' } as any,
+          },
+        },
+      });
+    }
   }
 
   if (!agent) return null;
