@@ -8,6 +8,7 @@ import {
   AgentSetupStatus,
   AgentInteractionType,
   AgentTone,
+  PlanningAutonomy,
   Subject,
   CurriculumType,
   Prisma,
@@ -78,6 +79,8 @@ export interface AgentIdentityUpdate {
   preferredDeliveryTime?: string;
   timezone?: string;
   agentTone?: AgentTone;
+  planningAutonomy?: PlanningAutonomy;
+  planningAutonomyAcknowledged?: boolean;
 }
 
 export interface ClassroomContextInput {

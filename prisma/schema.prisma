@@ -2538,6 +2538,12 @@ enum AgentTone {
   ENCOURAGING
 }
 
+enum PlanningAutonomy {
+  COACH
+  PLANNER
+  AUTOPILOT
+}
+
 enum WeeklyPrepStatus {
   GENERATING
   READY
@@ -2900,6 +2906,10 @@ model TeacherAgent {
   preferredPlanningDay  String? // "sunday", "monday", etc.
   preferredDeliveryTime String? // "07:00", "18:00", etc.
   timezone              String  @default("America/New_York")
+
+  // Planning autonomy (Coach → Planner → Autopilot)
+  planningAutonomy             PlanningAutonomy @default(COACH)
+  planningAutonomyAcknowledged Boolean          @default(false)
 
   // Agent personality
   agentTone AgentTone @default(FRIENDLY)

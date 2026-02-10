@@ -10,6 +10,7 @@
 
 import cron from 'node-cron';
 import { prisma } from '../config/database.js';
+import { PlanningAutonomy } from '@prisma/client';
 import { weeklyPrepService } from '../services/teacher/weeklyPrepService.js';
 import { queueWeeklyPrep } from './weeklyPrepJob.js';
 import { logger } from '../utils/logger.js';
@@ -81,6 +82,7 @@ async function runScheduledWeeklyPreps(): Promise<void> {
     const agents = await prisma.teacherAgent.findMany({
       where: {
         onboardingComplete: true,
+        planningAutonomy: PlanningAutonomy.AUTOPILOT,
         preferredPlanningDay: { not: null },
         preferredDeliveryTime: { not: null },
       },

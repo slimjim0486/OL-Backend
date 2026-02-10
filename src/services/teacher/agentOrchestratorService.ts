@@ -5,6 +5,7 @@ import {
   AgentChatMessage,
   MessageRole,
   AgentInteractionType,
+  PlanningAutonomy,
   Subject,
   Prisma,
 } from '@prisma/client';
@@ -27,6 +28,7 @@ export interface AgentResponse {
   message: string;
   sessionId: string;
   messageId: string;
+  interactionId: string;
   // Populated when the server updates the session title (usually from the first user prompt)
   sessionTitle?: string | null;
   intent: IntentType;
@@ -35,6 +37,7 @@ export interface AgentResponse {
     content: any;
     preview: string;
     contentId?: string;
+    interactionId?: string;
   };
   tokensUsed: number;
 }
@@ -50,6 +53,84 @@ function toSessionTitleFromFirstPrompt(prompt: string): string {
     .replace(/\s+/g, ' ')
     .trim();
   return truncate(normalized || 'Untitled chat', 60);
+}
+
+function normalizeModeArg(raw: string): PlanningAutonomy | null {
+  const v = String(raw || '').trim().toLowerCase();
+  if (v === 'coach') return PlanningAutonomy.COACH;
+  if (v === 'planner') return PlanningAutonomy.PLANNER;
+  if (v === 'autopilot') return PlanningAutonomy.AUTOPILOT;
+  return null;
+}
+
+function describeMode(mode: PlanningAutonomy): { title: string; description: string } {
+  switch (mode) {
+    case PlanningAutonomy.COACH:
+      return {
+        title: 'Coach',
+        description: 'I suggest options and you decide what to do.',
+      };
+    case PlanningAutonomy.PLANNER:
+      return {
+        title: 'Planner',
+        description: "I draft daily/weekly plans for you to approve.",
+      };
+    case PlanningAutonomy.AUTOPILOT:
+      return {
+        title: 'Autopilot',
+        description:
+          'I can generate weekly prep automatically on your schedule. You still review and approve materials.',
+      };
+  }
+}
+
+async function maybeHandleSlashCommand(
+  teacherId: string,
+  agent: { preferredPlanningDay?: string | null; preferredDeliveryTime?: string | null; timezone?: string | null },
+  message: string
+): Promise<{ assistantContent: string; intent: IntentType; tokensUsed: number } | null> {
+  const trimmed = String(message || '').trim();
+  if (!trimmed.startsWith('/')) return null;
+
+  const [cmdRaw, argRaw] = trimmed.split(/\s+/, 2);
+  const cmd = cmdRaw.toLowerCase();
+
+  if (cmd === '/mode') {
+    const mode = normalizeModeArg(argRaw || '');
+    if (!mode) {
+      return {
+        assistantContent:
+          `To change planning autonomy, use:\n` +
+          `- /mode coach\n` +
+          `- /mode planner\n` +
+          `- /mode autopilot`,
+        intent: 'chat',
+        tokensUsed: 0,
+      };
+    }
+
+    await agentMemoryService.updateIdentity(teacherId, {
+      planningAutonomy: mode,
+      planningAutonomyAcknowledged: true,
+    });
+
+    const desc = describeMode(mode);
+    const needsSchedule =
+      mode === PlanningAutonomy.AUTOPILOT && (!agent.preferredPlanningDay || !agent.preferredDeliveryTime);
+
+    return {
+      assistantContent:
+        `Planning mode set to **${desc.title}**.\n` +
+        `${desc.description}\n` +
+        (needsSchedule
+          ? `\nTo enable scheduled weekly prep, set a planning day/time in AI Assistant settings.`
+          : ''),
+      intent: 'chat',
+      tokensUsed: 0,
+    };
+  }
+
+  return null;
 }
 
 // ============================================
@@ -88,70 +169,103 @@ async function processMessage(
     },
   });
 
-  // 4. Assemble context
-  const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
-
-  // 5. Classify intent
-  const recentMessages = session.messages
-    .reverse()
-    .slice(-5)
-    .map((m) => ({ role: m.role, content: m.content }));
-  const intent = await taskRouterService.classifyIntent(
-    message,
-    recentMessages,
-    context.identityContext
-  );
-
-  logger.info('Intent classified', { teacherId, sessionId, intent: intent.type, confidence: intent.confidence });
-
-  // 6. Route to handler
+  // 4. Fast-path: slash commands (no LLM call)
   let assistantContent: string;
   let actionResult: AgentResponse['actionResult'] | undefined;
   let totalTokens = 0;
+  let intent: { type: IntentType; confidence: number; extractedParams: Record<string, any> } = {
+    type: 'chat',
+    confidence: 1,
+    extractedParams: {},
+  };
 
-  if (intent.type !== 'chat' && intent.confidence >= 0.6) {
-    // Content generation intent
-    try {
-      const bridgeResult = await routeToContentBridge(teacherId, intent);
-      actionResult = {
-        type: bridgeResult.contentType,
-        content: bridgeResult.content,
-        preview: bridgeResult.preview,
-        contentId: bridgeResult.contentId,
-      };
-      assistantContent = `${bridgeResult.preview}\n\nWould you like me to modify anything, or is this good to go?`;
-      totalTokens = bridgeResult.tokensUsed;
-    } catch (error: any) {
-      logger.error('Content generation failed in orchestrator', { error, intent: intent.type });
-      assistantContent = `I tried to create that for you, but ran into an issue: ${error.message || 'Unknown error'}. Could you try rephrasing your request?`;
-    }
+  const commandResult = await maybeHandleSlashCommand(teacherId, agent as any, message);
+  if (commandResult) {
+    assistantContent = commandResult.assistantContent;
+    intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
+    totalTokens = commandResult.tokensUsed;
   } else {
-    // Conversational chat
-    const chatResult = await generateChatResponse(
-      context.systemPrompt,
+    // 5. Assemble context
+    const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
+
+    // 6. Classify intent
+    const recentMessages = session.messages
+      .reverse()
+      .slice(-5)
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    intent = await taskRouterService.classifyIntent(
       message,
-      recentMessages
+      recentMessages,
+      context.identityContext
     );
-    assistantContent = chatResult.response;
-    totalTokens = chatResult.tokensUsed;
+
+    logger.info('Intent classified', { teacherId, sessionId, intent: intent.type, confidence: intent.confidence });
+
+    // 7. Route to handler
+    if (intent.type !== 'chat' && intent.confidence >= 0.6) {
+      // Content generation intent
+      try {
+        const bridgeResult = await routeToContentBridge(teacherId, intent);
+        actionResult = {
+          type: bridgeResult.contentType,
+          content: bridgeResult.content,
+          preview: bridgeResult.preview,
+          contentId: bridgeResult.contentId,
+        };
+        assistantContent =
+          bridgeResult.contentType === 'weekly_prep'
+            ? bridgeResult.preview
+            : `${bridgeResult.preview}\n\nWould you like me to modify anything, or is this good to go?`;
+        totalTokens = bridgeResult.tokensUsed;
+      } catch (error: any) {
+        logger.error('Content generation failed in orchestrator', { error, intent: intent.type });
+        assistantContent = `I tried to create that for you, but ran into an issue: ${error.message || 'Unknown error'}. Could you try rephrasing your request?`;
+      }
+    } else {
+      // Conversational chat
+      const chatResult = await generateChatResponse(
+        context.systemPrompt,
+        message,
+        recentMessages
+      );
+      assistantContent = chatResult.response;
+      totalTokens = chatResult.tokensUsed;
+    }
   }
 
-  // 7. Save assistant message
+  // 8. Record interaction (return id so UI can send approve/edit/regenerate feedback)
+  const interaction = await agentMemoryService.recordInteraction(agent.id, {
+    type: intent.type === 'chat' ? AgentInteractionType.CHAT : AgentInteractionType.CONTENT_GENERATION,
+    summary: truncate(message, 200),
+    input: message,
+    outputType: actionResult?.type || 'chat',
+    outputId: actionResult?.contentId,
+    tokensUsed: totalTokens,
+    modelUsed: actionResult ? config.gemini.models.flash : config.gemini.models.flash,
+  });
+
+  const persistedActionResult = actionResult
+    ? ({ ...actionResult, interactionId: interaction.id } as AgentResponse['actionResult'])
+    : undefined;
+
+  // 9. Save assistant message
   const assistantMessage = await prisma.agentChatMessage.create({
     data: {
       sessionId,
       role: MessageRole.ASSISTANT,
       content: assistantContent,
-      actionType: actionResult?.type || null,
-      actionResult: actionResult ? (actionResult as any) : undefined,
-      actionStatus: actionResult ? 'completed' : null,
+      actionType: persistedActionResult?.type || null,
+      actionResult: persistedActionResult ? (persistedActionResult as any) : undefined,
+      actionStatus: persistedActionResult ? 'completed' : null,
       model: config.gemini.models.flash,
       tokens: totalTokens,
     },
   });
 
-  // 8. Update session token count
-  const nextTitle = session.title ? undefined : toSessionTitleFromFirstPrompt(message);
+  // 10. Update session token count
+  const isCommand = String(message || '').trim().startsWith('/');
+  const nextTitle = session.title || isCommand ? undefined : toSessionTitleFromFirstPrompt(message);
   const updatedSession = await prisma.agentChatSession.update({
     where: { id: sessionId },
     data: {
@@ -162,24 +276,14 @@ async function processMessage(
     select: { title: true },
   });
 
-  // 9. Record interaction
-  await agentMemoryService.recordInteraction(agent.id, {
-    type: intent.type === 'chat' ? AgentInteractionType.CHAT : AgentInteractionType.CONTENT_GENERATION,
-    summary: truncate(message, 200),
-    input: message,
-    outputType: actionResult?.type || 'chat',
-    outputId: actionResult?.contentId,
-    tokensUsed: totalTokens,
-    modelUsed: config.gemini.models.flash,
-  });
-
   return {
     message: assistantContent,
     sessionId,
     messageId: assistantMessage.id,
+    interactionId: interaction.id,
     sessionTitle: updatedSession.title,
     intent: intent.type,
-    actionResult,
+    actionResult: persistedActionResult,
     tokensUsed: totalTokens,
   };
 }

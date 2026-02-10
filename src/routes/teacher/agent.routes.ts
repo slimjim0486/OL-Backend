@@ -3,7 +3,7 @@
  */
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { Subject, CurriculumType, AgentTone } from '@prisma/client';
+import { Subject, CurriculumType, AgentTone, PlanningAutonomy } from '@prisma/client';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
 import { agentMemoryService } from '../../services/teacher/agentMemoryService.js';
 import { agentOnboardingService } from '../../services/teacher/agentOnboardingService.js';
@@ -70,6 +70,8 @@ const updateIdentitySchema = z.object({
   preferredDeliveryTime: z.string().optional(),
   timezone: z.string().optional(),
   agentTone: z.nativeEnum(AgentTone).optional(),
+  planningAutonomy: z.nativeEnum(PlanningAutonomy).optional(),
+  planningAutonomyAcknowledged: z.boolean().optional(),
 });
 
 const onboardingMessageSchema = z.object({
@@ -122,10 +124,14 @@ const feedbackSchema = z.object({
   subject: z.string().optional(),
 });
 
+const PLANNING_DAY_ENUM = z.enum([
+  'SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
+]);
+
 const schedulingSchema = z.object({
-  preferredPlanningDay: z.enum([
-    'SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
-  ]).optional(),
+  preferredPlanningDay: z
+    .preprocess((v) => (typeof v === 'string' ? v.toUpperCase() : v), PLANNING_DAY_ENUM)
+    .optional(),
   preferredDeliveryTime: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format').optional(),
   timezone: z.string().optional(),
 });
