@@ -27,6 +27,8 @@ export interface AgentResponse {
   message: string;
   sessionId: string;
   messageId: string;
+  // Populated when the server updates the session title (usually from the first user prompt)
+  sessionTitle?: string | null;
   intent: IntentType;
   actionResult?: {
     type: string;
@@ -42,6 +44,13 @@ interface SessionWithMessages extends AgentChatSession {
 }
 
 const MAX_HISTORY_FOR_CONTEXT = 20;
+
+function toSessionTitleFromFirstPrompt(prompt: string): string {
+  const normalized = String(prompt || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return truncate(normalized || 'Untitled chat', 60);
+}
 
 // ============================================
 // MESSAGE PROCESSING PIPELINE
@@ -142,13 +151,15 @@ async function processMessage(
   });
 
   // 8. Update session token count
-  await prisma.agentChatSession.update({
+  const nextTitle = session.title ? undefined : toSessionTitleFromFirstPrompt(message);
+  const updatedSession = await prisma.agentChatSession.update({
     where: { id: sessionId },
     data: {
       totalTokens: { increment: totalTokens },
       // Auto-set title from first message if not set
-      ...(!session.title && { title: truncate(message, 60) }),
+      ...(nextTitle ? { title: nextTitle } : {}),
     },
+    select: { title: true },
   });
 
   // 9. Record interaction
@@ -166,6 +177,7 @@ async function processMessage(
     message: assistantContent,
     sessionId,
     messageId: assistantMessage.id,
+    sessionTitle: updatedSession.title,
     intent: intent.type,
     actionResult,
     tokensUsed: totalTokens,
