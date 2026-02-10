@@ -120,6 +120,15 @@ export function errorHandler(
       });
       return;
     }
+    if (prismaError.code === 'P2022') {
+      // Column does not exist (usually means migrations weren't applied)
+      res.status(409).json({
+        success: false,
+        error:
+          'Database schema is out of date (missing column). If you are running locally, apply the latest Prisma migrations and restart the backend.',
+      });
+      return;
+    }
     if (prismaError.code === 'P2025') {
       res.status(404).json({
         success: false,

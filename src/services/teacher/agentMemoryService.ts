@@ -17,6 +17,32 @@ import { logger } from '../../utils/logger.js';
 
 export type OnboardingResetFromStep = 'identity' | 'classroom' | 'curriculum';
 
+function isMissingTopicProgressColumnError(error: any): boolean {
+  const msg = String(error?.message || '');
+  return (
+    error?.name === 'PrismaClientKnownRequestError' &&
+    (error?.code === 'P2022' || msg.includes('does not exist')) &&
+    msg.includes('CurriculumState.topicProgress')
+  );
+}
+
+const CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS = {
+  id: true,
+  agentId: true,
+  subject: true,
+  gradeLevel: true,
+  schoolYear: true,
+  standardsTaught: true,
+  standardsAssessed: true,
+  standardsSkipped: true,
+  pacingGuide: true,
+  currentWeek: true,
+  // topicProgress intentionally omitted (for backward compatibility with older DBs)
+  identifiedGaps: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 // ============================================
 // TYPES
 // ============================================
@@ -137,14 +163,31 @@ async function getOrCreateAgent(teacherId: string): Promise<TeacherAgent> {
 }
 
 async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
-  return prisma.teacherAgent.findUnique({
-    where: { teacherId },
-    include: {
-      styleProfile: true,
-      classrooms: { where: { isActive: true } },
-      curriculumStates: true,
-    },
-  });
+  try {
+    return await prisma.teacherAgent.findUnique({
+      where: { teacherId },
+      include: {
+        styleProfile: true,
+        classrooms: { where: { isActive: true } },
+        curriculumStates: true,
+      },
+    });
+  } catch (error: any) {
+    if (!isMissingTopicProgressColumnError(error)) throw error;
+
+    logger.warn('DB schema missing CurriculumState.topicProgress; falling back to safe select', {
+      teacherId,
+    });
+
+    return (await prisma.teacherAgent.findUnique({
+      where: { teacherId },
+      include: {
+        styleProfile: true,
+        classrooms: { where: { isActive: true } },
+        curriculumStates: { select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS },
+      },
+    })) as any;
+  }
 }
 
 async function updateIdentity(
@@ -360,10 +403,22 @@ async function deleteClassroomContext(agentId: string, classroomId: string): Pro
 // ============================================
 
 async function getCurriculumStates(agentId: string): Promise<CurriculumState[]> {
-  return prisma.curriculumState.findMany({
-    where: { agentId },
-    orderBy: { subject: 'asc' },
-  });
+  try {
+    return await prisma.curriculumState.findMany({
+      where: { agentId },
+      orderBy: { subject: 'asc' },
+    });
+  } catch (error: any) {
+    if (!isMissingTopicProgressColumnError(error)) throw error;
+    logger.warn('DB schema missing CurriculumState.topicProgress; curriculumStates fallback select', {
+      agentId,
+    });
+    return (await prisma.curriculumState.findMany({
+      where: { agentId },
+      orderBy: { subject: 'asc' },
+      select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS,
+    })) as any;
+  }
 }
 
 async function getCurriculumState(
@@ -372,11 +427,26 @@ async function getCurriculumState(
   schoolYear?: string
 ): Promise<CurriculumState | null> {
   const year = schoolYear || getCurrentSchoolYear();
-  return prisma.curriculumState.findUnique({
-    where: {
-      agentId_subject_schoolYear: { agentId, subject, schoolYear: year },
-    },
-  });
+  try {
+    return await prisma.curriculumState.findUnique({
+      where: {
+        agentId_subject_schoolYear: { agentId, subject, schoolYear: year },
+      },
+    });
+  } catch (error: any) {
+    if (!isMissingTopicProgressColumnError(error)) throw error;
+    logger.warn('DB schema missing CurriculumState.topicProgress; curriculumState fallback select', {
+      agentId,
+      subject,
+      schoolYear: year,
+    });
+    return (await prisma.curriculumState.findUnique({
+      where: {
+        agentId_subject_schoolYear: { agentId, subject, schoolYear: year },
+      },
+      select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS,
+    })) as any;
+  }
 }
 
 async function updateCurriculumState(
@@ -385,34 +455,71 @@ async function updateCurriculumState(
   data: Partial<CurriculumStateInput>
 ): Promise<CurriculumState> {
   const schoolYear = data.schoolYear || getCurrentSchoolYear();
-  return prisma.curriculumState.upsert({
-    where: {
-      agentId_subject_schoolYear: { agentId, subject, schoolYear },
-    },
-    update: {
-      gradeLevel: data.gradeLevel,
-      standardsTaught: data.standardsTaught,
-      standardsAssessed: data.standardsAssessed,
-      standardsSkipped: data.standardsSkipped,
-      pacingGuide: data.pacingGuide,
-      currentWeek: data.currentWeek,
-      topicProgress: data.topicProgress,
-      identifiedGaps: data.identifiedGaps,
-    },
-    create: {
+  try {
+    return await prisma.curriculumState.upsert({
+      where: {
+        agentId_subject_schoolYear: { agentId, subject, schoolYear },
+      },
+      update: {
+        gradeLevel: data.gradeLevel,
+        standardsTaught: data.standardsTaught,
+        standardsAssessed: data.standardsAssessed,
+        standardsSkipped: data.standardsSkipped,
+        pacingGuide: data.pacingGuide,
+        currentWeek: data.currentWeek,
+        topicProgress: data.topicProgress,
+        identifiedGaps: data.identifiedGaps,
+      },
+      create: {
+        agentId,
+        subject,
+        schoolYear,
+        gradeLevel: data.gradeLevel,
+        standardsTaught: data.standardsTaught || [],
+        standardsAssessed: data.standardsAssessed || [],
+        standardsSkipped: data.standardsSkipped || [],
+        pacingGuide: data.pacingGuide,
+        currentWeek: data.currentWeek || 1,
+        topicProgress: data.topicProgress || {},
+        identifiedGaps: data.identifiedGaps || [],
+      },
+    });
+  } catch (error: any) {
+    if (!isMissingTopicProgressColumnError(error)) throw error;
+
+    logger.warn('DB schema missing CurriculumState.topicProgress; retrying upsert without topicProgress', {
       agentId,
       subject,
       schoolYear,
-      gradeLevel: data.gradeLevel,
-      standardsTaught: data.standardsTaught || [],
-      standardsAssessed: data.standardsAssessed || [],
-      standardsSkipped: data.standardsSkipped || [],
-      pacingGuide: data.pacingGuide,
-      currentWeek: data.currentWeek || 1,
-      topicProgress: data.topicProgress || {},
-      identifiedGaps: data.identifiedGaps || [],
-    },
-  });
+    });
+
+    return (await prisma.curriculumState.upsert({
+      where: {
+        agentId_subject_schoolYear: { agentId, subject, schoolYear },
+      },
+      update: {
+        gradeLevel: data.gradeLevel,
+        standardsTaught: data.standardsTaught,
+        standardsAssessed: data.standardsAssessed,
+        standardsSkipped: data.standardsSkipped,
+        pacingGuide: data.pacingGuide,
+        currentWeek: data.currentWeek,
+        identifiedGaps: data.identifiedGaps,
+      },
+      create: {
+        agentId,
+        subject,
+        schoolYear,
+        gradeLevel: data.gradeLevel,
+        standardsTaught: data.standardsTaught || [],
+        standardsAssessed: data.standardsAssessed || [],
+        standardsSkipped: data.standardsSkipped || [],
+        pacingGuide: data.pacingGuide,
+        currentWeek: data.currentWeek || 1,
+        identifiedGaps: data.identifiedGaps || [],
+      },
+    })) as any;
+  }
 }
 
 function getCurrentSchoolYear(): string {
@@ -476,14 +583,30 @@ async function getRecentInteractions(
 // ============================================
 
 async function getFullMemorySnapshot(teacherId: string): Promise<AgentMemorySnapshot | null> {
-  const agent = await prisma.teacherAgent.findUnique({
-    where: { teacherId },
-    include: {
-      styleProfile: true,
-      classrooms: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
-      curriculumStates: { orderBy: { subject: 'asc' } },
-    },
-  });
+  let agent: any;
+  try {
+    agent = await prisma.teacherAgent.findUnique({
+      where: { teacherId },
+      include: {
+        styleProfile: true,
+        classrooms: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
+        curriculumStates: { orderBy: { subject: 'asc' } },
+      },
+    });
+  } catch (error: any) {
+    if (!isMissingTopicProgressColumnError(error)) throw error;
+    logger.warn('DB schema missing CurriculumState.topicProgress; snapshot fallback select', {
+      teacherId,
+    });
+    agent = await prisma.teacherAgent.findUnique({
+      where: { teacherId },
+      include: {
+        styleProfile: true,
+        classrooms: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
+        curriculumStates: { select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS, orderBy: { subject: 'asc' } as any },
+      },
+    });
+  }
 
   if (!agent) return null;
 

@@ -172,6 +172,29 @@ async function processOnboardingResponse(
     // Extract structured data from user message using Gemini
     const parsedData = await extractStructuredData(step, userMessage);
 
+    // If we didn't get enough info for the curriculum step, do not advance.
+    // This prevents "American curriculum" (framework) answers from skipping the actual topic progress question.
+    if (step === 'curriculum') {
+      const subjects = Array.isArray(parsedData?.subjects) ? parsedData.subjects : [];
+      const valid = subjects.filter((s: any) => s?.subject && Object.values(Subject).includes(s.subject));
+      if (valid.length === 0) {
+        return {
+          parsedData,
+          agentMessage:
+            `Quick clarification so I can plan accurately:\n\n` +
+            `1) Which subject(s) should we focus on first (e.g., MATH, ENGLISH, SCIENCE)?\n` +
+            `2) What unit/topic are you teaching right now, and what's coming up next?`,
+          nextStep: {
+            step: 'curriculum',
+            prompt: STEP_PROMPTS.curriculum,
+            progress: Math.round((STEP_ORDER.indexOf('curriculum') / STEP_ORDER.length) * 100),
+            isComplete: false,
+          },
+          isComplete: false,
+        };
+      }
+    }
+
     // Populate appropriate memory layer
     await populateMemoryLayer(teacherId, agent.id, step, parsedData);
 
@@ -328,9 +351,7 @@ async function populateMemoryLayer(
           ? data.subjectsTaught
               .filter((s: string) => Object.values(Subject).includes(s as Subject))
           : undefined,
-        curriculumType: data.curriculumType && Object.values(CurriculumType).includes(data.curriculumType)
-          ? data.curriculumType
-          : undefined,
+        curriculumType: normalizeCurriculumType(data.curriculumType),
         yearsExperience: data.yearsExperience || undefined,
         teachingPhilosophy: data.teachingPhilosophy || undefined,
       });
@@ -546,6 +567,22 @@ function getCurrentSchoolYear(): string {
   const month = now.getMonth();
   if (month >= 7) return `${year}-${year + 1}`;
   return `${year - 1}-${year}`;
+}
+
+function normalizeCurriculumType(value: any): CurriculumType | undefined {
+  if (!value) return undefined;
+  if (Object.values(CurriculumType).includes(value)) return value as CurriculumType;
+  if (typeof value !== 'string') return undefined;
+
+  const v = value.toLowerCase().trim();
+  if (v.includes('american') || v.includes('us') || v.includes('usa') || v.includes('common core')) return CurriculumType.AMERICAN;
+  if (v.includes('british') || v.includes('uk') || v.includes('gcse') || v.includes('a-level')) return CurriculumType.BRITISH;
+  if (v === 'ib' || v.includes('international baccalaureate')) return CurriculumType.IB;
+  if (v.includes('cbse')) return CurriculumType.INDIAN_CBSE;
+  if (v.includes('icse')) return CurriculumType.INDIAN_ICSE;
+  if (v.includes('arabic') || v.includes('uae') || v.includes('ksa')) return CurriculumType.ARABIC;
+
+  return undefined;
 }
 
 // ============================================
