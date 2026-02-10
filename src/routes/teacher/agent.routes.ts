@@ -16,7 +16,6 @@ import { standardsAnalysisService } from '../../services/teacher/standardsAnalys
 import { reviewSummaryService } from '../../services/teacher/reviewSummaryService.js';
 import { exportYearEndHandoverPDF } from '../../services/teacher/handoverExportService.js';
 import { queueWeeklyPrep } from '../../jobs/index.js';
-import { isFeatureEnabled, FEATURE_FLAGS, getAllFlags } from '../../config/featureFlags.js';
 import { logger } from '../../utils/logger.js';
 import { ReviewType, ReviewStatus } from '@prisma/client';
 import { requireTeacherPro } from '../../middleware/teacherPlanGate.js';
@@ -42,14 +41,6 @@ function validateBody<T>(schema: z.ZodSchema<T>) {
     req.body = result.data;
     next();
   };
-}
-
-// Feature flag middleware
-function requireAgentFeature(req: Request, res: Response, next: NextFunction) {
-  if (!isFeatureEnabled(FEATURE_FLAGS.TEACHER_AGENT_ENABLED)) {
-    return res.status(404).json({ error: 'AI Assistant feature is not available yet.' });
-  }
-  next();
 }
 
 // ============================================================================
@@ -135,17 +126,6 @@ const schedulingSchema = z.object({
   preferredDeliveryTime: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format').optional(),
   timezone: z.string().optional(),
 });
-
-// ============================================================================
-// Feature Flags
-// ============================================================================
-
-router.get('/features', (req: Request, res: Response) => {
-  res.json({ flags: getAllFlags() });
-});
-
-// Apply feature flag check to all routes below
-router.use(requireAgentFeature);
 
 // ============================================================================
 // Setup & Identity
