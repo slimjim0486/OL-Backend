@@ -308,12 +308,20 @@ async function generateChatResponse(
   });
 
   // Build conversation history for Gemini
-  const history = recentMessages.map((m) => ({
+  const formattedHistory = recentMessages.map((m) => ({
     role: m.role === 'USER' ? 'user' as const : 'model' as const,
     parts: [{ text: m.content }],
   }));
 
-  const chat = model.startChat({ history });
+  // Gemini requires history to start with a 'user' role. If the session was created
+  // with an assistant greeting (or any leading model messages), drop them.
+  let history = formattedHistory;
+  if (history.length > 0 && history[0].role === 'model') {
+    const firstUserIndex = history.findIndex((m) => m.role === 'user');
+    history = firstUserIndex === -1 ? [] : history.slice(firstUserIndex);
+  }
+
+  const chat = model.startChat(history.length ? { history } : {});
   const result = await chat.sendMessage(userMessage);
   const responseText = result.response.text().trim();
   const tokensUsed = result.response.usageMetadata?.totalTokenCount || 500;
