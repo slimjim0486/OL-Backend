@@ -843,7 +843,7 @@ export const quotaService = {
       const creditsNeeded = tokensToCredits(estimatedTokens || OPERATION_ESTIMATES[operation] || 1000);
       throw new PaymentRequiredError(
         `You need ${creditsNeeded} credits for this action but only have ${check.remainingCredits} remaining. ` +
-        `Buy a credit pack or upgrade your plan at Settings → Billing.`
+        `Upgrade your seat plan at Settings → Billing to continue.`
       );
     }
 

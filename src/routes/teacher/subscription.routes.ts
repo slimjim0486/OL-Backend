@@ -1,9 +1,9 @@
 /**
  * Teacher Subscription Routes
  *
- * Handles subscription management for teachers:
+ * Handles teacher seat subscription management:
  * - Get subscription status and plans
- * - Create checkout sessions for subscriptions
+ * - Create checkout sessions for seat subscriptions
  * - (Deprecated) Credit pack endpoints retained for compatibility
  * - Access customer portal
  * - Cancel/resume subscriptions
@@ -34,6 +34,7 @@ router.get('/plans', async (req: Request, res: Response, next: NextFunction) => 
       data: {
         plans,
         currency: 'USD',
+        billingModel: 'SEAT_PLUS_DOWNLOAD',
       },
     });
   } catch (error) {
@@ -47,14 +48,10 @@ router.get('/plans', async (req: Request, res: Response, next: NextFunction) => 
  */
 router.get('/credit-packs', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const packs = subscriptionService.getAvailableCreditPacks();
-
-    res.json({
-      success: true,
-      data: {
-        packs,
-        currency: 'USD',
-      },
+    res.status(410).json({
+      success: false,
+      error: 'Credit packs are no longer available.',
+      data: { packs: [], currency: 'USD' },
     });
   } catch (error) {
     next(error);
@@ -126,6 +123,7 @@ router.get(
           subscription: subscriptionInfo,
           currentTier: subscriptionInfo?.tier || 'FREE',
           pricingModel: 'DOWNLOADS',
+          billingModel: 'SEAT_PLUS_DOWNLOAD',
         },
       });
     } catch (error) {

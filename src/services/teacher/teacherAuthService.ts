@@ -17,6 +17,7 @@ import { logger } from '../../utils/logger.js';
 import { referralService } from '../sharing/index.js';
 import { currencyService } from '../currency/currencyService.js';
 import { trackTeacherSignup, trackTeacherActivity } from '../brevo/brevoTrackingService.js';
+import { organizationSeatService } from './organizationSeatService.js';
 
 const SALT_ROUNDS = 12;
 
@@ -40,7 +41,8 @@ export interface TeacherSignupParams {
   password: string;
   firstName?: string;
   lastName?: string;
-  organizationId?: string; // Optional - for joining an existing org
+  organizationId?: string; // Optional - direct org join (admin flow)
+  inviteToken?: string; // Optional - signed org invite token
   referralCode?: string; // Optional - referral code from share link
 }
 
@@ -84,11 +86,28 @@ export const teacherAuthService = {
     deviceInfo?: string,
     ipAddress?: string
   ): Promise<TeacherLoginResult> {
-    const { email, password, firstName, lastName, organizationId, referralCode } = params;
+    const { email, password, firstName, lastName, organizationId, inviteToken, referralCode } = params;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (organizationId && inviteToken) {
+      throw new ValidationError('Use either organizationId or inviteToken, not both.');
+    }
+
+    let resolvedOrganizationId = organizationId;
+    let resolvedRole: TeacherRole = TeacherRole.TEACHER;
+
+    if (inviteToken) {
+      const invite = organizationSeatService.verifyInviteToken(inviteToken);
+      if (invite.email !== normalizedEmail) {
+        throw new ValidationError('This invite was created for a different email address.');
+      }
+      resolvedOrganizationId = invite.organizationId;
+      resolvedRole = invite.role;
+    }
 
     // Check if email already exists (for teachers)
     const existingTeacher = await prisma.teacher.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: normalizedEmail },
     });
 
     if (existingTeacher) {
@@ -100,16 +119,18 @@ export const teacherAuthService = {
       throw new ValidationError('Password must be at least 8 characters. Use a mix of letters, numbers, and symbols for better security.');
     }
 
-    // If organizationId provided, verify it exists
+    // If organization is provided via direct org ID or invite, verify and enforce seat availability.
     let organization = null;
-    if (organizationId) {
+    if (resolvedOrganizationId) {
       organization = await prisma.organization.findUnique({
-        where: { id: organizationId },
+        where: { id: resolvedOrganizationId },
       });
 
       if (!organization) {
         throw new NotFoundError('Organization not found');
       }
+
+      await organizationSeatService.ensureSeatAvailable(resolvedOrganizationId);
     }
 
     // Hash password
@@ -118,15 +139,15 @@ export const teacherAuthService = {
     // Create teacher account (emailVerified: true - no OTP required for teachers)
     const teacher = await prisma.teacher.create({
       data: {
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         passwordHash,
         firstName,
         lastName,
         emailVerified: true, // Auto-verified - no OTP friction for teachers
         emailVerifiedAt: new Date(),
-        organizationId: organizationId || null,
-        role: organizationId ? 'TEACHER' : 'TEACHER', // Default role
-        subscriptionTier: organizationId ? 'FREE' : 'FREE', // Free tier for individual teachers
+        organizationId: resolvedOrganizationId || null,
+        role: resolvedOrganizationId ? resolvedRole : TeacherRole.TEACHER,
+        subscriptionTier: 'FREE',
         monthlyTokenQuota: 30000, // 30 credits/month
         trialStartedAt: null,
         trialEndsAt: null,

@@ -25,3 +25,4 @@ export { weeklyPrepAudioService } from './weeklyPrepAudioService.js';
 export { communicationService } from './communicationService.js';
 export { standardsAnalysisService } from './standardsAnalysisService.js';
 export { reviewSummaryService } from './reviewSummaryService.js';
+export { organizationSeatService } from './organizationSeatService.js';

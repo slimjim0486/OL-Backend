@@ -861,8 +861,12 @@ model Organization {
 
   // Billing & Subscription
   stripeCustomerId   String?
+  stripeSubscriptionId String?
   subscriptionTier   OrgSubscriptionTier @default(STARTER)
   subscriptionStatus SubscriptionStatus  @default(ACTIVE)
+  subscriptionExpiresAt DateTime?
+  billingInterval OrgBillingInterval @default(MONTHLY)
+  seatLimit Int @default(10) // Total teacher seats included for this organization
 
   // Token Quotas
   monthlyTokenQuota BigInt   @default(1000000) // 1M tokens/month starter
@@ -2380,6 +2384,11 @@ enum OrgSubscriptionTier {
   STARTER // 10 teachers, 1M tokens/month
   PROFESSIONAL // 50 teachers, 5M tokens/month
   ENTERPRISE // Unlimited teachers, custom tokens
+}
+
+enum OrgBillingInterval {
+  MONTHLY
+  ANNUAL
 }
 
 enum TeacherSubscriptionTier {

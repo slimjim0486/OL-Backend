@@ -20,6 +20,7 @@ const teacherSignupSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   organizationId: z.string().uuid().optional(),
+  inviteToken: z.string().min(20).optional(),
   referralCode: z.string().min(1).max(20).optional(), // Referral code from share link
 });
 

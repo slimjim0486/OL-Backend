@@ -16,6 +16,7 @@ import { consentService } from '../services/auth/consentService.js';
 import { emailService } from '../services/email/emailService.js';
 import { familySubscriptionService } from '../services/parent/subscriptionService.js';
 import { stripeService } from '../services/stripe/index.js';
+import { organizationSubscriptionService } from '../services/stripe/organizationSubscriptionService.js';
 import { subscriptionService } from '../services/stripe/subscriptionService.js';
 import { logger } from '../utils/logger.js';
 
@@ -219,7 +220,10 @@ router.post('/stripe-subscription', async (req: Request, res: Response) => {
           metadata: session.metadata,
         });
 
-        await subscriptionService.handleCheckoutCompleted(session);
+        const handledByOrganization = await organizationSubscriptionService.handleCheckoutCompleted(session);
+        if (!handledByOrganization) {
+          await subscriptionService.handleCheckoutCompleted(session);
+        }
         break;
       }
 
@@ -236,7 +240,10 @@ router.post('/stripe-subscription', async (req: Request, res: Response) => {
           metadata: subscription.metadata,
         });
 
-        await subscriptionService.handleSubscriptionCreated(subscription);
+        const handledByOrganization = await organizationSubscriptionService.handleSubscriptionCreated(subscription);
+        if (!handledByOrganization) {
+          await subscriptionService.handleSubscriptionCreated(subscription);
+        }
         break;
       }
 
@@ -248,7 +255,10 @@ router.post('/stripe-subscription', async (req: Request, res: Response) => {
           metadata: subscription.metadata,
         });
 
-        await subscriptionService.handleSubscriptionDeleted(subscription);
+        const handledByOrganization = await organizationSubscriptionService.handleSubscriptionDeleted(subscription);
+        if (!handledByOrganization) {
+          await subscriptionService.handleSubscriptionDeleted(subscription);
+        }
         break;
       }
 
@@ -270,12 +280,21 @@ router.post('/stripe-subscription', async (req: Request, res: Response) => {
           customerId: invoice.customer,
         });
 
-        await subscriptionService.handlePaymentFailed(invoice);
+        const handledByOrganization = await organizationSubscriptionService.handlePaymentFailed(invoice);
+        if (!handledByOrganization) {
+          await subscriptionService.handlePaymentFailed(invoice);
+        }
         break;
       }
 
       case 'invoice.paid': {
         const invoice = event.data.object as Stripe.Invoice;
+        const handledByOrganization = await organizationSubscriptionService.handleInvoicePaid(invoice);
+        if (handledByOrganization) {
+          logger.info('Organization invoice paid processed', { invoiceId: invoice.id });
+          break;
+        }
+
         // Stripe API returns subscription as string or Subscription object
         // Using 'as any' due to Stripe SDK type inconsistencies
         const invoiceAny = invoice as any;

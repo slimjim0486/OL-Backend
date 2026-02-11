@@ -805,10 +805,11 @@ export const subscriptionService = {
       customerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id,
     });
 
-    // Skip family subscriptions - they're handled by familySubscriptionService
-    if (subscription.metadata.type === 'family') {
-      logger.debug('Skipping family subscription in teacher handler', {
+    // Skip non-teacher subscriptions (family/organization)
+    if (subscription.metadata.type === 'family' || subscription.metadata.type === 'organization') {
+      logger.debug('Skipping non-teacher subscription in teacher handler', {
         subscriptionId: subscription.id,
+        metadataType: subscription.metadata.type,
       });
       return;
     }
@@ -1001,10 +1002,11 @@ export const subscriptionService = {
    * Handle subscription deleted from webhook
    */
   async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
-    // Skip family subscriptions - they're handled by familySubscriptionService
-    if (subscription.metadata.type === 'family') {
-      logger.debug('Skipping family subscription deletion in teacher handler', {
+    // Skip non-teacher subscriptions (family/organization)
+    if (subscription.metadata.type === 'family' || subscription.metadata.type === 'organization') {
+      logger.debug('Skipping non-teacher subscription deletion in teacher handler', {
         subscriptionId: subscription.id,
+        metadataType: subscription.metadata.type,
       });
       return;
     }
@@ -1039,10 +1041,11 @@ export const subscriptionService = {
    * Handle checkout session completed from webhook
    */
   async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-    // Skip family subscription checkouts - they're handled by familySubscriptionService
-    if (session.metadata?.type === 'family') {
-      logger.debug('Skipping family checkout in teacher handler', {
+    // Skip non-teacher checkout sessions (family/organization)
+    if (session.metadata?.type === 'family' || session.metadata?.type === 'organization') {
+      logger.debug('Skipping non-teacher checkout in teacher handler', {
         sessionId: session.id,
+        metadataType: session.metadata?.type,
       });
       return;
     }
@@ -1295,6 +1298,8 @@ export const subscriptionService = {
       name: product.name,
       priceMonthly: product.priceMonthly,
       priceAnnual: product.priceAnnual,
+      billingUnit: product.tier === 'FREE' ? 'account' : 'seat',
+      billingModel: product.tier === 'FREE' ? 'free' : 'seat_subscription',
       features: product.features,
     }));
   },

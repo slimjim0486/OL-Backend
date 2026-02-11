@@ -280,6 +280,7 @@ export async function requireActiveSubscription(
         organization: {
           select: {
             subscriptionStatus: true,
+            subscriptionExpiresAt: true,
           },
         },
       },
@@ -293,6 +294,13 @@ export async function requireActiveSubscription(
     if (teacher.organization) {
       if (teacher.organization.subscriptionStatus !== 'ACTIVE') {
         throw new ForbiddenError('Organization subscription is not active');
+      }
+
+      if (
+        teacher.organization.subscriptionExpiresAt &&
+        teacher.organization.subscriptionExpiresAt < new Date()
+      ) {
+        throw new ForbiddenError('Organization subscription has expired');
       }
     } else {
       // Check individual subscription

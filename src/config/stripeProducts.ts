@@ -7,8 +7,8 @@
  *   - Lesson PDF: $1.99
  *   - Full bundle: $2.99
  * - Subscriptions:
- *   - Teacher (BASIC): $14.99/month or $119.88/year
- *   - Teacher Pro (PROFESSIONAL): $29.99/month or $239.88/year
+ *   - Teacher Seat (BASIC): $14.99/month or $119.88/year
+ *   - Teacher Pro Seat (PROFESSIONAL): $29.99/month or $239.88/year
  */
 
 import { TeacherSubscriptionTier, TeacherDownloadProductType } from '@prisma/client';
@@ -52,6 +52,7 @@ const TEACHER_PRODUCT: SubscriptionProduct = {
   priceIdMonthly: teacherMonthlyPriceId,
   priceIdAnnual: teacherAnnualPriceId,
   features: [
+    '1 teacher seat',
     'Unlimited downloads (all formats)',
     'All answer keys + infographics',
     'Google Slides + PowerPoint exports',
@@ -71,6 +72,7 @@ const TEACHER_PRO_PRODUCT: SubscriptionProduct = {
   priceIdMonthly: teacherProMonthlyPriceId,
   priceIdAnnual: teacherProAnnualPriceId,
   features: [
+    '1 teacher seat',
     'Everything in Teacher',
     'AI grading + batch processing',
     'Audio class updates',

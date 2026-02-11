@@ -576,20 +576,34 @@ router.post('/batch', async (req: Request, res: Response) => {
 
     const teacher = await prisma.teacher.findUnique({
       where: { id: teacherId },
-      select: { subscriptionTier: true, subscriptionStatus: true, subscriptionExpiresAt: true },
+      select: {
+        subscriptionTier: true,
+        subscriptionStatus: true,
+        subscriptionExpiresAt: true,
+        organization: {
+          select: {
+            subscriptionStatus: true,
+            subscriptionExpiresAt: true,
+          },
+        },
+      },
     });
 
-    // Only BASIC/PROFESSIONAL with active status count as subscribers
-    const isSubscriber = Boolean(
+    const hasIndividualSubscription = Boolean(
       teacher?.subscriptionTier !== 'FREE' &&
       teacher?.subscriptionStatus === 'ACTIVE' &&
       (!teacher.subscriptionExpiresAt || teacher.subscriptionExpiresAt > new Date())
     );
+    const hasOrganizationSeat = Boolean(
+      teacher?.organization?.subscriptionStatus === 'ACTIVE' &&
+      (!teacher.organization.subscriptionExpiresAt || teacher.organization.subscriptionExpiresAt > new Date())
+    );
+    const isSubscriber = hasIndividualSubscription || hasOrganizationSeat;
 
     if (!isSubscriber) {
       return res.status(403).json({
         success: false,
-        error: 'Batch exports require Unlimited downloads. Export items individually or start Unlimited.',
+        error: 'Batch exports require an active seat subscription. Export items individually or start a seat plan.',
         requiredProduct: 'BUNDLE',
         price: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
       });
@@ -841,20 +855,34 @@ router.post('/batch/drive', async (req: Request, res: Response) => {
 
     const teacher = await prisma.teacher.findUnique({
       where: { id: teacherId },
-      select: { subscriptionTier: true, subscriptionStatus: true, subscriptionExpiresAt: true },
+      select: {
+        subscriptionTier: true,
+        subscriptionStatus: true,
+        subscriptionExpiresAt: true,
+        organization: {
+          select: {
+            subscriptionStatus: true,
+            subscriptionExpiresAt: true,
+          },
+        },
+      },
     });
 
-    // Only BASIC/PROFESSIONAL with active status count as subscribers
-    const isSubscriber = Boolean(
+    const hasIndividualSubscription = Boolean(
       teacher?.subscriptionTier !== 'FREE' &&
       teacher?.subscriptionStatus === 'ACTIVE' &&
       (!teacher.subscriptionExpiresAt || teacher.subscriptionExpiresAt > new Date())
     );
+    const hasOrganizationSeat = Boolean(
+      teacher?.organization?.subscriptionStatus === 'ACTIVE' &&
+      (!teacher.organization.subscriptionExpiresAt || teacher.organization.subscriptionExpiresAt > new Date())
+    );
+    const isSubscriber = hasIndividualSubscription || hasOrganizationSeat;
 
     if (!isSubscriber) {
       return res.status(403).json({
         success: false,
-        error: 'Batch exports require Unlimited downloads. Export items individually or start Unlimited.',
+        error: 'Batch exports require an active seat subscription. Export items individually or start a seat plan.',
         requiredProduct: 'BUNDLE',
         price: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
       });

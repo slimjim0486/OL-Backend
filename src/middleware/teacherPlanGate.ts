@@ -69,6 +69,12 @@ export function requireTeacherTier(minTier: TeacherSubscriptionTier) {
           subscriptionExpiresAt: true,
           trialEndsAt: true,
           trialUsed: true,
+          organization: {
+            select: {
+              subscriptionStatus: true,
+              subscriptionExpiresAt: true,
+            },
+          },
         },
       });
 
@@ -76,8 +82,21 @@ export function requireTeacherTier(minTier: TeacherSubscriptionTier) {
         throw new ForbiddenError('Teacher not found');
       }
 
-      // Enterprise/org teachers are handled separately and should not be blocked by individual plan gates.
+      // Org teachers bypass individual tiers, but the organization subscription must be active.
       if (teacher.organizationId) {
+        const orgActive = Boolean(
+          teacher.organization?.subscriptionStatus === 'ACTIVE' &&
+          (!teacher.organization.subscriptionExpiresAt ||
+            teacher.organization.subscriptionExpiresAt.getTime() > Date.now())
+        );
+
+        if (!orgActive) {
+          throw new TeacherPlanRequiredError(
+            'BASIC',
+            'Organization seat subscription is not active. Contact your organization admin.'
+          );
+        }
+
         return next();
       }
 
@@ -107,4 +126,3 @@ export function requireTeacherTier(minTier: TeacherSubscriptionTier) {
 }
 
 export const requireTeacherPro = requireTeacherTier('PROFESSIONAL');
-

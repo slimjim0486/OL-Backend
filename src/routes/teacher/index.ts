@@ -21,6 +21,7 @@ import sharingRoutes from './sharing.routes.js';
 import selectionRoutes from './selection.routes.js';
 import agentRoutes from './agent.routes.js';
 import communicationRoutes from './communication.routes.js';
+import organizationRoutes from './organization.routes.js';
 const router = Router();
 
 // Mount teacher routes
@@ -45,5 +46,6 @@ router.use('/sharing', sharingRoutes);        // Content sharing hub
 router.use('/selection', selectionRoutes);
 router.use('/agent', agentRoutes);
 router.use('/communications', communicationRoutes);
+router.use('/organizations', organizationRoutes);
 
 export default router;

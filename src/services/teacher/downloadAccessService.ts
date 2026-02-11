@@ -37,16 +37,28 @@ export async function getDownloadAccess(teacherId: string, contentId: string) {
       subscriptionTier: true,
       subscriptionStatus: true,
       subscriptionExpiresAt: true,
+      organization: {
+        select: {
+          subscriptionStatus: true,
+          subscriptionExpiresAt: true,
+        },
+      },
     },
   });
 
-  // Only BASIC/PROFESSIONAL with active status count as subscribers
-  // FREE tier teachers must pay per download
-  const isSubscriber = Boolean(
+  const hasIndividualSubscription = Boolean(
     teacher?.subscriptionTier !== 'FREE' &&
     teacher?.subscriptionStatus === 'ACTIVE' &&
     (!teacher.subscriptionExpiresAt || teacher.subscriptionExpiresAt > new Date())
   );
+
+  const hasOrganizationSeat = Boolean(
+    teacher?.organization?.subscriptionStatus === 'ACTIVE' &&
+    (!teacher.organization.subscriptionExpiresAt || teacher.organization.subscriptionExpiresAt > new Date())
+  );
+
+  // Active individual paid plan or active organization seat grants export access.
+  const isSubscriber = hasIndividualSubscription || hasOrganizationSeat;
 
   const purchases = await prisma.teacherDownloadPurchase.findMany({
     where: { teacherId, contentId },
