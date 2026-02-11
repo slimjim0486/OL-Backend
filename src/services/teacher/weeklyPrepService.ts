@@ -14,6 +14,7 @@ import { contextAssemblerService } from './contextAssemblerService.js';
 import { contentGenerationService } from './contentGenerationService.js';
 import { reinforcementService } from './reinforcementService.js';
 import { logger } from '../../utils/logger.js';
+import { TeacherPlanRequiredError, hasTeacherTierAccess } from '../../middleware/teacherPlanGate.js';
 
 // ============================================
 // TYPES
@@ -77,20 +78,26 @@ async function initiateWeeklyPrep(
   if (!agent) throw new Error('Agent not initialized.');
   if (!agent.onboardingComplete) throw new Error('Please complete onboarding first.');
 
-  const weekStart = opts?.weekStartDate || getNextMonday();
+  const weekStart = normalizeWeekStartDate(opts?.weekStartDate || getNextMonday());
+  const weekEnd = getDayAfter(weekStart);
   const weekLabel = formatWeekLabel(weekStart);
 
   // Check for duplicate
   const existing = await prisma.agentWeeklyPrep.findFirst({
     where: {
       agentId: agent.id,
-      weekStartDate: weekStart,
+      weekStartDate: {
+        gte: weekStart,
+        lt: weekEnd,
+      },
       status: { notIn: [WeeklyPrepStatus.FAILED] },
     },
   });
   if (existing) {
     return { prepId: existing.id, weekLabel: existing.weekLabel };
   }
+
+  await enforceWeeklyPrepCreationAccess(teacherId, agent.id, weekStart, weekEnd);
 
   const prep = await prisma.agentWeeklyPrep.create({
     data: {
@@ -408,6 +415,7 @@ async function getWeeklyPrep(prepId: string, teacherId: string) {
     },
   });
   if (!prep) throw new Error('Weekly prep not found');
+  await enforceWeeklyPrepAccess(teacherId, agent.id, prep.id);
   return prep;
 }
 
@@ -417,6 +425,34 @@ async function getWeeklyPrepList(
 ) {
   const agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) return { preps: [], total: 0 };
+
+  const hasPro = await hasTeacherTierAccess(teacherId, 'PROFESSIONAL');
+  if (!hasPro) {
+    const [firstPrep, allWeekCount] = await Promise.all([
+      prisma.agentWeeklyPrep.findFirst({
+        where: {
+          agentId: agent.id,
+          status: { notIn: [WeeklyPrepStatus.FAILED] },
+        },
+        orderBy: [{ weekStartDate: 'asc' }, { createdAt: 'asc' }],
+        include: {
+          _count: { select: { materials: true } },
+        },
+      }),
+      prisma.agentWeeklyPrep.count({
+        where: {
+          agentId: agent.id,
+          status: { notIn: [WeeklyPrepStatus.FAILED] },
+        },
+      }),
+    ]);
+
+    return {
+      preps: firstPrep ? [firstPrep] : [],
+      total: firstPrep ? 1 : 0,
+      lockedWeeks: Math.max(0, allWeekCount - (firstPrep ? 1 : 0)),
+    };
+  }
 
   const page = opts?.page || 1;
   const limit = opts?.limit || 10;
@@ -440,6 +476,7 @@ async function getWeeklyPrepList(
 async function getWeeklyPrepProgress(prepId: string, teacherId: string) {
   const agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) throw new Error('Agent not found');
+  await enforceWeeklyPrepAccess(teacherId, agent.id, prepId);
 
   const prep = await prisma.agentWeeklyPrep.findFirst({
     where: { id: prepId, agentId: agent.id },
@@ -482,6 +519,7 @@ async function approveMaterial(materialId: string, teacherId: string): Promise<v
 async function approveAllMaterials(prepId: string, teacherId: string): Promise<number> {
   const agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) throw new Error('Agent not found');
+  await enforceWeeklyPrepAccess(teacherId, agent.id, prepId);
 
   const prep = await prisma.agentWeeklyPrep.findFirst({
     where: { id: prepId, agentId: agent.id },
@@ -645,6 +683,7 @@ async function finalizeWeeklyPrep(
 ): Promise<FinalizeWeeklyPrepResult> {
   const agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) throw new Error('Agent not found');
+  await enforceWeeklyPrepAccess(teacherId, agent.id, prepId);
 
   const prep = await prisma.agentWeeklyPrep.findFirst({
     where: { id: prepId, agentId: agent.id },
@@ -722,11 +761,12 @@ async function verifyMaterialOwnership(materialId: string, teacherId: string) {
 
   const material = await prisma.agentMaterial.findUnique({
     where: { id: materialId },
-    include: { weeklyPrep: { select: { agentId: true } } },
+    include: { weeklyPrep: { select: { id: true, agentId: true } } },
   });
   if (!material || material.weeklyPrep.agentId !== agent.id) {
     throw new Error('Material not found');
   }
+  await enforceWeeklyPrepAccess(teacherId, agent.id, material.weeklyPrep.id);
   return material;
 }
 
@@ -738,6 +778,76 @@ function getNextMonday(): Date {
   monday.setDate(now.getDate() + daysUntilMonday);
   monday.setHours(0, 0, 0, 0);
   return monday;
+}
+
+function normalizeWeekStartDate(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function getDayAfter(date: Date): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + 1);
+  return next;
+}
+
+async function enforceWeeklyPrepCreationAccess(
+  teacherId: string,
+  agentId: string,
+  weekStart: Date,
+  weekEnd: Date
+): Promise<void> {
+  const hasPro = await hasTeacherTierAccess(teacherId, 'PROFESSIONAL');
+  if (hasPro) return;
+
+  const hasAnotherWeek = await prisma.agentWeeklyPrep.findFirst({
+    where: {
+      agentId,
+      status: { notIn: [WeeklyPrepStatus.FAILED] },
+      NOT: {
+        weekStartDate: {
+          gte: weekStart,
+          lt: weekEnd,
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  if (hasAnotherWeek) {
+    throw new TeacherPlanRequiredError(
+      'PROFESSIONAL',
+      'Teacher Pro is required to generate Week 2 and beyond. Your first weekly calendar remains free.'
+    );
+  }
+}
+
+async function enforceWeeklyPrepAccess(
+  teacherId: string,
+  agentId: string,
+  prepId: string
+): Promise<void> {
+  const hasPro = await hasTeacherTierAccess(teacherId, 'PROFESSIONAL');
+  if (hasPro) return;
+
+  const firstPrep = await prisma.agentWeeklyPrep.findFirst({
+    where: {
+      agentId,
+      status: { notIn: [WeeklyPrepStatus.FAILED] },
+    },
+    orderBy: [{ weekStartDate: 'asc' }, { createdAt: 'asc' }],
+    select: { id: true },
+  });
+
+  if (!firstPrep) return;
+
+  if (firstPrep.id !== prepId) {
+    throw new TeacherPlanRequiredError(
+      'PROFESSIONAL',
+      'Teacher Pro is required to access Week 2 and beyond. Your first weekly calendar remains free.'
+    );
+  }
 }
 
 function formatWeekLabel(date: Date): string {

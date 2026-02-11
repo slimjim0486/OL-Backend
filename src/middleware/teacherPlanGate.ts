@@ -51,6 +51,102 @@ function hasActivePaidSubscription(teacher: {
   return true;
 }
 
+type TeacherPlanSnapshot = {
+  id: string;
+  organizationId: string | null;
+  role: TeacherRole;
+  subscriptionTier: TeacherSubscriptionTier;
+  subscriptionStatus: string;
+  subscriptionExpiresAt: Date | null;
+  trialEndsAt: Date | null;
+  trialUsed: boolean | null;
+  organization: {
+    subscriptionStatus: string;
+    subscriptionExpiresAt: Date | null;
+  } | null;
+};
+
+async function loadTeacherPlanSnapshot(teacherId: string): Promise<TeacherPlanSnapshot | null> {
+  return prisma.teacher.findUnique({
+    where: { id: teacherId },
+    select: {
+      id: true,
+      organizationId: true,
+      role: true,
+      subscriptionTier: true,
+      subscriptionStatus: true,
+      subscriptionExpiresAt: true,
+      trialEndsAt: true,
+      trialUsed: true,
+      organization: {
+        select: {
+          subscriptionStatus: true,
+          subscriptionExpiresAt: true,
+        },
+      },
+    },
+  });
+}
+
+function assertTeacherTierAccess(
+  teacher: TeacherPlanSnapshot,
+  minTier: TeacherSubscriptionTier
+): void {
+  // Org teachers bypass individual tiers, but the organization subscription must be active.
+  if (teacher.organizationId) {
+    const orgActive = Boolean(
+      teacher.organization?.subscriptionStatus === 'ACTIVE' &&
+      (!teacher.organization.subscriptionExpiresAt ||
+        teacher.organization.subscriptionExpiresAt.getTime() > Date.now())
+    );
+
+    if (!orgActive) {
+      throw new TeacherPlanRequiredError(
+        'BASIC',
+        'Organization seat subscription is not active. Contact your organization admin.'
+      );
+    }
+
+    return;
+  }
+
+  // Allow super admins to access everything.
+  if (teacher.role === TeacherRole.SUPER_ADMIN) {
+    return;
+  }
+
+  // Free-tier trials (if enabled elsewhere) should have full feature access during the trial window.
+  if (isActiveTrial(teacher)) {
+    return;
+  }
+
+  const activeSubscription = hasActivePaidSubscription(teacher);
+  const currentRank = TIER_RANK[teacher.subscriptionTier];
+  const requiredRank = TIER_RANK[minTier];
+
+  if (!activeSubscription || currentRank < requiredRank) {
+    throw new TeacherPlanRequiredError(minTier);
+  }
+}
+
+export async function hasTeacherTierAccess(
+  teacherId: string,
+  minTier: TeacherSubscriptionTier
+): Promise<boolean> {
+  const teacher = await loadTeacherPlanSnapshot(teacherId);
+  if (!teacher) return false;
+
+  try {
+    assertTeacherTierAccess(teacher, minTier);
+    return true;
+  } catch (error) {
+    if (error instanceof TeacherPlanRequiredError || error instanceof ForbiddenError) {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export function requireTeacherTier(minTier: TeacherSubscriptionTier) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -58,65 +154,13 @@ export function requireTeacherTier(minTier: TeacherSubscriptionTier) {
         throw new ForbiddenError('Teacher authentication required');
       }
 
-      const teacher = await prisma.teacher.findUnique({
-        where: { id: req.teacher.id },
-        select: {
-          id: true,
-          organizationId: true,
-          role: true,
-          subscriptionTier: true,
-          subscriptionStatus: true,
-          subscriptionExpiresAt: true,
-          trialEndsAt: true,
-          trialUsed: true,
-          organization: {
-            select: {
-              subscriptionStatus: true,
-              subscriptionExpiresAt: true,
-            },
-          },
-        },
-      });
+      const teacher = await loadTeacherPlanSnapshot(req.teacher.id);
 
       if (!teacher) {
         throw new ForbiddenError('Teacher not found');
       }
 
-      // Org teachers bypass individual tiers, but the organization subscription must be active.
-      if (teacher.organizationId) {
-        const orgActive = Boolean(
-          teacher.organization?.subscriptionStatus === 'ACTIVE' &&
-          (!teacher.organization.subscriptionExpiresAt ||
-            teacher.organization.subscriptionExpiresAt.getTime() > Date.now())
-        );
-
-        if (!orgActive) {
-          throw new TeacherPlanRequiredError(
-            'BASIC',
-            'Organization seat subscription is not active. Contact your organization admin.'
-          );
-        }
-
-        return next();
-      }
-
-      // Allow super admins to access everything.
-      if (teacher.role === TeacherRole.SUPER_ADMIN) {
-        return next();
-      }
-
-      // Free-tier trials (if enabled elsewhere) should have full feature access during the trial window.
-      if (isActiveTrial(teacher)) {
-        return next();
-      }
-
-      const activeSubscription = hasActivePaidSubscription(teacher);
-      const currentRank = TIER_RANK[teacher.subscriptionTier];
-      const requiredRank = TIER_RANK[minTier];
-
-      if (!activeSubscription || currentRank < requiredRank) {
-        throw new TeacherPlanRequiredError(minTier);
-      }
+      assertTeacherTierAccess(teacher, minTier);
 
       next();
     } catch (error) {
