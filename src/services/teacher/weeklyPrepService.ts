@@ -45,6 +45,16 @@ interface WeeklyPlan {
   totalMaterialCount: number;
 }
 
+interface MaterialGenerationOptions {
+  feedbackNote?: string;
+}
+
+interface RegenerateMaterialOptions {
+  feedbackNote?: string;
+  titleOverride?: string;
+  subjectOverride?: string;
+}
+
 const PENDING_REVIEW_STATUSES: MaterialStatus[] = [
   MaterialStatus.GENERATED,
   MaterialStatus.EDITED,
@@ -301,10 +311,17 @@ async function generateMaterials(prepId: string): Promise<void> {
 
 async function generateSingleMaterial(
   material: any,
-  teacherId: string
+  teacherId: string,
+  opts?: MaterialGenerationOptions
 ): Promise<{ content: any; tokensUsed: number; modelUsed: string }> {
   const planCtx = (material.planContext as any) || {};
-  const prompt = buildMaterialPrompt(material.materialType, material.title, material.subject, planCtx);
+  const prompt = buildMaterialPrompt(
+    material.materialType,
+    material.title,
+    material.subject,
+    planCtx,
+    opts
+  );
 
   const model = genAI.getGenerativeModel({
     model: config.gemini.models.flash,
@@ -538,9 +555,21 @@ async function updateMaterial(
 async function regenerateMaterial(
   materialId: string,
   teacherId: string,
-  feedbackNote?: string
+  opts?: RegenerateMaterialOptions
 ): Promise<void> {
   const material = await verifyMaterialOwnership(materialId, teacherId);
+  const titleOverride = normalizeMaterialTitle(opts?.titleOverride);
+  const subjectOverride = normalizeMaterialSubject(opts?.subjectOverride);
+
+  const nextTitle = titleOverride || material.title;
+  const nextSubject = subjectOverride || material.subject;
+  const teacherFeedback = buildRegenerationFeedbackNote(
+    opts?.feedbackNote,
+    material.title,
+    nextTitle,
+    material.subject,
+    nextSubject
+  );
 
   await prisma.agentMaterial.update({
     where: { id: materialId },
@@ -548,12 +577,18 @@ async function regenerateMaterial(
   });
 
   try {
-    const result = await generateSingleMaterial(material, teacherId);
+    const result = await generateSingleMaterial(
+      { ...material, title: nextTitle, subject: nextSubject },
+      teacherId,
+      { feedbackNote: teacherFeedback }
+    );
 
     await prisma.agentMaterial.update({
       where: { id: materialId },
       data: {
         content: result.content as any,
+        title: nextTitle,
+        subject: nextSubject,
         status: MaterialStatus.GENERATED,
         tokensUsed: { increment: result.tokensUsed },
         modelUsed: result.modelUsed,
@@ -581,9 +616,9 @@ async function regenerateMaterial(
 
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await reinforcementService.recordRegenerationSignal(agent.id, feedbackNote, {
+    await reinforcementService.recordRegenerationSignal(agent.id, teacherFeedback, {
       contentType: mapWeeklyMaterialToContentType(material.materialType),
-      subject: material.subject,
+      subject: nextSubject,
     });
   }
 }
@@ -783,6 +818,50 @@ function mapWeeklyMaterialToContentType(type: MaterialType): string {
   }
 }
 
+function normalizeMaterialTitle(title?: string): string | undefined {
+  const normalized = String(title || '').trim();
+  if (!normalized) return undefined;
+  return normalized.slice(0, 200);
+}
+
+function normalizeMaterialSubject(subject?: string): string | undefined {
+  const raw = String(subject || '').trim();
+  if (!raw) return undefined;
+  const cleaned = raw
+    .replace(/[^\w\s/-]+/g, '')
+    .replace(/[\s/-]+/g, '_')
+    .toUpperCase();
+  if (!cleaned) return undefined;
+
+  if (cleaned === 'ELA' || cleaned === 'LANGUAGE_ARTS') {
+    return 'ENGLISH';
+  }
+  return cleaned.slice(0, 80);
+}
+
+function buildRegenerationFeedbackNote(
+  feedbackNote: string | undefined,
+  previousTitle: string,
+  nextTitle: string,
+  previousSubject: string,
+  nextSubject: string
+): string | undefined {
+  const normalizedFeedback = String(feedbackNote || '').trim();
+  const parts: string[] = [];
+
+  if (nextTitle !== previousTitle) {
+    parts.push(`Update title from "${previousTitle}" to "${nextTitle}".`);
+  }
+  if (nextSubject !== previousSubject) {
+    parts.push(`Update subject from "${previousSubject}" to "${nextSubject}".`);
+  }
+  if (normalizedFeedback) {
+    parts.push(normalizedFeedback);
+  }
+
+  return parts.length > 0 ? parts.join(' ') : undefined;
+}
+
 async function refreshWeeklyPrepReviewStatus(prepId: string): Promise<void> {
   const [approvedCount, pendingCount, reviewableCount] = await Promise.all([
     prisma.agentMaterial.count({
@@ -873,10 +952,19 @@ Return a JSON object with this exact structure:
 }`;
 }
 
-function buildMaterialPrompt(type: MaterialType, title: string, subject: string, planCtx: any): string {
+function buildMaterialPrompt(
+  type: MaterialType,
+  title: string,
+  subject: string,
+  planCtx: any,
+  opts?: MaterialGenerationOptions
+): string {
   const topicStr = planCtx.topic ? `Topic: ${planCtx.topic}` : '';
   const standardsStr = planCtx.standards?.length ? `Standards: ${planCtx.standards.join(', ')}` : '';
   const notesStr = planCtx.notes ? `Notes: ${planCtx.notes}` : '';
+  const regenerationStr = opts?.feedbackNote
+    ? `\nTEACHER REVISION REQUEST:\n${opts.feedbackNote}\n\nYou must apply this request while keeping the material age-appropriate and standards-aligned.\n`
+    : '';
 
   const typeInstructions: Record<string, string> = {
     [MaterialType.WARM_UP]: `Create a 5-minute warm-up activity. Include 3-5 review questions or a quick problem set. Return JSON: { "title", "duration": "5 min", "instructions", "questions": [{ "question", "answer" }] }`,
@@ -896,6 +984,8 @@ ${standardsStr}
 ${notesStr}
 
 Title: "${title}"
+
+${regenerationStr}
 
 ${typeInstructions[type] || typeInstructions[MaterialType.ACTIVITY]}
 

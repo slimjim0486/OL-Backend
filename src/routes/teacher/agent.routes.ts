@@ -523,6 +523,8 @@ const materialUpdateSchema = z.object({
 
 const materialRegenerateSchema = z.object({
   feedbackNote: z.string().optional(),
+  titleOverride: z.string().min(1).max(200).optional(),
+  subjectOverride: z.string().min(1).max(80).optional(),
 });
 
 // Create / queue weekly prep
@@ -656,7 +658,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const teacherId = (req as any).teacher.id;
-      await weeklyPrepService.regenerateMaterial(req.params.materialId, teacherId, req.body.feedbackNote);
+      await weeklyPrepService.regenerateMaterial(req.params.materialId, teacherId, req.body);
       res.json({ success: true });
     } catch (error) {
       next(error);
