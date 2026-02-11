@@ -79,6 +79,33 @@ try {
 }
 
 const app = express();
+const DB_CONNECT_MAX_ATTEMPTS = 10;
+const DB_CONNECT_BASE_DELAY_MS = 2000;
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+async function connectDatabaseWithRetry(): Promise<void> {
+  for (let attempt = 1; attempt <= DB_CONNECT_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      await prisma.$connect();
+      logger.info('Database connected');
+      return;
+    } catch (error) {
+      if (attempt === DB_CONNECT_MAX_ATTEMPTS) {
+        throw error;
+      }
+
+      const delayMs = Math.min(DB_CONNECT_BASE_DELAY_MS * attempt, 10000);
+      logger.warn('Database connection failed; retrying', {
+        attempt,
+        maxAttempts: DB_CONNECT_MAX_ATTEMPTS,
+        retryDelayMs: delayMs,
+      });
+      await sleep(delayMs);
+    }
+  }
+}
 
 // ============================================
 // MIDDLEWARE SETUP
@@ -227,8 +254,7 @@ app.use(errorHandler);
 async function startServer(): Promise<void> {
   try {
     // Connect to database
-    await prisma.$connect();
-    logger.info('Database connected');
+    await connectDatabaseWithRetry();
 
     // Connect to Redis
     await redis.ping();
