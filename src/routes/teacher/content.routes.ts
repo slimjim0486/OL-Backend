@@ -233,6 +233,49 @@ router.post(
 );
 
 /**
+ * GET /api/teacher/content/from-weekly-material/:materialId
+ * Find latest full lesson generated from a weekly prep material marker
+ */
+router.get(
+  '/from-weekly-material/:materialId',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const marker = `weekly_prep_material_id:${req.params.materialId}`;
+      const content = await prisma.teacherContent.findFirst({
+        where: {
+          teacherId: req.teacher!.id,
+          contentType: TeacherContentType.LESSON,
+          extractedText: {
+            contains: marker,
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          id: true,
+          title: true,
+          updatedAt: true,
+        },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          exists: !!content,
+          contentId: content?.id,
+          content: content || null,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /api/teacher/content/:id
  * Get content by ID
  */
