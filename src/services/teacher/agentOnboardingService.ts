@@ -44,17 +44,15 @@ const STEP_ORDER: OnboardingStepName[] = ['identity', 'classroom', 'curriculum',
 const STEP_PROMPTS: Record<OnboardingStepName, string> = {
   identity: `Hi! I'm your AI teaching assistant. I'd love to get to know you so I can help you create better content for your students.
 
-Tell me about yourself — what school do you teach at, what grades and subjects do you teach, and which curriculum framework do you follow (American, British, IB, etc.)? Feel free to share as much or as little as you'd like!`,
+Tell me about yourself — what school do you teach at, and what grades and subjects do you teach?`,
 
   classroom: `Great, thanks for sharing that! Now let me learn about your classroom.
 
 How many students do you have? Do you use any grouping system (like leveled groups, table groups, etc.)? Any important things I should know about your classroom setup?`,
 
-  curriculum: `Perfect! One last thing — where are you in your curriculum right now?
+  curriculum: `Perfect! One last thing — where are your classes right now?
 
-This is about what you're teaching right now (units/topics), not the curriculum framework.
-
-What topics or standards have you covered so far this year? What are you working on this week? What's coming up next?`,
+For each subject, share what you've already covered, what you're teaching now, and what is coming up next. Add standards if you have them.`,
 
   confirmation: `Here's a summary of what I've learned about you. Does everything look right? You can say "looks good" to finish, or tell me what needs to be changed.`,
 };
@@ -173,17 +171,41 @@ async function processOnboardingResponse(
     const parsedData = await extractStructuredData(step, userMessage);
 
     // If we didn't get enough info for the curriculum step, do not advance.
-    // This prevents "American curriculum" (framework) answers from skipping the actual topic progress question.
+    // This prevents framework-only answers from skipping the actual topic progress question.
     if (step === 'curriculum') {
       const subjects = Array.isArray(parsedData?.subjects) ? parsedData.subjects : [];
-      const valid = subjects.filter((s: any) => s?.subject && Object.values(Subject).includes(s.subject));
+      let valid = normalizeCurriculumSubjects(subjects);
+
       if (valid.length === 0) {
+        const fallbackSubject = getSingleKnownSubject(agent.subjectsTaught);
+        if (fallbackSubject) {
+          valid = normalizeCurriculumSubjects(subjects, fallbackSubject);
+        }
+      }
+
+      if (valid.length > 0) {
+        parsedData.subjects = valid;
+      } else {
+        const knownSubjects = normalizeSubjectArray(agent.subjectsTaught);
+        let clarificationPrompt =
+          `Quick clarification so I can plan accurately:\n\n` +
+          `1) Which subject(s) should we focus on first (e.g., MATH, ENGLISH, SCIENCE)?\n` +
+          `2) What unit/topic are you teaching right now, and what's coming up next?`;
+
+        if (knownSubjects.length === 1) {
+          clarificationPrompt =
+            `Quick clarification so I can map this accurately:\n\n` +
+            `For **${knownSubjects[0]}**, what unit/topic are you teaching right now, and what's coming up next?`;
+        } else if (knownSubjects.length > 1) {
+          clarificationPrompt =
+            `Quick clarification so I can map this accurately:\n\n` +
+            `1) Which of these subjects does this apply to: ${knownSubjects.join(', ')}?\n` +
+            `2) What unit/topic are you teaching right now, and what's coming up next?`;
+        }
+
         return {
           parsedData,
-          agentMessage:
-            `Quick clarification so I can plan accurately:\n\n` +
-            `1) Which subject(s) should we focus on first (e.g., MATH, ENGLISH, SCIENCE)?\n` +
-            `2) What unit/topic are you teaching right now, and what's coming up next?`,
+          agentMessage: clarificationPrompt,
           nextStep: {
             step: 'curriculum',
             prompt: STEP_PROMPTS.curriculum,
@@ -567,6 +589,70 @@ function getCurrentSchoolYear(): string {
   const month = now.getMonth();
   if (month >= 7) return `${year}-${year + 1}`;
   return `${year - 1}-${year}`;
+}
+
+function normalizeSubjectArray(input: unknown): Subject[] {
+  if (!Array.isArray(input)) return [];
+  const deduped = input.filter((s) => Object.values(Subject).includes(s as Subject));
+  return Array.from(new Set(deduped as Subject[]));
+}
+
+function getSingleKnownSubject(subjects: unknown): Subject | undefined {
+  const knownSubjects = normalizeSubjectArray(subjects);
+  return knownSubjects.length === 1 ? knownSubjects[0] : undefined;
+}
+
+function normalizeCurriculumSubjects(
+  rawSubjects: unknown,
+  fallbackSubject?: Subject
+): Array<Record<string, any>> {
+  if (!Array.isArray(rawSubjects)) return [];
+
+  const normalized: Array<Record<string, any> | null> = rawSubjects
+    .map((raw): Record<string, any> | null => {
+      if (!raw || typeof raw !== 'object') return null;
+      const subjectValue = (raw as any).subject;
+      const resolvedSubject: Subject | undefined = Object.values(Subject).includes(subjectValue as Subject)
+        ? (subjectValue as Subject)
+        : fallbackSubject;
+
+      if (!resolvedSubject) return null;
+
+      const coveredTopics = Array.isArray((raw as any).coveredTopics)
+        ? (raw as any).coveredTopics.filter(Boolean).map((topic: any) => String(topic))
+        : [];
+      const upNextTopics = Array.isArray((raw as any).upNextTopics)
+        ? (raw as any).upNextTopics.filter(Boolean).map((topic: any) => String(topic))
+        : [];
+      const standardsTaught = Array.isArray((raw as any).standardsTaught)
+        ? (raw as any).standardsTaught.filter(Boolean).map((std: any) => String(std))
+        : [];
+      const currentTopic = typeof (raw as any).currentTopic === 'string'
+        ? (raw as any).currentTopic.trim()
+        : '';
+      const currentWeekRaw = (raw as any).currentWeek;
+      const currentWeek =
+        typeof currentWeekRaw === 'number'
+          ? currentWeekRaw
+          : typeof currentWeekRaw === 'string' && currentWeekRaw.trim() !== '' && !Number.isNaN(Number(currentWeekRaw))
+            ? Number(currentWeekRaw)
+            : undefined;
+
+      if (!currentTopic && coveredTopics.length === 0 && upNextTopics.length === 0 && standardsTaught.length === 0 && !currentWeek) {
+        return null;
+      }
+
+      return {
+        subject: resolvedSubject,
+        currentTopic: currentTopic || undefined,
+        coveredTopics: coveredTopics.length ? coveredTopics : undefined,
+        upNextTopics: upNextTopics.length ? upNextTopics : undefined,
+        standardsTaught: standardsTaught.length ? standardsTaught : undefined,
+        currentWeek: typeof currentWeek === 'number' && currentWeek >= 1 ? currentWeek : undefined,
+      };
+    });
+
+  return normalized.filter((entry): entry is Record<string, any> => entry !== null);
 }
 
 function normalizeCurriculumType(value: any): CurriculumType | undefined {
