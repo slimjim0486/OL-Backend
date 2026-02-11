@@ -605,6 +605,34 @@ router.post('/weekly-prep/:id/approve-all', async (req: Request, res: Response, 
   }
 });
 
+// Finalize weekly prep (mark complete when no items remain pending review)
+router.post('/weekly-prep/:id/finalize', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const teacherId = (req as any).teacher.id;
+    const result = await weeklyPrepService.finalizeWeeklyPrep(req.params.id, teacherId);
+
+    if (!result.finalized) {
+      res.status(409).json({
+        success: false,
+        code: 'WEEKLY_PREP_PENDING_REVIEW',
+        error: result.reviewableCount === 0
+          ? 'No reviewable materials available to finalize this week.'
+          : 'Some materials still need approval before finalizing.',
+        data: result,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Weekly prep finalized',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update material (edit)
 router.patch(
   '/weekly-prep/:id/materials/:materialId',

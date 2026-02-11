@@ -45,6 +45,16 @@ interface WeeklyPlan {
   totalMaterialCount: number;
 }
 
+const PENDING_REVIEW_STATUSES: MaterialStatus[] = [
+  MaterialStatus.GENERATED,
+  MaterialStatus.EDITED,
+];
+
+const REVIEWABLE_STATUSES: MaterialStatus[] = [
+  MaterialStatus.APPROVED,
+  ...PENDING_REVIEW_STATUSES,
+];
+
 // ============================================
 // INITIATING A WEEKLY PREP
 // ============================================
@@ -441,15 +451,6 @@ async function approveMaterial(materialId: string, teacherId: string): Promise<v
     data: { status: MaterialStatus.APPROVED, approvedAt: new Date() },
   });
 
-  // Update prep approved count
-  const approvedCount = await prisma.agentMaterial.count({
-    where: { weeklyPrepId: material.weeklyPrepId, status: MaterialStatus.APPROVED },
-  });
-  await prisma.agentWeeklyPrep.update({
-    where: { id: material.weeklyPrepId },
-    data: { approvedCount },
-  });
-
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
     await reinforcementService.recordApprovalSignal(agent.id, {
@@ -457,6 +458,8 @@ async function approveMaterial(materialId: string, teacherId: string): Promise<v
       subject: material.subject,
     });
   }
+
+  await refreshWeeklyPrepReviewStatus(material.weeklyPrepId);
 }
 
 async function approveAllMaterials(prepId: string, teacherId: string): Promise<number> {
@@ -471,7 +474,7 @@ async function approveAllMaterials(prepId: string, teacherId: string): Promise<n
   const materialsToApprove = await prisma.agentMaterial.findMany({
     where: {
       weeklyPrepId: prepId,
-      status: MaterialStatus.GENERATED,
+      status: { in: PENDING_REVIEW_STATUSES },
     },
     select: { id: true, materialType: true, subject: true },
   });
@@ -479,19 +482,11 @@ async function approveAllMaterials(prepId: string, teacherId: string): Promise<n
   const result = await prisma.agentMaterial.updateMany({
     where: {
       weeklyPrepId: prepId,
-      status: MaterialStatus.GENERATED,
+      status: { in: PENDING_REVIEW_STATUSES },
     },
     data: { status: MaterialStatus.APPROVED, approvedAt: new Date() },
   });
-
-  const approvedCount = await prisma.agentMaterial.count({
-    where: { weeklyPrepId: prepId, status: MaterialStatus.APPROVED },
-  });
-
-  await prisma.agentWeeklyPrep.update({
-    where: { id: prepId },
-    data: { approvedCount, status: WeeklyPrepStatus.APPROVED },
-  });
+  await refreshWeeklyPrepReviewStatus(prepId);
 
   // Reinforcement: record approvals per material so we can learn content-type/subject patterns.
   for (const m of materialsToApprove) {
@@ -536,6 +531,8 @@ async function updateMaterial(
       subject: material.subject,
     });
   }
+
+  await refreshWeeklyPrepReviewStatus(material.weeklyPrepId);
 }
 
 async function regenerateMaterial(
@@ -573,6 +570,7 @@ async function regenerateMaterial(
         totalTokensUsed: { increment: result.tokensUsed },
       },
     });
+    await refreshWeeklyPrepReviewStatus(material.weeklyPrepId);
   } catch (err) {
     await prisma.agentMaterial.update({
       where: { id: materialId },
@@ -588,6 +586,95 @@ async function regenerateMaterial(
       subject: material.subject,
     });
   }
+}
+
+interface FinalizeWeeklyPrepResult {
+  finalized: boolean;
+  status: WeeklyPrepStatus;
+  approvedCount: number;
+  pendingCount: number;
+  reviewableCount: number;
+  pendingMaterials: Array<{
+    id: string;
+    title: string;
+    subject: string;
+    materialType: MaterialType;
+    dayOfWeek: number;
+    status: MaterialStatus;
+  }>;
+}
+
+async function finalizeWeeklyPrep(
+  prepId: string,
+  teacherId: string
+): Promise<FinalizeWeeklyPrepResult> {
+  const agent = await agentMemoryService.getAgent(teacherId);
+  if (!agent) throw new Error('Agent not found');
+
+  const prep = await prisma.agentWeeklyPrep.findFirst({
+    where: { id: prepId, agentId: agent.id },
+  });
+  if (!prep) throw new Error('Weekly prep not found');
+
+  const [approvedCount, pendingCount, reviewableCount, pendingMaterials] = await Promise.all([
+    prisma.agentMaterial.count({
+      where: { weeklyPrepId: prepId, status: MaterialStatus.APPROVED },
+    }),
+    prisma.agentMaterial.count({
+      where: { weeklyPrepId: prepId, status: { in: PENDING_REVIEW_STATUSES } },
+    }),
+    prisma.agentMaterial.count({
+      where: { weeklyPrepId: prepId, status: { in: REVIEWABLE_STATUSES } },
+    }),
+    prisma.agentMaterial.findMany({
+      where: { weeklyPrepId: prepId, status: { in: PENDING_REVIEW_STATUSES } },
+      orderBy: [{ dayOfWeek: 'asc' }, { sortOrder: 'asc' }],
+      select: {
+        id: true,
+        title: true,
+        subject: true,
+        materialType: true,
+        dayOfWeek: true,
+        status: true,
+      },
+    }),
+  ]);
+
+  if (pendingCount > 0 || reviewableCount === 0) {
+    const nextStatus = reviewableCount > 0 ? WeeklyPrepStatus.REVIEWING : prep.status;
+    if (prep.status !== nextStatus || prep.approvedCount !== approvedCount) {
+      await prisma.agentWeeklyPrep.update({
+        where: { id: prepId },
+        data: { status: nextStatus, approvedCount },
+      });
+    }
+
+    return {
+      finalized: false,
+      status: nextStatus,
+      approvedCount,
+      pendingCount,
+      reviewableCount,
+      pendingMaterials,
+    };
+  }
+
+  await prisma.agentWeeklyPrep.update({
+    where: { id: prepId },
+    data: {
+      status: WeeklyPrepStatus.APPROVED,
+      approvedCount,
+    },
+  });
+
+  return {
+    finalized: true,
+    status: WeeklyPrepStatus.APPROVED,
+    approvedCount,
+    pendingCount: 0,
+    reviewableCount,
+    pendingMaterials: [],
+  };
 }
 
 // ============================================
@@ -696,6 +783,33 @@ function mapWeeklyMaterialToContentType(type: MaterialType): string {
   }
 }
 
+async function refreshWeeklyPrepReviewStatus(prepId: string): Promise<void> {
+  const [approvedCount, pendingCount, reviewableCount] = await Promise.all([
+    prisma.agentMaterial.count({
+      where: { weeklyPrepId: prepId, status: MaterialStatus.APPROVED },
+    }),
+    prisma.agentMaterial.count({
+      where: { weeklyPrepId: prepId, status: { in: PENDING_REVIEW_STATUSES } },
+    }),
+    prisma.agentMaterial.count({
+      where: { weeklyPrepId: prepId, status: { in: REVIEWABLE_STATUSES } },
+    }),
+  ]);
+
+  const nextStatus =
+    pendingCount === 0 && reviewableCount > 0
+      ? WeeklyPrepStatus.APPROVED
+      : WeeklyPrepStatus.REVIEWING;
+
+  await prisma.agentWeeklyPrep.update({
+    where: { id: prepId },
+    data: {
+      approvedCount,
+      status: nextStatus,
+    },
+  });
+}
+
 function materialContentToText(content: any): string {
   if (content == null) return '';
   if (typeof content === 'string') return content;
@@ -802,6 +916,7 @@ export const weeklyPrepService = {
   getWeeklyPrepProgress,
   approveMaterial,
   approveAllMaterials,
+  finalizeWeeklyPrep,
   updateMaterial,
   regenerateMaterial,
 };
