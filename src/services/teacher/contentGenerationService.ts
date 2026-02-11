@@ -5,6 +5,8 @@ import { prisma } from '../../config/database.js';
 import { Subject, TeacherContentType, TokenOperation } from '@prisma/client';
 import { quotaService } from './quotaService.js';
 import { contentService } from './contentService.js';
+import { agentMemoryService } from './agentMemoryService.js';
+import { contextAssemblerService } from './contextAssemblerService.js';
 import { logger } from '../../utils/logger.js';
 import { uploadFile } from '../storage/storageService.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -107,6 +109,14 @@ const FLASH_FALLBACK_THRESHOLDS = {
   HIGH_GRADE_MIN: 9,        // Grade levels 9+ might benefit from Pro
 };
 
+const ADDITIONAL_CONTEXT_MAX_CHARS = 12000;
+const CONTEXT_MARKERS = [
+  '[Teacher Context]',
+  '[Classroom Context]',
+  '[Curriculum State]',
+  '[Style Preferences]',
+];
+
 type FlashFallbackReason =
   | 'insufficient_sections'
   | 'short_content'
@@ -120,6 +130,122 @@ interface FlashLessonValidation {
   isValid: boolean;
   reason?: FlashFallbackReason;
   details?: string;
+}
+
+function includesInjectedTeacherContext(value?: string): boolean {
+  if (!value) return false;
+  return CONTEXT_MARKERS.some((marker) => value.includes(marker));
+}
+
+function inferGradeLevelFromMemory(gradesTaught?: string[] | null): string | undefined {
+  if (!Array.isArray(gradesTaught) || gradesTaught.length === 0) return undefined;
+
+  const cleaned = gradesTaught
+    .map((grade) => String(grade || '').trim())
+    .filter(Boolean);
+
+  if (!cleaned.length) return undefined;
+
+  const hasPreK = cleaned.some((grade) => /pre[-\s]?k/i.test(grade));
+  const hasK = cleaned.some((grade) => /\bkindergarten\b|\bk\b/i.test(grade));
+  const numbers = cleaned
+    .flatMap((grade) => grade.match(/\d{1,2}/g) || [])
+    .map((num) => Number.parseInt(num, 10))
+    .filter((num) => !Number.isNaN(num));
+
+  if (hasPreK && numbers.length) return `Pre-K-${Math.max(...numbers)}`.slice(0, 20);
+  if (hasPreK) return 'Pre-K';
+  if (hasK && numbers.length === 1) return `K-${numbers[0]}`.slice(0, 20);
+  if (hasK && numbers.length === 0) return 'Kindergarten';
+
+  if (numbers.length > 0) {
+    const min = Math.min(...numbers);
+    const max = Math.max(...numbers);
+    return (min === max ? `Grade ${min}` : `Grade ${min}-${max}`).slice(0, 20);
+  }
+
+  if (cleaned.length === 1) return cleaned[0].slice(0, 20);
+  return `${cleaned[0]}, ${cleaned[1]}`.slice(0, 20);
+}
+
+function mergeAdditionalContext(
+  requestContext?: string,
+  teacherMemoryContext?: string
+): string | undefined {
+  const requestCtx = requestContext?.trim();
+  const teacherCtx = teacherMemoryContext?.trim();
+
+  if (!requestCtx && !teacherCtx) return undefined;
+  if (!teacherCtx) return requestCtx;
+  if (!requestCtx) {
+    return teacherCtx.length <= ADDITIONAL_CONTEXT_MAX_CHARS
+      ? teacherCtx
+      : `${teacherCtx.slice(0, ADDITIONAL_CONTEXT_MAX_CHARS)}\n... (truncated)`;
+  }
+
+  // Avoid duplicating if context has already been injected upstream (e.g. agent bridge path).
+  if (includesInjectedTeacherContext(requestCtx)) return requestCtx;
+
+  const requestHeader = '[Request Context]';
+  const teacherHeader = '[Teacher Memory Context]';
+  const combinedPrefix = `${requestHeader}\n${requestCtx}\n\n${teacherHeader}\n`;
+
+  if (combinedPrefix.length >= ADDITIONAL_CONTEXT_MAX_CHARS) {
+    const available = Math.max(0, ADDITIONAL_CONTEXT_MAX_CHARS - requestHeader.length - 20);
+    return `${requestHeader}\n${requestCtx.slice(0, available)}\n... (truncated)`;
+  }
+
+  const remaining = ADDITIONAL_CONTEXT_MAX_CHARS - combinedPrefix.length;
+  if (teacherCtx.length <= remaining) {
+    return `${combinedPrefix}${teacherCtx}`;
+  }
+
+  return `${combinedPrefix}${teacherCtx.slice(0, Math.max(0, remaining))}\n... (truncated)`;
+}
+
+async function enrichLessonInputWithTeacherContext(
+  teacherId: string,
+  input: GenerateLessonInput
+): Promise<GenerateLessonInput> {
+  try {
+    // Ensure an agent exists so memory-based enrichment can use profile defaults too.
+    await agentMemoryService.getOrCreateAgent(teacherId);
+
+    const [agent, context] = await Promise.all([
+      agentMemoryService.getAgent(teacherId),
+      contextAssemblerService.assembleContext(teacherId, 'CONTENT_GENERATION', { subject: input.subject }),
+    ]);
+
+    const memoryContext = contextAssemblerService.buildAdditionalContextString(context);
+    const mergedAdditionalContext = mergeAdditionalContext(input.additionalContext, memoryContext);
+
+    const inferredSubject =
+      !input.subject && Array.isArray(agent?.subjectsTaught) && agent.subjectsTaught.length === 1
+        ? agent.subjectsTaught[0]
+        : undefined;
+
+    const inferredGradeLevel = !input.gradeLevel
+      ? inferGradeLevelFromMemory(agent?.gradesTaught as string[] | undefined)
+      : undefined;
+
+    const inferredCurriculum = !input.curriculum && agent?.curriculumType
+      ? String(agent.curriculumType)
+      : undefined;
+
+    return {
+      ...input,
+      subject: input.subject || inferredSubject,
+      gradeLevel: input.gradeLevel || inferredGradeLevel,
+      curriculum: input.curriculum || inferredCurriculum,
+      additionalContext: mergedAdditionalContext,
+    };
+  } catch (error) {
+    logger.warn('Failed to enrich lesson generation input with teacher memory', {
+      teacherId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return input;
+  }
 }
 
 /**
@@ -389,19 +515,23 @@ export const contentGenerationService = {
     teacherId: string,
     input: GenerateLessonInput
   ): Promise<GeneratedLesson> {
+    const resolvedInput = await enrichLessonInputWithTeacherContext(teacherId, input);
+
     // Check quota - full lessons require more tokens
-    const isFullLesson = input.lessonType === 'full';
+    const isFullLesson = resolvedInput.lessonType === 'full';
     const estimatedTokens = isFullLesson ? 10000 : 4000;
     await quotaService.enforceQuota(teacherId, TokenOperation.LESSON_GENERATION, estimatedTokens);
 
     logger.info('Generating lesson with Flash-first strategy', {
       teacherId,
-      topic: input.topic,
-      lessonType: input.lessonType || 'guide',
-      gradeLevel: input.gradeLevel,
+      topic: resolvedInput.topic,
+      lessonType: resolvedInput.lessonType || 'guide',
+      gradeLevel: resolvedInput.gradeLevel,
+      subject: resolvedInput.subject,
+      curriculum: resolvedInput.curriculum,
     });
 
-    const prompt = isFullLesson ? buildFullLessonPrompt(input) : buildLessonPrompt(input);
+    const prompt = isFullLesson ? buildFullLessonPrompt(resolvedInput) : buildLessonPrompt(resolvedInput);
 
     // Track which model was used and if fallback occurred
     let modelUsed: 'flash' | 'pro' = 'flash';
@@ -436,7 +566,7 @@ export const contentGenerationService = {
         // Flash failed - fall back to Pro
         logger.info('Flash response blocked/empty, falling back to Pro', {
           teacherId,
-          topic: input.topic,
+          topic: resolvedInput.topic,
           blockReason: responseCheck.blockReason,
         });
         modelUsed = 'pro';
@@ -452,13 +582,13 @@ export const contentGenerationService = {
           const flashLesson = JSON.parse(extractJSON(responseText)) as Omit<GeneratedLesson, 'tokensUsed'>;
 
           // Validate Flash output quality
-          const validation = validateFlashLessonOutput(flashLesson, input.gradeLevel);
+          const validation = validateFlashLessonOutput(flashLesson, resolvedInput.gradeLevel);
 
           if (!validation.isValid) {
             // Flash output quality insufficient - fall back to Pro
             logger.info('Flash output quality insufficient, falling back to Pro', {
               teacherId,
-              topic: input.topic,
+              topic: resolvedInput.topic,
               reason: validation.reason,
               details: validation.details,
             });
@@ -478,7 +608,7 @@ export const contentGenerationService = {
 
             logger.info('Lesson generated successfully with Flash', {
               teacherId,
-              topic: input.topic,
+              topic: resolvedInput.topic,
               tokensUsed,
               sectionsCount: flashLesson.sections?.length,
             });
@@ -494,7 +624,7 @@ export const contentGenerationService = {
           // Parse error with Flash - fall back to Pro
           logger.info('Flash parse error, falling back to Pro', {
             teacherId,
-            topic: input.topic,
+            topic: resolvedInput.topic,
             error: parseError instanceof Error ? parseError.message : 'Unknown',
           });
           modelUsed = 'pro';
@@ -507,7 +637,7 @@ export const contentGenerationService = {
       // Flash request failed - fall back to Pro
       logger.info('Flash request failed, falling back to Pro', {
         teacherId,
-        topic: input.topic,
+        topic: resolvedInput.topic,
         error: flashError instanceof Error ? flashError.message : 'Unknown',
       });
       modelUsed = 'pro';
@@ -522,7 +652,7 @@ export const contentGenerationService = {
     if (proResponseCheck.isBlocked) {
       logger.warn('Gemini Pro response was blocked', {
         teacherId,
-        topic: input.topic,
+        topic: resolvedInput.topic,
         blockReason: proResponseCheck.blockReason,
         finishReason: proResponseCheck.finishReason,
       });
@@ -535,7 +665,7 @@ export const contentGenerationService = {
     if (proResponseCheck.isEmpty) {
       logger.warn('Gemini Pro returned empty response', {
         teacherId,
-        topic: input.topic,
+        topic: resolvedInput.topic,
         finishReason: proResponseCheck.finishReason,
       });
       throw new Error(
@@ -560,7 +690,7 @@ export const contentGenerationService = {
 
       logger.info('Lesson generated successfully', {
         teacherId,
-        topic: input.topic,
+        topic: resolvedInput.topic,
         modelUsed,
         fallbackTriggered,
         fallbackReason,
@@ -585,8 +715,8 @@ export const contentGenerationService = {
         responseLength,
         tokensUsed,
         isTruncated,
-        lessonType: input.lessonType || 'guide',
-        topic: input.topic,
+        lessonType: resolvedInput.lessonType || 'guide',
+        topic: resolvedInput.topic,
         modelUsed,
         fallbackTriggered,
         // Log more of the response for debugging truncation issues
