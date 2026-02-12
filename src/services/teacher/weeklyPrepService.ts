@@ -23,6 +23,7 @@ import { TeacherPlanRequiredError, hasTeacherTierAccess } from '../../middleware
 export interface WeeklyPrepOptions {
   triggeredBy?: 'manual' | 'scheduled' | 'chat';
   weekStartDate?: Date; // defaults to upcoming Monday
+  forceCreate?: boolean; // skip same-week dedupe when true
 }
 
 interface PlanDay {
@@ -82,19 +83,21 @@ async function initiateWeeklyPrep(
   const weekEnd = getDayAfter(weekStart);
   const weekLabel = formatWeekLabel(weekStart);
 
-  // Check for duplicate
-  const existing = await prisma.agentWeeklyPrep.findFirst({
-    where: {
-      agentId: agent.id,
-      weekStartDate: {
-        gte: weekStart,
-        lt: weekEnd,
+  // Check for duplicate unless caller explicitly requests a fresh prep.
+  if (!opts?.forceCreate) {
+    const existing = await prisma.agentWeeklyPrep.findFirst({
+      where: {
+        agentId: agent.id,
+        weekStartDate: {
+          gte: weekStart,
+          lt: weekEnd,
+        },
+        status: { notIn: [WeeklyPrepStatus.FAILED] },
       },
-      status: { notIn: [WeeklyPrepStatus.FAILED] },
-    },
-  });
-  if (existing) {
-    return { prepId: existing.id, weekLabel: existing.weekLabel };
+    });
+    if (existing) {
+      return { prepId: existing.id, weekLabel: existing.weekLabel };
+    }
   }
 
   await enforceWeeklyPrepCreationAccess(teacherId, agent.id, weekStart, weekEnd);

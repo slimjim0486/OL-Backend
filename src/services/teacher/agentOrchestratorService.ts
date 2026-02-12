@@ -193,8 +193,20 @@ async function processMessage(
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
   } else if (isDirectCalendarNavigationRequest(message)) {
+    const { prepId, weekLabel } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
+      triggeredBy: 'chat',
+      forceCreate: true,
+    });
+    await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
+
+    actionResult = {
+      type: 'weekly_prep',
+      content: { prepId, weekLabel },
+      preview: `Opening your calendar for "${weekLabel}" now.`,
+      contentId: prepId,
+    };
     assistantContent = 'Opening your calendar now.';
-    intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
     totalTokens = 0;
   } else {
     // 5. Assemble context
@@ -367,6 +379,7 @@ async function routeToContentBridge(
     case 'weekly_prep': {
       const { prepId, weekLabel } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
         triggeredBy: 'chat',
+        forceCreate: true,
       });
       await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
       return {
