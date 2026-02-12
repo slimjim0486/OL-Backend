@@ -18,9 +18,10 @@ import { exportYearEndHandoverPDF } from '../../services/teacher/handoverExportS
 import { queueWeeklyPrep } from '../../jobs/index.js';
 import { logger } from '../../utils/logger.js';
 import { ReviewType, ReviewStatus } from '@prisma/client';
-import { requireTeacherPro } from '../../middleware/teacherPlanGate.js';
+import { requireTeacherTier } from '../../middleware/teacherPlanGate.js';
 
 const router = Router();
+const requireTeacherUnlimited = requireTeacherTier('BASIC');
 
 // All routes require teacher authentication
 router.use(authenticateTeacher);
@@ -669,7 +670,7 @@ router.post(
 // Generate audio from weekly prep
 router.post(
   '/weekly-prep/:id/generate-audio',
-  requireTeacherPro,
+  requireTeacherUnlimited,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const audioUpdateId = await weeklyPrepAudioService.generateAudioFromWeeklyPrep(req.params.id);
@@ -733,7 +734,7 @@ router.post('/standards/suggest-actions', async (req: Request, res: Response, ne
 // Reviews (Monthly & Yearly)
 // ============================================================================
 
-router.get('/reviews', requireTeacherPro, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reviews', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const type = req.query.type as ReviewType | undefined;
@@ -747,7 +748,7 @@ router.get('/reviews', requireTeacherPro, async (req: Request, res: Response, ne
 });
 
 
-router.get('/reviews/:id', requireTeacherPro, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reviews/:id', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const review = await reviewSummaryService.getReview(req.params.id, teacherId);
@@ -759,7 +760,7 @@ router.get('/reviews/:id', requireTeacherPro, async (req: Request, res: Response
 });
 
 // Download a printable year-end handover package (PDF)
-router.get('/reviews/:id/handover.pdf', requireTeacherPro, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reviews/:id/handover.pdf', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const result = await exportYearEndHandoverPDF({ teacherId, reviewId: req.params.id });
@@ -779,7 +780,7 @@ router.get('/reviews/:id/handover.pdf', requireTeacherPro, async (req: Request, 
   }
 });
 
-router.post('/reviews/generate-monthly', requireTeacherPro, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/reviews/generate-monthly', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const month = req.body.month ? new Date(req.body.month) : undefined;
@@ -790,7 +791,7 @@ router.post('/reviews/generate-monthly', requireTeacherPro, async (req: Request,
   }
 });
 
-router.post('/reviews/generate-yearly', requireTeacherPro, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/reviews/generate-yearly', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const schoolYear = req.body.schoolYear;
@@ -801,7 +802,7 @@ router.post('/reviews/generate-yearly', requireTeacherPro, async (req: Request, 
   }
 });
 
-router.patch('/reviews/:id', requireTeacherPro, async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/reviews/:id', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const { status, handoverNotes } = req.body;
@@ -812,7 +813,7 @@ router.patch('/reviews/:id', requireTeacherPro, async (req: Request, res: Respon
   }
 });
 
-router.delete('/reviews/:id', requireTeacherPro, async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/reviews/:id', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     await reviewSummaryService.deleteReview(req.params.id, teacherId);

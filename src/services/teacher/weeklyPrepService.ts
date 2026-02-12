@@ -429,8 +429,8 @@ async function getWeeklyPrepList(
   const agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) return { preps: [], total: 0 };
 
-  const hasPro = await hasTeacherTierAccess(teacherId, 'PROFESSIONAL');
-  if (!hasPro) {
+  const hasUnlimited = await hasTeacherTierAccess(teacherId, 'BASIC');
+  if (!hasUnlimited) {
     const [firstPrep, allWeekCount] = await Promise.all([
       prisma.agentWeeklyPrep.findFirst({
         where: {
@@ -801,8 +801,8 @@ async function enforceWeeklyPrepCreationAccess(
   weekStart: Date,
   weekEnd: Date
 ): Promise<void> {
-  const hasPro = await hasTeacherTierAccess(teacherId, 'PROFESSIONAL');
-  if (hasPro) return;
+  const hasUnlimited = await hasTeacherTierAccess(teacherId, 'BASIC');
+  if (hasUnlimited) return;
 
   const hasAnotherWeek = await prisma.agentWeeklyPrep.findFirst({
     where: {
@@ -820,8 +820,8 @@ async function enforceWeeklyPrepCreationAccess(
 
   if (hasAnotherWeek) {
     throw new TeacherPlanRequiredError(
-      'PROFESSIONAL',
-      'Teacher Pro is required to generate Week 2 and beyond. Your first weekly calendar remains free.'
+      'BASIC',
+      'Teacher Unlimited is required to generate Week 2 and beyond. Your first weekly calendar remains free.'
     );
   }
 }
@@ -831,8 +831,8 @@ async function enforceWeeklyPrepAccess(
   agentId: string,
   prepId: string
 ): Promise<void> {
-  const hasPro = await hasTeacherTierAccess(teacherId, 'PROFESSIONAL');
-  if (hasPro) return;
+  const hasUnlimited = await hasTeacherTierAccess(teacherId, 'BASIC');
+  if (hasUnlimited) return;
 
   const firstPrep = await prisma.agentWeeklyPrep.findFirst({
     where: {
@@ -847,8 +847,8 @@ async function enforceWeeklyPrepAccess(
 
   if (firstPrep.id !== prepId) {
     throw new TeacherPlanRequiredError(
-      'PROFESSIONAL',
-      'Teacher Pro is required to access Week 2 and beyond. Your first weekly calendar remains free.'
+      'BASIC',
+      'Teacher Unlimited is required to access Week 2 and beyond. Your first weekly calendar remains free.'
     );
   }
 }
