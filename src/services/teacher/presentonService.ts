@@ -125,6 +125,18 @@ interface AssessmentQuestion {
 interface LessonContent {
   title: string;
   summary?: string;
+  weeklyMaterialType?: string;
+  weeklyTemplateVersion?: string;
+  duration?: string | number;
+  estimatedTime?: string | number;
+  grouping?: string;
+  focus?: string;
+  instructions?: string | string[];
+  questions?: Array<string | { question?: string; answer?: string }>;
+  problems?: Array<string | { number?: number | string; question?: string; answer?: string; difficulty?: string }>;
+  materials?: string[];
+  extensions?: string;
+  parentNote?: string;
   objectives?: string[];
   sections?: LessonSection[];
   vocabulary?: VocabularyItem[];
@@ -170,6 +182,58 @@ interface FlashcardContent {
   cards: Flashcard[];
 }
 
+type WeeklyTemplateType = 'WARM_UP' | 'WORKSHEET' | 'ACTIVITY' | 'HOMEWORK';
+
+function isWeeklyTemplateType(value: string): value is WeeklyTemplateType {
+  return value === 'WARM_UP' || value === 'WORKSHEET' || value === 'ACTIVITY' || value === 'HOMEWORK';
+}
+
+function normalizeWeeklyTemplateType(lessonData?: LessonContent | null): WeeklyTemplateType | undefined {
+  const raw = String(lessonData?.weeklyMaterialType || '').toUpperCase();
+  return isWeeklyTemplateType(raw) ? raw : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function asText(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(asText).filter(Boolean).join('\n');
+  return '';
+}
+
+function splitLines(value: unknown): string[] {
+  const source = asText(value);
+  if (!source) return [];
+  return source
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').trim())
+    .filter(Boolean);
+}
+
+function sectionByKeywords(lessonData: LessonContent, keywords: string[]): LessonSection | undefined {
+  const sections = lessonData.sections || [];
+  const loweredKeywords = keywords.map((keyword) => keyword.toLowerCase());
+  return sections.find((section) => {
+    const title = String(section.title || '').toLowerCase();
+    return loweredKeywords.some((keyword) => title.includes(keyword));
+  });
+}
+
+function sectionContentLines(lessonData: LessonContent, keywords: string[]): string[] {
+  const section = sectionByKeywords(lessonData, keywords);
+  return section ? splitLines(section.content) : [];
+}
+
 /**
  * Truncate text to a maximum length
  */
@@ -188,6 +252,10 @@ function formatLessonContent(
   options: PresentonExportOptions
 ): string {
   const lessonData = content.lessonContent as unknown as LessonContent;
+  const weeklyTemplateType = normalizeWeeklyTemplateType(lessonData);
+  if (weeklyTemplateType) {
+    return formatWeeklyTemplateContent(content, lessonData, options, weeklyTemplateType);
+  }
   const subject = (content.subject || 'OTHER').replace('_', ' ');
 
   // Build a concise, structured prompt
@@ -297,6 +365,202 @@ function formatLessonContent(
   return parts.join('\n');
 }
 
+function formatWeeklyTemplateContent(
+  content: TeacherContent,
+  lessonData: LessonContent,
+  options: PresentonExportOptions,
+  templateType: WeeklyTemplateType
+): string {
+  const subject = (content.subject || 'OTHER').replace('_', ' ');
+  const data = asRecord(lessonData);
+  const title = asText(data.title) || content.title;
+  const summary = asText(data.summary) || asText(content.description);
+  const parts: string[] = [];
+
+  parts.push(`Title: ${title}`);
+  parts.push(`Subject: ${subject}, Grade ${content.gradeLevel}`);
+  parts.push(`Material Type: ${templateType.replace(/_/g, ' ')}`);
+  if (summary) {
+    parts.push(`\nOverview: ${truncateText(summary, 500)}`);
+  }
+
+  if (templateType === 'WARM_UP') {
+    const duration = asText(data.duration) || '5-10 min';
+    const focus = asText(data.focus);
+    const instructions = asText(data.instructions) || asText(sectionByKeywords(lessonData, ['task', 'instructions'])?.content);
+    const rawQuestions = asArray(data.questions);
+    const fallbackQuestionLines = sectionContentLines(lessonData, ['warm-up', 'prompt', 'question']);
+
+    parts.push(`\nWarm-Up Details:`);
+    parts.push(`- Duration: ${duration}`);
+    if (focus) parts.push(`- Focus: ${focus}`);
+    if (instructions) parts.push(`- Student Instructions: ${truncateText(instructions, 280)}`);
+
+    parts.push(`\nWarm-Up Questions:`);
+    if (rawQuestions.length > 0) {
+      rawQuestions.slice(0, 8).forEach((item, index) => {
+        const questionObj = asRecord(item);
+        const question = asText(questionObj.question) || asText(item);
+        if (!question) return;
+        parts.push(`${index + 1}. ${truncateText(question, 220)}`);
+        if (options.includeAnswers) {
+          const answer = asText(questionObj.answer);
+          if (answer) parts.push(`   Answer: ${truncateText(answer, 160)}`);
+        }
+      });
+    } else if (fallbackQuestionLines.length > 0) {
+      fallbackQuestionLines.slice(0, 8).forEach((line, index) => {
+        parts.push(`${index + 1}. ${truncateText(line, 220)}`);
+      });
+    }
+
+    const debrief = asText(sectionByKeywords(lessonData, ['debrief'])?.content);
+    if (debrief) {
+      parts.push(`\nDebrief Questions:`);
+      splitLines(debrief).slice(0, 5).forEach((line) => parts.push(`- ${truncateText(line, 140)}`));
+    }
+  }
+
+  if (templateType === 'WORKSHEET' || templateType === 'HOMEWORK') {
+    const isHomework = templateType === 'HOMEWORK';
+    const instructions = asText(data.instructions) || asText(sectionByKeywords(lessonData, ['instructions'])?.content);
+    const estimated = isHomework ? asText(data.estimatedTime) : '';
+    if (estimated) parts.push(`- Estimated Time: ${estimated}`);
+    if (instructions) parts.push(`\nStudent Instructions: ${truncateText(instructions, 320)}`);
+
+    const rawProblems = asArray(data.problems);
+    const fallbackProblemLines = sectionContentLines(
+      lessonData,
+      ['practice', 'problem', 'assignment', 'questions']
+    );
+    parts.push(`\nPractice Problems:`);
+    if (rawProblems.length > 0) {
+      rawProblems.slice(0, 14).forEach((item, index) => {
+        const problemObj = asRecord(item);
+        const number = asText(problemObj.number) || String(index + 1);
+        const question = asText(problemObj.question) || asText(item);
+        if (!question) return;
+        const difficulty = asText(problemObj.difficulty);
+        parts.push(`${number}. ${truncateText(question, 240)}${difficulty ? ` (${difficulty})` : ''}`);
+        if (options.includeAnswers) {
+          const answer = asText(problemObj.answer);
+          if (answer) parts.push(`   Answer: ${truncateText(answer, 160)}`);
+        }
+      });
+    } else if (fallbackProblemLines.length > 0) {
+      fallbackProblemLines.slice(0, 14).forEach((line, index) => {
+        parts.push(`${index + 1}. ${truncateText(line, 240)}`);
+      });
+    }
+
+    if (isHomework) {
+      const parentNote = asText(data.parentNote) || asText(sectionByKeywords(lessonData, ['parent', 'family'])?.content);
+      if (parentNote) {
+        parts.push(`\nParent Note: ${truncateText(parentNote, 260)}`);
+      }
+      const extension = asText(sectionByKeywords(lessonData, ['extension'])?.content);
+      if (extension) {
+        parts.push(`\nExtension Challenge: ${truncateText(extension, 260)}`);
+      }
+    }
+  }
+
+  if (templateType === 'ACTIVITY') {
+    const duration = asText(data.duration);
+    const grouping = asText(data.grouping);
+    if (duration || grouping) {
+      parts.push(`\nActivity Setup:`);
+      if (duration) parts.push(`- Duration: ${duration}`);
+      if (grouping) parts.push(`- Grouping: ${grouping}`);
+    }
+
+    const overview = asText(sectionByKeywords(lessonData, ['overview', 'objective'])?.content);
+    if (overview) {
+      parts.push(`\nActivity Overview: ${truncateText(overview, 360)}`);
+    }
+
+    const materials = asArray(data.materials).map(asText).filter(Boolean);
+    const materialFallback = sectionContentLines(lessonData, ['materials']);
+    const materialItems = (materials.length > 0 ? materials : materialFallback).slice(0, 12);
+    if (materialItems.length > 0) {
+      parts.push(`\nMaterials Needed:`);
+      materialItems.forEach((item) => parts.push(`- ${truncateText(item, 140)}`));
+    }
+
+    const steps = asArray(data.instructions).map(asText).filter(Boolean);
+    const stepFallback = sectionContentLines(lessonData, ['procedure', 'step', 'instructions']);
+    const stepItems = (steps.length > 0 ? steps : stepFallback).slice(0, 10);
+    if (stepItems.length > 0) {
+      parts.push(`\nProcedure Steps:`);
+      stepItems.forEach((step, index) => parts.push(`${index + 1}. ${truncateText(step, 220)}`));
+    }
+
+    const debrief = asText(sectionByKeywords(lessonData, ['debrief', 'discussion'])?.content);
+    if (debrief) {
+      parts.push(`\nDebrief Prompts:`);
+      splitLines(debrief).slice(0, 6).forEach((item) => parts.push(`- ${truncateText(item, 160)}`));
+    }
+
+    const extensions = asText(data.extensions)
+      || asText(sectionByKeywords(lessonData, ['differentiation', 'extension'])?.content);
+    if (extensions) {
+      parts.push(`\nDifferentiation & Extensions: ${truncateText(extensions, 320)}`);
+    }
+  }
+
+  // Weekly materials may still include generated quiz/flashcards in LESSON records.
+  const quizData = content.quizContent as unknown as QuizContent | null;
+  if (quizData?.questions?.length) {
+    parts.push(`\nQuiz Questions (${quizData.questions.length} total):`);
+    quizData.questions.slice(0, 6).forEach((q, i) => {
+      parts.push(`${i + 1}. ${truncateText(q.question, 160)}`);
+    });
+  }
+
+  const flashcardData = content.flashcardContent as unknown as FlashcardContent | null;
+  if (flashcardData?.cards?.length) {
+    parts.push(`\nKey Flashcards (${flashcardData.cards.length} total):`);
+    flashcardData.cards.slice(0, 6).forEach((card, i) => {
+      parts.push(`${i + 1}. ${truncateText(card.front, 120)} -> ${truncateText(card.back, 140)}`);
+    });
+  }
+
+  return parts.join('\n');
+}
+
+function buildLessonPPTInstructions(
+  content: TeacherContent,
+  templateType: WeeklyTemplateType | undefined
+): string {
+  const gradeLevel = content.gradeLevel || 'mixed';
+
+  if (templateType === 'WARM_UP') {
+    return `Create a high-energy classroom warm-up presentation for Grade ${gradeLevel}.
+Structure slides as: title, objective/focus, instructions, warm-up questions, optional answer key, and debrief transition.
+Keep pacing quick and visual. Use one prompt per slide when possible.`;
+  }
+
+  if (templateType === 'WORKSHEET') {
+    return `Create a worksheet-style teaching presentation for Grade ${gradeLevel}.
+Structure slides as: title, learning goal, student instructions, sequenced practice problems, and concise answer review.
+Keep formatting clean and classroom-friendly for projection or print follow-up.`;
+  }
+
+  if (templateType === 'HOMEWORK') {
+    return `Create a homework briefing presentation for Grade ${gradeLevel}.
+Structure slides as: title, homework expectations, assignment problems, extension challenge, and answer review.
+Use clear directions that students and families can follow independently.`;
+  }
+
+  if (templateType === 'ACTIVITY') {
+    return `Create an interactive activity presentation for Grade ${gradeLevel}.
+Structure slides as: objective/hook, materials, step-by-step procedure, debrief questions, and differentiation/extension ideas.
+Prioritize teacher usability and clear student action cues.`;
+  }
+
+  return `Create an engaging educational presentation for Grade ${gradeLevel} students. Use clear headings, bullet points, and include relevant images.`;
+}
+
 /**
  * Calculate number of slides based on content and style
  */
@@ -304,6 +568,34 @@ function calculateSlideCount(content: TeacherContent, options: PresentonExportOp
   const lessonData = content.lessonContent as unknown as LessonContent;
   const quizData = content.quizContent as unknown as QuizContent | null;
   const flashcardData = content.flashcardContent as unknown as FlashcardContent | null;
+  const weeklyTemplateType = normalizeWeeklyTemplateType(lessonData);
+
+  if (weeklyTemplateType) {
+    const questionCount = asArray((lessonData as unknown as Record<string, unknown>).questions).length;
+    const problemCount = asArray((lessonData as unknown as Record<string, unknown>).problems).length;
+    const stepCount = asArray((lessonData as unknown as Record<string, unknown>).instructions).length;
+
+    if (weeklyTemplateType === 'WARM_UP') {
+      const slides = 4 + Math.min(questionCount > 0 ? questionCount : 4, options.slideStyle === 'focused' ? 7 : 4);
+      return Math.min(Math.max(slides, 6), options.slideStyle === 'focused' ? 14 : 10);
+    }
+
+    if (weeklyTemplateType === 'WORKSHEET' || weeklyTemplateType === 'HOMEWORK') {
+      const itemCount = problemCount > 0 ? problemCount : 8;
+      const slides = options.slideStyle === 'focused'
+        ? 4 + Math.ceil(itemCount / 2)
+        : 4 + Math.ceil(itemCount / 3);
+      return Math.min(Math.max(slides, 8), options.slideStyle === 'focused' ? 20 : 14);
+    }
+
+    if (weeklyTemplateType === 'ACTIVITY') {
+      const steps = stepCount > 0 ? stepCount : 5;
+      const slides = options.slideStyle === 'focused'
+        ? 6 + Math.ceil(steps / 2)
+        : 5 + Math.ceil(steps / 3);
+      return Math.min(Math.max(slides, 8), options.slideStyle === 'focused' ? 16 : 12);
+    }
+  }
 
   // Base slides: title + objectives + summary
   let slides = 3;
@@ -365,6 +657,8 @@ export async function generateLessonPPTX(
 
   // Format the lesson content into a concise prompt
   const lessonPrompt = formatLessonContent(content, options);
+  const lessonData = content.lessonContent as unknown as LessonContent;
+  const weeklyTemplateType = normalizeWeeklyTemplateType(lessonData);
 
   // Calculate appropriate slide count
   const slideCount = calculateSlideCount(content, options);
@@ -374,7 +668,7 @@ export async function generateLessonPPTX(
   // Prepare the API request - keep it simple
   const requestBody: PresentonRequest = {
     content: lessonPrompt,
-    instructions: `Create an engaging educational presentation for Grade ${content.gradeLevel} students. Use clear headings, bullet points, and include relevant images.`,
+    instructions: buildLessonPPTInstructions(content, weeklyTemplateType),
     tone: 'educational',
     verbosity: options.slideStyle === 'dense' ? 'concise' : 'standard',
     web_search: false,

@@ -438,11 +438,15 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
       });
     }
 
-    // Only lessons and flashcard decks can be exported to PPTX
-    if (content.contentType !== 'LESSON' && content.contentType !== 'FLASHCARD_DECK') {
+    // Lessons, flashcards, and worksheets can be exported to PPTX
+    if (
+      content.contentType !== 'LESSON' &&
+      content.contentType !== 'FLASHCARD_DECK' &&
+      content.contentType !== 'WORKSHEET'
+    ) {
       return res.status(400).json({
         success: false,
-        error: 'Only lessons and flashcard decks can be exported to PowerPoint. Try PDF export for quizzes.',
+        error: 'Only lessons, worksheets, and flashcard decks can be exported to PowerPoint. Try PDF export for quizzes.',
       });
     }
 
@@ -1040,11 +1044,15 @@ router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
       });
     }
 
-    // Only lessons and flashcard decks can be exported to PPTX
-    if (content.contentType !== 'LESSON' && content.contentType !== 'FLASHCARD_DECK') {
+    // Lessons, flashcards, and worksheets can be exported to PPTX
+    if (
+      content.contentType !== 'LESSON' &&
+      content.contentType !== 'FLASHCARD_DECK' &&
+      content.contentType !== 'WORKSHEET'
+    ) {
       return res.status(400).json({
         success: false,
-        error: 'Only lessons and flashcard decks can be exported to PowerPoint',
+        error: 'Only lessons, worksheets, and flashcard decks can be exported to PowerPoint',
       });
     }
 
