@@ -72,12 +72,23 @@ const updateStatusSchema = z.object({
 });
 
 const WEEKLY_PREP_MATERIAL_MARKER_RE = /weekly_prep_material_id:([0-9a-f-]+)/i;
+const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-function extractWeeklyPrepMaterialIdFromContent(content: { extractedText?: string | null }): string | null {
+function extractWeeklyPrepMaterialIdFromContent(
+  content: { extractedText?: string | null } | null | undefined
+): string | null {
   const extracted = String(content?.extractedText || '');
   if (!extracted) return null;
   const match = extracted.match(WEEKLY_PREP_MATERIAL_MARKER_RE);
   return match?.[1] || null;
+}
+
+function getIsoWeekNumber(date: Date): number {
+  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+  return Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
 // ============================================
@@ -114,9 +125,67 @@ router.get(
         }
       );
 
+      // Enrich lesson cards generated from weekly prep with week/day tags.
+      const weeklyPrepMaterialIds = Array.from(
+        new Set(
+          (result.data || [])
+            .map((item) => extractWeeklyPrepMaterialIdFromContent(item))
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      let weeklyPrepByMaterialId = new Map<string, {
+        weekLabel: string;
+        weekNumber: number;
+        dayOfWeek: number;
+        dayLabel: string;
+      }>();
+
+      if (weeklyPrepMaterialIds.length > 0) {
+        const materials = await prisma.agentMaterial.findMany({
+          where: {
+            id: { in: weeklyPrepMaterialIds },
+          },
+          select: {
+            id: true,
+            dayOfWeek: true,
+            weeklyPrep: {
+              select: {
+                weekLabel: true,
+                weekStartDate: true,
+              },
+            },
+          },
+        });
+
+        weeklyPrepByMaterialId = new Map(
+          materials.map((material) => [
+            material.id,
+            {
+              weekLabel: material.weeklyPrep.weekLabel,
+              weekNumber: getIsoWeekNumber(material.weeklyPrep.weekStartDate),
+              dayOfWeek: material.dayOfWeek,
+              dayLabel: WEEKDAY_LABELS[material.dayOfWeek] || `Day ${material.dayOfWeek + 1}`,
+            },
+          ])
+        );
+      }
+
+      const enrichedData = (result.data || []).map((item) => {
+        const materialId = extractWeeklyPrepMaterialIdFromContent(item);
+        if (!materialId) return item;
+        const weeklyPrep = weeklyPrepByMaterialId.get(materialId);
+        if (!weeklyPrep) return item;
+
+        return {
+          ...item,
+          weeklyPrep,
+        };
+      });
+
       res.json({
         success: true,
-        data: result.data,
+        data: enrichedData,
         pagination: result.pagination,
       });
     } catch (error) {
