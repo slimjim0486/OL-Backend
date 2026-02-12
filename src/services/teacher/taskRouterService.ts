@@ -9,6 +9,7 @@ import { logger } from '../../utils/logger.js';
 
 export type IntentType =
   | 'chat'
+  | 'open_calendar'
   | 'generate_lesson'
   | 'generate_quiz'
   | 'generate_flashcards'
@@ -36,6 +37,7 @@ export interface TaskIntent {
 const CLASSIFICATION_PROMPT = `You are an intent classifier for a teacher AI assistant. Given a teacher's message, classify the intent into one of these categories:
 
 - chat: General conversation, questions about teaching, advice, or anything that doesn't require content generation
+- open_calendar: User wants to open/view the calendar or schedule view (keywords: open calendar, show my schedule, let me see it on calendar)
 - generate_lesson: Create a lesson plan (keywords: lesson, plan, teach, unit)
 - generate_quiz: Create a quiz or test (keywords: quiz, test, assessment, questions)
 - generate_flashcards: Create flashcards (keywords: flashcards, review cards, study cards)
@@ -62,6 +64,56 @@ Extract relevant parameters like:
 - gradeLevel: Grade level mentioned
 - count: Number of items requested (e.g., "10 questions")
 - difficulty: Difficulty level if mentioned`;
+
+const VALID_INTENTS: Set<IntentType> = new Set([
+  'chat',
+  'open_calendar',
+  'generate_lesson',
+  'generate_quiz',
+  'generate_flashcards',
+  'generate_sub_plan',
+  'generate_iep',
+  'generate_audio',
+  'generate_parent_email',
+  'generate_report_comments',
+  'update_curriculum',
+  'weekly_prep',
+  'export',
+  'unknown',
+]);
+
+const OPEN_CALENDAR_HEURISTIC_RE =
+  /\b(?:take\s+me\s+to|go\s+to|open|show\s+me|bring\s+me\s+to|navigate\s+to)\s+(?:my|the)?\s*(?:weekly\s+prep\s*)?(?:calendar|schedule)\b|\blet\s+me\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:calendar|schedule)\b|\b(?:can|could)\s+i\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:calendar|schedule)\b|\b(?:put|add)\s+(?:it|this|that|these|those)?\s*(?:on|to)\s+(?:my|the)?\s*(?:calendar|schedule)\b/i;
+
+function parseIntentJson(raw: string): any {
+  const text = String(raw || '').trim();
+  if (!text) throw new Error('Empty classifier response');
+  try {
+    return JSON.parse(text);
+  } catch {
+    const block = text.match(/\{[\s\S]*\}/);
+    if (!block) throw new Error('No JSON object found in classifier response');
+    return JSON.parse(block[0]);
+  }
+}
+
+function heuristicIntent(message: string, reason: string): TaskIntent {
+  const text = String(message || '');
+  if (OPEN_CALENDAR_HEURISTIC_RE.test(text)) {
+    return {
+      type: 'open_calendar',
+      confidence: 0.8,
+      extractedParams: {},
+      reasoning: reason,
+    };
+  }
+  return {
+    type: 'chat',
+    confidence: 0.3,
+    extractedParams: {},
+    reasoning: reason,
+  };
+}
 
 async function classifyIntent(
   message: string,
@@ -93,21 +145,18 @@ async function classifyIntent(
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    const parsed = JSON.parse(text);
+    const parsed = parseIntentJson(text);
+    const rawType = String(parsed.type || 'chat') as IntentType;
+    const type: IntentType = VALID_INTENTS.has(rawType) ? rawType : 'chat';
     return {
-      type: parsed.type || 'chat',
+      type,
       confidence: Math.min(1, Math.max(0, parsed.confidence || 0.5)),
       extractedParams: parsed.extractedParams || {},
       reasoning: parsed.reasoning,
     };
   } catch (error) {
     logger.warn('Intent classification failed, defaulting to chat', { error, message });
-    return {
-      type: 'chat',
-      confidence: 0.3,
-      extractedParams: {},
-      reasoning: 'Classification failed, defaulting to chat',
-    };
+    return heuristicIntent(message, 'Classification failed; used heuristic fallback');
   }
 }
 
