@@ -635,6 +635,35 @@ const generateFullLessonSchema = z.object({
   templateId: z.string().uuid().optional(),
 });
 
+const weeklyMaterialTypeSchema = z.enum([
+  'WARM_UP',
+  'LESSON',
+  'WORKSHEET',
+  'EXIT_TICKET',
+  'QUIZ',
+  'FLASHCARDS',
+  'ACTIVITY',
+  'HOMEWORK',
+]);
+
+type WeeklyMaterialType = z.infer<typeof weeklyMaterialTypeSchema>;
+
+const generateFromWeeklyMaterialSchema = z.object({
+  materialId: z.string().uuid().optional(),
+  materialType: weeklyMaterialTypeSchema,
+  title: z.string().min(1, 'Title is required').max(255),
+  topic: z.string().min(1, 'Topic is required').max(500),
+  subject: z.nativeEnum(Subject).optional(),
+  gradeLevel: z.string().max(20).optional(),
+  curriculum: z.string().max(50).optional(),
+  standards: z.array(z.string().max(100)).optional(),
+  notes: z.string().max(3000).optional(),
+  seedMaterial: z.unknown().optional(),
+  differentiation: z.string().max(50).optional(),
+  includeQuiz: z.boolean().optional(),
+  includeFlashcards: z.boolean().optional(),
+});
+
 const generateQuizSchema = z.object({
   content: z.string().min(50, 'Content must be at least 50 characters'),
   title: z.string().max(255).optional(),
@@ -677,6 +706,111 @@ const generateInfographicSchema = z.object({
   gradeLevel: z.string().max(20).optional(),
   subject: z.string().max(50).optional(),
 });
+
+function safeJsonString(value: unknown, maxChars = 3500): string {
+  if (value == null) return '';
+  let serialized = '';
+  try {
+    serialized = JSON.stringify(value, null, 2);
+  } catch {
+    serialized = String(value);
+  }
+  if (serialized.length <= maxChars) return serialized;
+  return `${serialized.slice(0, maxChars)}\n... (truncated)`;
+}
+
+function buildWeeklyMaterialAdditionalContext(input: z.infer<typeof generateFromWeeklyMaterialSchema>): string {
+  const parts: string[] = [];
+
+  parts.push(`[Weekly Material Type]\n${input.materialType}`);
+  parts.push(`[Weekly Material Title]\n${input.title}`);
+  parts.push(`[Topic]\n${input.topic}`);
+
+  if (input.subject) parts.push(`[Subject]\n${input.subject}`);
+  if (input.gradeLevel) parts.push(`[Grade Level]\n${input.gradeLevel}`);
+  if (input.curriculum) parts.push(`[Curriculum]\n${input.curriculum}`);
+  if (input.standards?.length) parts.push(`[Standards]\n${input.standards.join(', ')}`);
+  if (input.notes) parts.push(`[Teacher Notes]\n${input.notes}`);
+  if (input.differentiation) parts.push(`[Differentiation Focus]\n${input.differentiation}`);
+
+  const seed = safeJsonString(input.seedMaterial, 5000);
+  if (seed) parts.push(`[Seed Material]\n${seed}`);
+
+  return parts.join('\n\n').slice(0, 12000);
+}
+
+function buildTemplateStructureForWeeklyMaterial(type: WeeklyMaterialType) {
+  switch (type) {
+    case 'WARM_UP':
+      return {
+        sections: [
+          { type: 'hook', title: 'Warm-Up Prompt', prompt: 'Write a short, engaging warm-up prompt that activates prior knowledge.', duration: '5 min' },
+          { type: 'task', title: 'Student Task', prompt: 'Provide clear task instructions and expected output from students.', duration: '5 min' },
+          { type: 'answers', title: 'Answer Guide', prompt: 'Give concise model answers and common misconceptions to watch for.' },
+          { type: 'debrief', title: 'Quick Debrief', prompt: 'List 2-3 fast debrief questions to transition into the lesson.' },
+        ],
+      };
+    case 'WORKSHEET':
+      return {
+        sections: [
+          { type: 'goal', title: 'Learning Goal', prompt: 'State the worksheet objective in student-friendly language.' },
+          { type: 'instructions', title: 'Instructions', prompt: 'Provide concise student instructions for completing the worksheet.' },
+          { type: 'practice', title: 'Practice Problems', prompt: 'Create 8-12 problems from easier to harder with clear numbering.', count: 10 },
+          { type: 'answers', title: 'Answer Key & Notes', prompt: 'Provide answer key with short explanation per item.' },
+        ],
+      };
+    case 'EXIT_TICKET':
+      return {
+        sections: [
+          { type: 'instructions', title: 'Exit Ticket Instructions', prompt: 'Write clear exit-ticket instructions.' },
+          { type: 'questions', title: 'Exit Ticket Questions', prompt: 'Create exactly 3 questions targeting key lesson outcomes.', count: 3 },
+          { type: 'answers', title: 'Teacher Answer Key', prompt: 'Provide concise correct answers and what to look for in responses.' },
+        ],
+      };
+    case 'ACTIVITY':
+      return {
+        sections: [
+          { type: 'overview', title: 'Activity Overview', prompt: 'Describe purpose, objective, and engagement hook.' },
+          { type: 'materials', title: 'Materials Needed', prompt: 'List all required materials and setup notes.' },
+          { type: 'procedure', title: 'Step-by-Step Procedure', prompt: 'Provide a clear numbered procedure teachers can run immediately.' },
+          { type: 'debrief', title: 'Discussion & Debrief', prompt: 'Provide debrief questions and expected student takeaways.' },
+          { type: 'differentiation', title: 'Differentiation Moves', prompt: 'Provide above/on-level/below/ELL scaffolds.' },
+        ],
+      };
+    case 'HOMEWORK':
+      return {
+        sections: [
+          { type: 'instructions', title: 'Homework Instructions', prompt: 'Write clear instructions students and families can follow.' },
+          { type: 'problems', title: 'Assignment Problems', prompt: 'Create 6-10 homework tasks with increasing complexity.', count: 8 },
+          { type: 'extension', title: 'Extension Challenge', prompt: 'Add 1-2 optional challenge tasks for advanced learners.' },
+          { type: 'answers', title: 'Answer Key', prompt: 'Provide concise answer key or model responses.' },
+        ],
+      };
+    default:
+      return undefined;
+  }
+}
+
+function buildSourceContentForQuickGenerators(input: z.infer<typeof generateFromWeeklyMaterialSchema>): string {
+  const lines = [
+    `Title: ${input.title}`,
+    `Topic: ${input.topic}`,
+    input.subject ? `Subject: ${input.subject}` : '',
+    input.gradeLevel ? `Grade Level: ${input.gradeLevel}` : '',
+    input.curriculum ? `Curriculum: ${input.curriculum}` : '',
+    input.standards?.length ? `Standards: ${input.standards.join(', ')}` : '',
+    input.notes ? `Teacher Notes: ${input.notes}` : '',
+  ].filter(Boolean);
+
+  const seed = safeJsonString(input.seedMaterial, 2500);
+  if (seed) lines.push(`Seed Material:\n${seed}`);
+
+  let text = lines.join('\n');
+  if (text.length < 80) {
+    text += '\nExpand this into robust classroom-ready material with examples and answer guidance.';
+  }
+  return text;
+}
 
 // ============================================
 // PDF ANALYSIS ROUTES
@@ -1154,6 +1288,152 @@ router.post(
         success: true,
         data: result,
         message: 'Full lesson generated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/content/generate/from-weekly-material
+ * Generate material-specific content from a weekly prep calendar item
+ * and save directly to My Content with an appropriate content type.
+ */
+router.post(
+  '/generate/from-weekly-material',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(generateFromWeeklyMaterialSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const input = req.body as z.infer<typeof generateFromWeeklyMaterialSchema>;
+      const teacherId = req.teacher!.id;
+      const additionalContext = buildWeeklyMaterialAdditionalContext(input);
+      const contentSource = buildSourceContentForQuickGenerators(input);
+      const extractedText = input.materialId
+        ? `weekly_prep_material_id:${input.materialId}`
+        : undefined;
+
+      let createPayload: {
+        title: string;
+        description: string;
+        subject?: Subject;
+        gradeLevel?: string;
+        contentType: TeacherContentType;
+        sourceType: SourceType;
+        extractedText?: string;
+        lessonContent?: Record<string, unknown>;
+        quizContent?: Record<string, unknown>;
+        flashcardContent?: Record<string, unknown>;
+      } = {
+        title: input.title,
+        description: `Generated from weekly prep ${input.materialType.toLowerCase().replace(/_/g, ' ')}: ${input.topic}`,
+        subject: input.subject,
+        gradeLevel: input.gradeLevel,
+        contentType: TeacherContentType.LESSON,
+        sourceType: SourceType.TEXT,
+        extractedText,
+      };
+
+      if (input.materialType === 'LESSON') {
+        const generated = await contentGenerationService.generateFullLessonWithProgress(
+          teacherId,
+          {
+            topic: input.topic,
+            subject: input.subject,
+            gradeLevel: input.gradeLevel,
+            curriculum: input.curriculum,
+            lessonType: 'full',
+            includeActivities: true,
+            includeAssessment: true,
+            includeQuiz: input.includeQuiz ?? true,
+            includeFlashcards: input.includeFlashcards ?? true,
+            includeInfographic: false,
+            additionalContext,
+          }
+        );
+
+        createPayload = {
+          ...createPayload,
+          contentType: TeacherContentType.LESSON,
+          lessonContent: {
+            ...(generated.lesson as unknown as Record<string, unknown>),
+            weeklyMaterialType: input.materialType,
+            weeklyTemplateVersion: 'v1',
+          },
+          quizContent: generated.quiz as unknown as Record<string, unknown> | undefined,
+          flashcardContent: generated.flashcards as unknown as Record<string, unknown> | undefined,
+        };
+      } else if (input.materialType === 'QUIZ' || input.materialType === 'EXIT_TICKET') {
+        const quiz = await contentGenerationService.generateQuiz(teacherId, '', {
+          content: contentSource,
+          title: input.materialType === 'EXIT_TICKET'
+            ? `Exit Ticket: ${input.title}`
+            : `Quiz: ${input.title}`,
+          questionCount: input.materialType === 'EXIT_TICKET' ? 3 : 10,
+          questionTypes: input.materialType === 'EXIT_TICKET'
+            ? ['multiple_choice', 'short_answer']
+            : ['multiple_choice', 'true_false', 'short_answer'],
+          difficulty: 'mixed',
+          gradeLevel: input.gradeLevel,
+        });
+
+        createPayload = {
+          ...createPayload,
+          contentType: TeacherContentType.QUIZ,
+          quizContent: quiz as unknown as Record<string, unknown>,
+        };
+      } else if (input.materialType === 'FLASHCARDS') {
+        const flashcards = await contentGenerationService.generateFlashcards(teacherId, '', {
+          content: contentSource,
+          title: `Flashcards: ${input.title}`,
+          cardCount: 15,
+          includeHints: true,
+          gradeLevel: input.gradeLevel,
+        });
+
+        createPayload = {
+          ...createPayload,
+          contentType: TeacherContentType.FLASHCARD_DECK,
+          flashcardContent: flashcards as unknown as Record<string, unknown>,
+        };
+      } else {
+        const templateStructure = buildTemplateStructureForWeeklyMaterial(input.materialType);
+        const lesson = await contentGenerationService.generateLesson(teacherId, {
+          topic: input.topic,
+          subject: input.subject,
+          gradeLevel: input.gradeLevel,
+          curriculum: input.curriculum,
+          lessonType: 'guide',
+          includeActivities: input.materialType === 'ACTIVITY',
+          includeAssessment: input.materialType !== 'ACTIVITY',
+          additionalContext,
+          templateStructure,
+        });
+
+        const worksheetLike = input.materialType === 'WORKSHEET' || input.materialType === 'HOMEWORK';
+        createPayload = {
+          ...createPayload,
+          contentType: worksheetLike ? TeacherContentType.WORKSHEET : TeacherContentType.LESSON,
+          lessonContent: {
+            ...(lesson as unknown as Record<string, unknown>),
+            weeklyMaterialType: input.materialType,
+            weeklyTemplateVersion: 'v1',
+          },
+        };
+      }
+
+      const content = await contentService.createContent(teacherId, createPayload);
+
+      res.json({
+        success: true,
+        data: {
+          id: content.id,
+          contentType: content.contentType,
+          title: content.title,
+        },
+        message: 'Material generated and saved to My Content.',
       });
     } catch (error) {
       next(error);

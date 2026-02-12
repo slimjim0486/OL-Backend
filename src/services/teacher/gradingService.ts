@@ -3,7 +3,6 @@ import { genAI, TEACHER_CONTENT_SAFETY_SETTINGS } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { prisma } from '../../config/database.js';
 import {
-  TokenOperation,
   GradingJob,
   GradingSubmission,
   GradingJobStatus,
@@ -13,7 +12,6 @@ import {
   CurriculumType,
   Prisma,
 } from '@prisma/client';
-import { quotaService } from './quotaService.js';
 import { rubricService, RubricCriterion } from './rubricService.js';
 import {
   buildGradingSystemPrompt,
@@ -127,9 +125,8 @@ export const gradingService = {
     const criteria = rubric.criteria as unknown as RubricCriterion[];
     const submissionLength = input.studentSubmission.length;
 
-    // Estimate tokens and check quota
+    // Estimate tokens for logging and fallback usage metadata.
     const estimatedTokens = estimateGradingTokens(criteria, submissionLength);
-    await quotaService.enforceQuota(teacherId, TokenOperation.GRADING_SINGLE, estimatedTokens);
 
     logger.info('Starting single submission grading', {
       teacherId,
@@ -268,16 +265,6 @@ export const gradingService = {
         },
       });
 
-      // Record token usage
-      await quotaService.recordUsage({
-        teacherId,
-        operation: TokenOperation.GRADING_SINGLE,
-        tokensUsed,
-        modelUsed: config.gemini.models.pro,
-        resourceType: 'grading_submission',
-        resourceId: submission.id,
-      });
-
       // Increment rubric usage
       await rubricService.incrementUsage(input.rubricId);
 
@@ -349,9 +336,6 @@ export const gradingService = {
 
     const tokensPerSubmission = estimateGradingTokens(criteria, avgSubmissionLength);
     const totalEstimatedTokens = tokensPerSubmission * input.submissions.length;
-
-    // Check quota for entire batch
-    await quotaService.enforceQuota(teacherId, TokenOperation.GRADING_BATCH, totalEstimatedTokens);
 
     logger.info('Creating batch grading job', {
       teacherId,
@@ -534,16 +518,6 @@ export const gradingService = {
 
         gradedCount++;
         totalTokensUsed += tokensUsed;
-
-        // Record token usage
-        await quotaService.recordUsage({
-          teacherId,
-          operation: TokenOperation.GRADING_BATCH,
-          tokensUsed,
-          modelUsed: config.gemini.models.pro,
-          resourceType: 'grading_submission',
-          resourceId: submission.id,
-        });
 
         // Update job progress
         await prisma.gradingJob.update({

@@ -49,6 +49,8 @@ interface PracticeExercise {
 interface LessonContent {
   title: string;
   summary?: string;
+  weeklyMaterialType?: string;
+  weeklyTemplateVersion?: string;
   objectives?: string[];
   sections?: LessonSection[];
   vocabulary?: VocabularyItem[];
@@ -66,6 +68,8 @@ interface LessonContent {
   prerequisites?: string[];
   nextSteps?: string;
 }
+
+type WeeklyTemplateType = 'WARM_UP' | 'WORKSHEET' | 'ACTIVITY' | 'HOMEWORK';
 
 interface QuizQuestion {
   id: string;
@@ -522,6 +526,327 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
   `;
 }
 
+const WEEKLY_TEMPLATE_LABELS: Record<WeeklyTemplateType, string> = {
+  WARM_UP: 'Warm-Up',
+  WORKSHEET: 'Worksheet',
+  ACTIVITY: 'Activity',
+  HOMEWORK: 'Homework',
+};
+
+function isWeeklyTemplateType(value: string): value is WeeklyTemplateType {
+  return value === 'WARM_UP' || value === 'WORKSHEET' || value === 'ACTIVITY' || value === 'HOMEWORK';
+}
+
+function normalizeWeeklyTemplateType(lessonData: LessonContent): WeeklyTemplateType | undefined {
+  const raw = String(lessonData?.weeklyMaterialType || '').toUpperCase();
+  return isWeeklyTemplateType(raw) ? raw : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function asText(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(asText).filter(Boolean).join('\n');
+  return '';
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function textToHtml(value: unknown): string {
+  const text = asText(value);
+  if (!text) return '';
+  return escapeHtml(text).replace(/\n/g, '<br />');
+}
+
+function splitLines(value: unknown): string[] {
+  const source = asText(value);
+  if (!source) return [];
+  return source
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').trim())
+    .filter(Boolean);
+}
+
+function sectionByKeywords(lessonData: LessonContent, keywords: string[]): LessonSection | undefined {
+  const sections = lessonData.sections || [];
+  const lowerKeywords = keywords.map((k) => k.toLowerCase());
+  return sections.find((section) => {
+    const title = String(section.title || '').toLowerCase();
+    return lowerKeywords.some((keyword) => title.includes(keyword));
+  });
+}
+
+function orderedSteps(value: unknown): string[] {
+  const items = asArray(value).map(asText).filter(Boolean);
+  if (items.length > 0) return items;
+  return splitLines(value);
+}
+
+function generateWeeklyTemplateHTML(
+  content: TeacherContent,
+  lessonData: LessonContent,
+  options: ExportOptions,
+  templateType: WeeklyTemplateType
+): string {
+  const subject = (content.subject || 'OTHER') as Subject;
+  const styles = getBaseStyles(subject, options.colorScheme);
+  const data = asRecord(lessonData as unknown as Record<string, unknown>);
+  const templateLabel = WEEKLY_TEMPLATE_LABELS[templateType];
+  const summary = asText(data.summary) || asText(content.description);
+  const createdDate = new Date(content.createdAt).toLocaleDateString();
+
+  const metadataPills: string[] = [];
+  const pushPill = (value: unknown) => {
+    const text = asText(value);
+    if (text) metadataPills.push(`<span class="badge">${escapeHtml(text)}</span>`);
+  };
+
+  switch (templateType) {
+    case 'WARM_UP':
+      pushPill(asText(data.duration) || '5-10 min');
+      pushPill(data.focus);
+      break;
+    case 'WORKSHEET':
+      pushPill(data.topic);
+      break;
+    case 'ACTIVITY':
+      pushPill(data.duration);
+      pushPill(data.grouping);
+      break;
+    case 'HOMEWORK':
+      pushPill(data.estimatedTime);
+      break;
+  }
+
+  let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${escapeHtml(lessonData.title || content.title)}</title>
+      <style>
+        ${styles}
+        .weekly-shell {
+          background: #FFFFFF;
+          border: 1px solid #E5E7EB;
+          border-radius: 14px;
+          padding: 20px;
+        }
+        .weekly-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .weekly-list {
+          margin: 0;
+          padding-left: 20px;
+        }
+        .weekly-list li {
+          margin-bottom: 10px;
+        }
+        .weekly-card {
+          border: 1px solid #E5E7EB;
+          border-radius: 10px;
+          background: #F9FAFB;
+          padding: 12px 14px;
+          margin-bottom: 10px;
+        }
+        .weekly-answer {
+          margin-top: 8px;
+          padding: 8px 10px;
+          background: #ECFDF5;
+          border-left: 3px solid #10B981;
+          border-radius: 6px;
+          font-size: 10pt;
+          color: #065F46;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>${escapeHtml(lessonData.title || content.title)}</h1>
+        <div class="meta">
+          <span class="badge">${(content.subject || 'OTHER').replace('_', ' ')}</span>
+          <span>${templateLabel}</span>
+          <span>Grade: ${escapeHtml(content.gradeLevel || '')}</span>
+          <span>Created: ${createdDate}</span>
+        </div>
+      </div>
+      <div class="weekly-shell">
+        <div class="weekly-meta">
+          ${metadataPills.join('')}
+        </div>
+        ${summary ? `<div class="summary-box"><p>${textToHtml(summary)}</p></div>` : ''}
+  `;
+
+  if (templateType === 'WARM_UP') {
+    const instructions = asText(data.instructions) || asText(sectionByKeywords(lessonData, ['instructions', 'task'])?.content);
+    const questions = asArray(data.questions);
+    const fallbackQuestions = splitLines(sectionByKeywords(lessonData, ['warm-up', 'prompt', 'question'])?.content);
+    html += `
+      ${instructions ? `
+        <div class="section">
+          <h2 class="section-title"><span class="icon">🧭</span> Instructions</h2>
+          <p>${textToHtml(instructions)}</p>
+        </div>
+      ` : ''}
+      <div class="section">
+        <h2 class="section-title"><span class="icon">❓</span> Questions</h2>
+        ${questions.length > 0 ? `
+          <ol class="weekly-list">
+            ${questions.map((item, i) => {
+              const q = asRecord(item);
+              const question = asText(q.question) || asText(item);
+              const answer = asText(q.answer);
+              return `
+                <li>
+                  <div>${textToHtml(question) || `Question ${i + 1}`}</div>
+                  ${options.includeAnswers && answer ? `<div class="weekly-answer"><strong>Answer:</strong> ${textToHtml(answer)}</div>` : ''}
+                </li>
+              `;
+            }).join('')}
+          </ol>
+        ` : `
+          ${fallbackQuestions.length > 0
+            ? `<ol class="weekly-list">${fallbackQuestions.map((line) => `<li>${textToHtml(line)}</li>`).join('')}</ol>`
+            : '<p>No warm-up questions provided.</p>'}
+        `}
+      </div>
+    `;
+  }
+
+  if (templateType === 'WORKSHEET' || templateType === 'HOMEWORK') {
+    const instructions = asText(data.instructions) || asText(sectionByKeywords(lessonData, ['instructions'])?.content);
+    const problems = asArray(data.problems);
+    const fallbackProblems = splitLines(
+      sectionByKeywords(lessonData, ['practice', 'problem', 'assignment', 'questions'])?.content
+    );
+
+    html += `
+      ${instructions ? `
+        <div class="section">
+          <h2 class="section-title"><span class="icon">🧭</span> Instructions</h2>
+          <p>${textToHtml(instructions)}</p>
+        </div>
+      ` : ''}
+
+      <div class="section">
+        <h2 class="section-title"><span class="icon">✏️</span> Problems</h2>
+        ${problems.length > 0 ? `
+          ${problems.map((item, i) => {
+            const p = asRecord(item);
+            const number = asText(p.number) || String(i + 1);
+            const question = asText(p.question) || asText(item);
+            const difficulty = asText(p.difficulty);
+            const answer = asText(p.answer);
+            return `
+              <div class="weekly-card">
+                <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                  <strong>${escapeHtml(number)}.</strong>
+                  ${difficulty ? `<span class="badge">${escapeHtml(difficulty)}</span>` : ''}
+                </div>
+                <div>${textToHtml(question)}</div>
+                ${options.includeAnswers && answer ? `<div class="weekly-answer"><strong>Answer:</strong> ${textToHtml(answer)}</div>` : ''}
+              </div>
+            `;
+          }).join('')}
+        ` : `
+          ${fallbackProblems.length > 0
+            ? `<ol class="weekly-list">${fallbackProblems.map((line) => `<li>${textToHtml(line)}</li>`).join('')}</ol>`
+            : '<p>No problems provided.</p>'}
+        `}
+      </div>
+    `;
+
+    if (templateType === 'HOMEWORK') {
+      const parentNote = asText(data.parentNote) || asText(sectionByKeywords(lessonData, ['parent', 'family'])?.content);
+      if (parentNote) {
+        html += `
+          <div class="section">
+            <h2 class="section-title"><span class="icon">🏠</span> Parent Note</h2>
+            <p>${textToHtml(parentNote)}</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  if (templateType === 'ACTIVITY') {
+    const objective = asText(sectionByKeywords(lessonData, ['overview', 'objective'])?.content);
+    const materials = asArray(data.materials).map(asText).filter(Boolean);
+    const materialFallback = splitLines(sectionByKeywords(lessonData, ['materials'])?.content);
+    const instructions = orderedSteps(data.instructions);
+    const instructionFallback = orderedSteps(sectionByKeywords(lessonData, ['procedure', 'steps', 'instructions'])?.content);
+    const extensions = asText(data.extensions)
+      || asText(sectionByKeywords(lessonData, ['extension', 'differentiation'])?.content);
+
+    html += `
+      ${objective ? `
+        <div class="section">
+          <h2 class="section-title"><span class="icon">🎯</span> Activity Overview</h2>
+          <p>${textToHtml(objective)}</p>
+        </div>
+      ` : ''}
+      <div class="section">
+        <h2 class="section-title"><span class="icon">🧰</span> Materials</h2>
+        ${(materials.length > 0 || materialFallback.length > 0)
+          ? `<ul class="weekly-list">${(materials.length > 0 ? materials : materialFallback).map((line) => `<li>${textToHtml(line)}</li>`).join('')}</ul>`
+          : '<p>No materials listed.</p>'}
+      </div>
+      <div class="section">
+        <h2 class="section-title"><span class="icon">🪜</span> Step-by-Step Instructions</h2>
+        ${(instructions.length > 0 || instructionFallback.length > 0)
+          ? `<ol class="weekly-list">${(instructions.length > 0 ? instructions : instructionFallback).map((line) => `<li>${textToHtml(line)}</li>`).join('')}</ol>`
+          : '<p>No instructions provided.</p>'}
+      </div>
+      ${extensions ? `
+        <div class="section">
+          <h2 class="section-title"><span class="icon">🚀</span> Extensions</h2>
+          <p>${textToHtml(extensions)}</p>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  if (options.includeTeacherNotes && lessonData.teacherNotes) {
+    html += `
+      <div class="teacher-notes">
+        <h3>📋 Teacher Notes</h3>
+        <div class="content">${textToHtml(lessonData.teacherNotes)}</div>
+      </div>
+    `;
+  }
+
+  html += `
+      </div>
+      <div class="footer">
+        Generated by Orbit Learn • ${new Date().toLocaleDateString()}
+      </div>
+    </body>
+    </html>
+  `;
+
+  return html;
+}
+
 /**
  * Generate HTML for lesson content
  */
@@ -530,6 +855,11 @@ function generateLessonHTML(
   lessonData: LessonContent,
   options: ExportOptions
 ): string {
+  const weeklyTemplateType = normalizeWeeklyTemplateType(lessonData);
+  if (weeklyTemplateType) {
+    return generateWeeklyTemplateHTML(content, lessonData, options, weeklyTemplateType);
+  }
+
   const subject = (content.subject || 'OTHER') as Subject;
   const styles = getBaseStyles(subject, options.colorScheme);
 

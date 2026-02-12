@@ -2,17 +2,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { gradingService } from '../../services/teacher/gradingService.js';
 import { authenticateTeacher, requireTeacher } from '../../middleware/teacherAuth.js';
-import { requireTeacherPro } from '../../middleware/teacherPlanGate.js';
 import { validateInput } from '../../middleware/validateInput.js';
 import { z } from 'zod';
 import { queueGradingBatchJob } from '../../jobs/index.js';
 
 const router = Router();
 
-// All routes require teacher auth + Teacher Pro
+// All routes require teacher auth.
 router.use(authenticateTeacher);
 router.use(requireTeacher);
-router.use(requireTeacherPro);
 
 // ============================================
 // VALIDATION SCHEMAS

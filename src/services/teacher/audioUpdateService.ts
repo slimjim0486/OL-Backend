@@ -3,8 +3,7 @@
 import { genAI } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { prisma } from '../../config/database.js';
-import { AudioStatus, TokenOperation, TeacherAudioUpdate } from '@prisma/client';
-import { quotaService } from './quotaService.js';
+import { AudioStatus, TeacherAudioUpdate } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 import { uploadFile } from '../storage/storageService.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -88,9 +87,8 @@ export const audioUpdateService = {
     teacherId: string,
     input: GenerateAudioScriptInput
   ): Promise<GeneratedScript> {
-    // Check quota
+    // Estimate tokens for logging and fallback usage metadata.
     const estimatedTokens = 7500; // ~75 credits for audio update
-    await quotaService.enforceQuota(teacherId, TokenOperation.AUDIO_UPDATE, estimatedTokens);
 
     logger.info('Generating audio update script', {
       teacherId,
@@ -163,15 +161,6 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
         script: string;
         estimatedDurationSeconds: number;
       };
-
-      // Record usage
-      await quotaService.recordUsage({
-        teacherId,
-        operation: TokenOperation.AUDIO_UPDATE,
-        tokensUsed,
-        modelUsed: config.gemini.models.flash,
-        resourceType: 'audio_script',
-      });
 
       return {
         title: parsed.title,

@@ -2,7 +2,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { audioUpdateService } from '../../services/teacher/audioUpdateService.js';
 import { authenticateTeacher, requireTeacher } from '../../middleware/teacherAuth.js';
-import { requireTeacherPro } from '../../middleware/teacherPlanGate.js';
 import { validateInput } from '../../middleware/validateInput.js';
 import { z } from 'zod';
 import { AudioStatus } from '@prisma/client';
@@ -76,9 +75,6 @@ router.get(
     });
   }
 );
-
-// Everything below is a Teacher Pro feature.
-router.use(requireTeacherPro);
 
 /**
  * GET /api/teacher/audio-updates
