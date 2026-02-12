@@ -1,6 +1,6 @@
 // Teacher Content routes - CRUD operations for lessons, quizzes, flashcards
 import { Router, Request, Response, NextFunction } from 'express';
-import { contentService, quotaService } from '../../services/teacher/index.js';
+import { contentService, quotaService, weeklyPrepService } from '../../services/teacher/index.js';
 import { contentGenerationService } from '../../services/teacher/contentGenerationService.js';
 import { geminiService } from '../../services/ai/geminiService.js';
 import { authenticateTeacher, requireTeacher } from '../../middleware/teacherAuth.js';
@@ -70,6 +70,15 @@ const listContentQuerySchema = z.object({
 const updateStatusSchema = z.object({
   status: z.nativeEnum(ContentStatus),
 });
+
+const WEEKLY_PREP_MATERIAL_MARKER_RE = /weekly_prep_material_id:([0-9a-f-]+)/i;
+
+function extractWeeklyPrepMaterialIdFromContent(content: { extractedText?: string | null }): string | null {
+  const extracted = String(content?.extractedText || '');
+  if (!extracted) return null;
+  const match = extracted.match(WEEKLY_PREP_MATERIAL_MARKER_RE);
+  return match?.[1] || null;
+}
 
 // ============================================
 // ROUTES
@@ -268,6 +277,55 @@ router.get(
           contentId: content?.id,
           content: content || null,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/content/:id/approve-weekly-prep
+ * Approve the linked weekly prep material (if present) and publish content
+ */
+router.post(
+  '/:id/approve-weekly-prep',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = req.teacher!.id;
+      const content = await contentService.getContentById(req.params.id, teacherId);
+
+      if (!content) {
+        res.status(404).json({
+          success: false,
+          error: 'Content not found',
+        });
+        return;
+      }
+
+      const materialId = extractWeeklyPrepMaterialIdFromContent(content);
+      if (!materialId) {
+        res.status(400).json({
+          success: false,
+          code: 'NOT_WEEKLY_PREP_CONTENT',
+          error: 'This lesson is not linked to a weekly prep material.',
+        });
+        return;
+      }
+
+      await weeklyPrepService.approveMaterial(materialId, teacherId);
+
+      const updatedContent =
+        content.status === ContentStatus.PUBLISHED
+          ? content
+          : await contentService.updateStatus(content.id, teacherId, ContentStatus.PUBLISHED);
+
+      res.json({
+        success: true,
+        data: updatedContent,
+        message: 'Lesson approved and synced with weekly prep.',
       });
     } catch (error) {
       next(error);
