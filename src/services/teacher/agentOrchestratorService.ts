@@ -48,11 +48,13 @@ interface SessionWithMessages extends AgentChatSession {
 
 const MAX_HISTORY_FOR_CONTEXT = 20;
 const CALENDAR_REDIRECT_USER_INTENT_PATTERNS = [
-  /\b(?:take\s+me\s+to|go\s+to|open|show\s+me|bring\s+me\s+to|navigate\s+to)\s+(?:my|the)?\s*(?:weekly\s+prep\s*)?(?:calendar|schedule)\b/i,
-  /\blet\s+me\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:calendar|schedule)\b/i,
-  /\b(?:can|could)\s+i\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:calendar|schedule)\b/i,
-  /\b(?:put|add)\s+(?:it|this|that|these|those)?\s*(?:on|to)\s+(?:my|the)?\s*(?:calendar|schedule)\b/i,
+  /\b(?:take\s+me\s+to|go\s+to|open|show(?:\s+me)?|bring\s+me\s+to|navigate\s+to)\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:weekly\s+prep\s*)?(?:calendar|schedule)\b/i,
+  /\blet\s+me\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
+  /\b(?:can|could)\s+i\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
+  /\b(?:put|add)\s+(?:it|this|that|these|those)?\s*(?:on|to)\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
 ];
+const CALENDAR_FORCE_FRESH_HINT_RE = /\b(?:new|fresh|another|next)\b/i;
+const CALENDAR_WEEK_REFERENCE_RE = /\bweek(?:\s*#?\s*)?\d+\b/i;
 
 function toSessionTitleFromFirstPrompt(prompt: string): string {
   const normalized = String(prompt || '')
@@ -96,6 +98,13 @@ function isDirectCalendarNavigationRequest(message: string): boolean {
   return CALENDAR_REDIRECT_USER_INTENT_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+function shouldForceFreshCalendarPrep(message: string): boolean {
+  const text = String(message || '').trim();
+  if (!text) return false;
+  if (!/\b(?:calendar|schedule)\b/i.test(text)) return false;
+  return CALENDAR_FORCE_FRESH_HINT_RE.test(text) || CALENDAR_WEEK_REFERENCE_RE.test(text);
+}
+
 function extractWeeklyPrepIdFromActionResult(actionResult: Prisma.JsonValue | null | undefined): string | null {
   if (!actionResult || typeof actionResult !== 'object' || Array.isArray(actionResult)) return null;
   const obj = actionResult as Record<string, any>;
@@ -129,16 +138,19 @@ function findRecentSessionWeeklyPrepId(messages: AgentChatMessage[]): string | n
 
 async function buildCalendarNavigationActionResult(
   teacherId: string,
-  sessionMessages: AgentChatMessage[]
+  sessionMessages: AgentChatMessage[],
+  message: string
 ): Promise<NonNullable<AgentResponse['actionResult']>> {
-  const existingPrepId = findRecentSessionWeeklyPrepId(sessionMessages);
-  if (existingPrepId) {
-    return {
-      type: 'weekly_prep',
-      content: { prepId: existingPrepId },
-      preview: 'Opening your calendar now.',
-      contentId: existingPrepId,
-    };
+  if (!shouldForceFreshCalendarPrep(message)) {
+    const existingPrepId = findRecentSessionWeeklyPrepId(sessionMessages);
+    if (existingPrepId) {
+      return {
+        type: 'weekly_prep',
+        content: { prepId: existingPrepId },
+        preview: 'Opening your calendar now.',
+        contentId: existingPrepId,
+      };
+    }
   }
 
   const { prepId, weekLabel } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
@@ -256,7 +268,7 @@ async function processMessage(
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
   } else if (isDirectCalendarNavigationRequest(message)) {
-    actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages);
+    actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message);
     assistantContent = 'Opening your calendar now.';
     intent = { type: 'open_calendar', confidence: 1, extractedParams: {} };
     totalTokens = 0;
@@ -280,7 +292,7 @@ async function processMessage(
 
     // 7. Route to handler
     if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
-      actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages);
+      actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message);
       assistantContent = 'Opening your calendar now.';
     } else if (intent.type !== 'chat' && intent.confidence >= 0.6) {
       // Content generation intent

@@ -37,7 +37,7 @@ export interface TaskIntent {
 const CLASSIFICATION_PROMPT = `You are an intent classifier for a teacher AI assistant. Given a teacher's message, classify the intent into one of these categories:
 
 - chat: General conversation, questions about teaching, advice, or anything that doesn't require content generation
-- open_calendar: User wants to open/view the calendar or schedule view (keywords: open calendar, show my schedule, let me see it on calendar)
+- open_calendar: User wants to open/view the calendar or schedule view (keywords: open calendar, show my schedule, let me see it on calendar, take me to week 9 calendar, open new calendar)
 - generate_lesson: Create a lesson plan (keywords: lesson, plan, teach, unit)
 - generate_quiz: Create a quiz or test (keywords: quiz, test, assessment, questions)
 - generate_flashcards: Create flashcards (keywords: flashcards, review cards, study cards)
@@ -82,8 +82,18 @@ const VALID_INTENTS: Set<IntentType> = new Set([
   'unknown',
 ]);
 
-const OPEN_CALENDAR_HEURISTIC_RE =
-  /\b(?:take\s+me\s+to|go\s+to|open|show\s+me|bring\s+me\s+to|navigate\s+to)\s+(?:my|the)?\s*(?:weekly\s+prep\s*)?(?:calendar|schedule)\b|\blet\s+me\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:calendar|schedule)\b|\b(?:can|could)\s+i\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:calendar|schedule)\b|\b(?:put|add)\s+(?:it|this|that|these|those)?\s*(?:on|to)\s+(?:my|the)?\s*(?:calendar|schedule)\b/i;
+const OPEN_CALENDAR_HEURISTIC_PATTERNS: RegExp[] = [
+  /\b(?:take\s+me\s+to|go\s+to|open|show(?:\s+me)?|bring\s+me\s+to|navigate\s+to)\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:weekly\s+prep\s*)?(?:calendar|schedule)\b/i,
+  /\blet\s+me\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
+  /\b(?:can|could)\s+i\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
+  /\b(?:put|add)\s+(?:it|this|that|these|those)?\s*(?:on|to)\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
+];
+
+function isCalendarNavigationRequest(message: string): boolean {
+  const text = String(message || '').trim();
+  if (!text) return false;
+  return OPEN_CALENDAR_HEURISTIC_PATTERNS.some((pattern) => pattern.test(text));
+}
 
 function parseIntentJson(raw: string): any {
   const text = String(raw || '').trim();
@@ -98,8 +108,7 @@ function parseIntentJson(raw: string): any {
 }
 
 function heuristicIntent(message: string, reason: string): TaskIntent {
-  const text = String(message || '');
-  if (OPEN_CALENDAR_HEURISTIC_RE.test(text)) {
+  if (isCalendarNavigationRequest(message)) {
     return {
       type: 'open_calendar',
       confidence: 0.8,
