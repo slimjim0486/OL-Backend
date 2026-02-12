@@ -47,6 +47,8 @@ interface SessionWithMessages extends AgentChatSession {
 }
 
 const MAX_HISTORY_FOR_CONTEXT = 20;
+const CALENDAR_REDIRECT_USER_INTENT_RE =
+  /\b(?:take\s+me\s+to|go\s+to|open|show\s+me)\s+(?:my|the)?\s*(?:weekly\s+prep\s*)?(?:calendar|schedule)\b/i;
 
 function toSessionTitleFromFirstPrompt(prompt: string): string {
   const normalized = String(prompt || '')
@@ -82,6 +84,12 @@ function describeMode(mode: PlanningAutonomy): { title: string; description: str
           'I can generate weekly prep automatically on your schedule. You still review and approve materials.',
       };
   }
+}
+
+function isDirectCalendarNavigationRequest(message: string): boolean {
+  const text = String(message || '').trim();
+  if (!text) return false;
+  return CALENDAR_REDIRECT_USER_INTENT_RE.test(text);
 }
 
 async function maybeHandleSlashCommand(
@@ -184,6 +192,10 @@ async function processMessage(
     assistantContent = commandResult.assistantContent;
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
+  } else if (isDirectCalendarNavigationRequest(message)) {
+    assistantContent = 'Opening your calendar now.';
+    intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    totalTokens = 0;
   } else {
     // 5. Assemble context
     const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
