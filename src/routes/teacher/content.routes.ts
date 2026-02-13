@@ -1398,6 +1398,41 @@ router.post(
           contentType: TeacherContentType.FLASHCARD_DECK,
           flashcardContent: flashcards as unknown as Record<string, unknown>,
         };
+      } else if (
+        input.materialType === 'WARM_UP' ||
+        input.materialType === 'WORKSHEET' ||
+        input.materialType === 'ACTIVITY' ||
+        input.materialType === 'HOMEWORK'
+      ) {
+        const contextNote = [
+          contentSource,
+          input.differentiation ? `Differentiation Focus: ${input.differentiation}` : '',
+        ].filter(Boolean).join('\n\n');
+
+        const generated = await weeklyPrepService.generateSingleMaterial(
+          {
+            materialType: input.materialType,
+            title: input.title,
+            subject: input.subject || 'GENERAL',
+            planContext: {
+              topic: input.topic,
+              standards: input.standards || [],
+              notes: contextNote,
+            },
+          },
+          teacherId
+        );
+
+        const worksheetLike = input.materialType === 'WORKSHEET' || input.materialType === 'HOMEWORK';
+        createPayload = {
+          ...createPayload,
+          contentType: worksheetLike ? TeacherContentType.WORKSHEET : TeacherContentType.LESSON,
+          lessonContent: {
+            ...(generated.content as Record<string, unknown>),
+            weeklyMaterialType: input.materialType,
+            weeklyTemplateVersion: 'v1',
+          },
+        };
       } else {
         const templateStructure = buildTemplateStructureForWeeklyMaterial(input.materialType);
         const lesson = await contentGenerationService.generateLesson(teacherId, {
