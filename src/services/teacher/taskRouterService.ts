@@ -2,6 +2,7 @@
 import { genAI, TEACHER_CONTENT_SAFETY_SETTINGS } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
+import { detectPlannerNavigationIntent } from './plannerNavigationIntent.js';
 
 // ============================================
 // TYPES
@@ -37,7 +38,7 @@ export interface TaskIntent {
 const CLASSIFICATION_PROMPT = `You are an intent classifier for a teacher AI assistant. Given a teacher's message, classify the intent into one of these categories:
 
 - chat: General conversation, questions about teaching, advice, or anything that doesn't require content generation
-- open_calendar: User wants to open/view the calendar or schedule view (keywords: open calendar, show my schedule, let me see it on calendar, take me to week 9 calendar, open new calendar)
+- open_calendar: User wants to open/view the calendar, planner, weekly prep, or schedule view (keywords: open calendar, show my schedule, open planner, open weekly prep, let me see it on calendar, take me to week 9 calendar, open new calendar)
 - generate_lesson: Create a lesson plan (keywords: lesson, plan, teach, unit)
 - generate_quiz: Create a quiz or test (keywords: quiz, test, assessment, questions)
 - generate_flashcards: Create flashcards (keywords: flashcards, review cards, study cards)
@@ -82,19 +83,6 @@ const VALID_INTENTS: Set<IntentType> = new Set([
   'unknown',
 ]);
 
-const OPEN_CALENDAR_HEURISTIC_PATTERNS: RegExp[] = [
-  /\b(?:take\s+me\s+to|go\s+to|open|show(?:\s+me)?|bring\s+me\s+to|navigate\s+to)\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:weekly\s+prep\s*)?(?:calendar|schedule)\b/i,
-  /\blet\s+me\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
-  /\b(?:can|could)\s+i\s+see(?:\s+it)?(?:\s+(?:on|in))?\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
-  /\b(?:put|add)\s+(?:it|this|that|these|those)?\s*(?:on|to)\s+(?:my|the)?\s*(?:new|next|fresh)?\s*(?:week(?:\s*#?\s*\d+)?\s*)?(?:calendar|schedule)\b/i,
-];
-
-function isCalendarNavigationRequest(message: string): boolean {
-  const text = String(message || '').trim();
-  if (!text) return false;
-  return OPEN_CALENDAR_HEURISTIC_PATTERNS.some((pattern) => pattern.test(text));
-}
-
 function parseIntentJson(raw: string): any {
   const text = String(raw || '').trim();
   if (!text) throw new Error('Empty classifier response');
@@ -108,12 +96,13 @@ function parseIntentJson(raw: string): any {
 }
 
 function heuristicIntent(message: string, reason: string): TaskIntent {
-  if (isCalendarNavigationRequest(message)) {
+  const navigationIntent = detectPlannerNavigationIntent(message);
+  if (navigationIntent.isNavigation) {
     return {
       type: 'open_calendar',
-      confidence: 0.8,
+      confidence: navigationIntent.forceFresh ? 0.86 : 0.8,
       extractedParams: {},
-      reasoning: reason,
+      reasoning: `${reason}; detected planner navigation phrasing`,
     };
   }
   return {
@@ -157,9 +146,23 @@ async function classifyIntent(
     const parsed = parseIntentJson(text);
     const rawType = String(parsed.type || 'chat') as IntentType;
     const type: IntentType = VALID_INTENTS.has(rawType) ? rawType : 'chat';
+    const confidence = Math.min(1, Math.max(0, parsed.confidence || 0.5));
+    const navigationIntent = detectPlannerNavigationIntent(message);
+
+    if (navigationIntent.isNavigation && (type === 'chat' || type === 'unknown')) {
+      return {
+        type: 'open_calendar',
+        confidence: Math.max(confidence, navigationIntent.forceFresh ? 0.88 : 0.82),
+        extractedParams: parsed.extractedParams || {},
+        reasoning:
+          parsed.reasoning ||
+          'Classifier returned chat/unknown, but navigation intent detector matched planner request',
+      };
+    }
+
     return {
       type,
-      confidence: Math.min(1, Math.max(0, parsed.confidence || 0.5)),
+      confidence,
       extractedParams: parsed.extractedParams || {},
       reasoning: parsed.reasoning,
     };
