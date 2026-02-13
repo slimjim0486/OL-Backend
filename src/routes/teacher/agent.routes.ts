@@ -3,7 +3,16 @@
  */
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { Subject, CurriculumType, AgentTone, PlanningAutonomy } from '@prisma/client';
+import {
+  Subject,
+  CurriculumType,
+  AgentTone,
+  PlanningAutonomy,
+  ReviewType,
+  ReviewStatus,
+  MessageRole,
+  AgentInteractionType,
+} from '@prisma/client';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
 import { agentMemoryService } from '../../services/teacher/agentMemoryService.js';
 import { agentOnboardingService } from '../../services/teacher/agentOnboardingService.js';
@@ -15,9 +24,10 @@ import { weeklyPrepAudioService } from '../../services/teacher/weeklyPrepAudioSe
 import { standardsAnalysisService } from '../../services/teacher/standardsAnalysisService.js';
 import { reviewSummaryService } from '../../services/teacher/reviewSummaryService.js';
 import { exportYearEndHandoverPDF } from '../../services/teacher/handoverExportService.js';
+import { lessonReviewService } from '../../services/teacher/lessonReviewService.js';
 import { queueWeeklyPrep } from '../../jobs/index.js';
+import { prisma } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
-import { ReviewType, ReviewStatus } from '@prisma/client';
 import { requireTeacherTier } from '../../middleware/teacherPlanGate.js';
 
 const router = Router();
@@ -103,6 +113,15 @@ const createSessionSchema = z.object({
 
 const sendMessageSchema = z.object({
   content: z.string().min(1, 'Message is required'),
+});
+
+const lessonReviewSchema = z.object({
+  filename: z.string().max(255).optional(),
+  lessonText: z.string().min(200, 'Lesson text is required').max(120000),
+  title: z.string().max(255).optional(),
+  subject: z.string().max(80).optional(),
+  gradeLevel: z.string().max(20).optional(),
+  teacherNotes: z.string().max(3000).optional(),
 });
 
 const feedbackSchema = z.object({
@@ -454,6 +473,110 @@ router.post(
         content
       );
       res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Review an uploaded lesson (rubric report) and post the result into the chat session
+router.post(
+  '/chat/sessions/:id/review-lesson',
+  validateBody(lessonReviewSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = (req as any).teacher.id;
+      const sessionId = req.params.id;
+      const agent = await agentMemoryService.getAgent(teacherId);
+      if (!agent) return res.status(404).json({ error: 'Agent not found' });
+      if (!agent.onboardingComplete) {
+        return res.status(400).json({ error: 'Please complete onboarding before using chat.' });
+      }
+
+      const session = await prisma.agentChatSession.findFirst({
+        where: { id: sessionId, agentId: agent.id },
+        select: { id: true, title: true },
+      });
+      if (!session) return res.status(404).json({ error: 'Session not found' });
+
+      const { filename, lessonText, title, subject, gradeLevel, teacherNotes } = req.body;
+
+      const safeLabel = String(title || filename || 'uploaded lesson').trim();
+      const userContent = `Review my lesson: ${safeLabel || 'uploaded lesson'}`;
+
+      // Store user message (we don't store the full extracted text in chat)
+      await prisma.agentChatMessage.create({
+        data: {
+          sessionId,
+          role: MessageRole.USER,
+          content: userContent,
+        },
+      });
+
+      const review = await lessonReviewService.reviewLesson(teacherId, {
+        lessonText,
+        title,
+        subject,
+        gradeLevel,
+        teacherNotes,
+      });
+
+      const interaction = await agentMemoryService.recordInteraction(agent.id, {
+        type: AgentInteractionType.CONTENT_GENERATION,
+        summary: `Lesson review: ${safeLabel || 'uploaded lesson'}`.slice(0, 200),
+        input: userContent,
+        outputType: 'lesson_review',
+        tokensUsed: review.tokensUsed,
+        modelUsed: review.modelUsed,
+      });
+
+      const actionResult = {
+        type: 'lesson_review',
+        content: {
+          filename: filename || null,
+          title: title || null,
+          subject: subject || null,
+          gradeLevel: gradeLevel || null,
+          report: review.report,
+        },
+        preview: `Rubric review ready for ${safeLabel || 'your lesson'}.`,
+        interactionId: interaction.id,
+      };
+
+      const assistantMessage = await prisma.agentChatMessage.create({
+        data: {
+          sessionId,
+          role: MessageRole.ASSISTANT,
+          content: review.markdown,
+          actionType: 'lesson_review',
+          actionResult: actionResult as any,
+          actionStatus: 'completed',
+          model: review.modelUsed,
+          tokens: review.tokensUsed,
+        },
+      });
+
+      const nextTitle =
+        session.title ||
+        (safeLabel ? `Review: ${safeLabel}`.replace(/\s+/g, ' ').trim().slice(0, 60) : null);
+
+      await prisma.agentChatSession.update({
+        where: { id: sessionId },
+        data: {
+          totalTokens: { increment: review.tokensUsed },
+          ...(nextTitle && !session.title ? { title: nextTitle } : {}),
+        },
+      });
+
+      res.json({
+        success: true,
+        message: review.markdown,
+        sessionId,
+        messageId: assistantMessage.id,
+        interactionId: interaction.id,
+        actionResult,
+        tokensUsed: review.tokensUsed,
+      });
     } catch (error) {
       next(error);
     }
