@@ -1,5 +1,5 @@
 // Curriculum Configuration for Jeffrey AI Tutor
-// Based on educational systems research for K-8 teaching characteristics
+// Based on educational systems research for K-12 teaching characteristics
 
 import { CurriculumType, AgeGroup } from '@prisma/client';
 

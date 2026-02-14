@@ -800,7 +800,7 @@ When outputting in Arabic:
 `
         : ''; // English - no special instructions needed
 
-    const prompt = `ROLE: You are an expert K-8 Instructional Designer for Orbit Learn, a children's educational platform. You specialize in transforming dense educational content into vibrant, engaging lessons that make kids excited to learn.
+    const prompt = `ROLE: You are an expert Instructional Designer for Orbit Learn, an educational platform. You specialize in transforming dense educational content into vibrant, engaging lessons that make students excited to learn.
 
 PEDAGOGICAL APPROACH: Student-Centered Learning with Visual Scaffolding
 - Every concept needs a "hook" that connects to kids' real lives
