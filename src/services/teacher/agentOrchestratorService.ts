@@ -116,6 +116,16 @@ function findRecentSessionWeeklyPrepId(messages: AgentChatMessage[]): string | n
   return null;
 }
 
+function buildExportHelpMessage(): string {
+  return (
+    `To find and export your lesson plans/slides in Orbit Learn:\n` +
+    `1. Go to **Teacher Portal → Content**.\n` +
+    `2. Open the lesson you want.\n` +
+    `3. Use **Export** to download **PDF** or **PowerPoint (PPTX slides)**.\n\n` +
+    `Tell me the lesson title (or paste the first few words), and I can help you locate the right one.`
+  );
+}
+
 async function buildCalendarNavigationActionResult(
   teacherId: string,
   sessionMessages: AgentChatMessage[],
@@ -281,7 +291,10 @@ async function processMessage(
     if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
       actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message);
       assistantContent = 'Opening your calendar now.';
-    } else if (intent.type !== 'chat' && intent.confidence >= 0.6) {
+    } else if (intent.type === 'export' && intent.confidence >= 0.6) {
+      assistantContent = buildExportHelpMessage();
+      totalTokens = 0;
+    } else if (intent.type !== 'chat' && intent.type !== 'export' && intent.type !== 'unknown' && intent.confidence >= 0.6) {
       // Content generation intent
       try {
         const bridgeResult = await routeToContentBridge(teacherId, intent);

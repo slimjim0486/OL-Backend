@@ -83,16 +83,49 @@ const VALID_INTENTS: Set<IntentType> = new Set([
   'unknown',
 ]);
 
-function parseIntentJson(raw: string): any {
-  const text = String(raw || '').trim();
-  if (!text) throw new Error('Empty classifier response');
-  try {
-    return JSON.parse(text);
-  } catch {
-    const block = text.match(/\{[\s\S]*\}/);
-    if (!block) throw new Error('No JSON object found in classifier response');
-    return JSON.parse(block[0]);
+function extractJSON(text: string): string {
+  const normalized = String(text || '').replace(/^\uFEFF/, '').trim();
+  if (!normalized) return normalized;
+
+  const jsonBlockMatch = normalized.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (jsonBlockMatch) {
+    return jsonBlockMatch[1].trim();
   }
+
+  const jsonObjectMatch = normalized.match(/\{[\s\S]*\}/);
+  if (jsonObjectMatch) {
+    return jsonObjectMatch[0].trim();
+  }
+
+  return normalized;
+}
+
+function repairJSON(jsonLike: string): string {
+  // Common model bug: trailing commas.
+  return String(jsonLike || '').replace(/,\s*([}\]])/g, '$1');
+}
+
+function parseIntentJson(raw: string): any | null {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+
+  const candidates = [text, extractJSON(text)];
+  for (const candidate of candidates) {
+    for (const variant of [candidate, repairJSON(candidate)]) {
+      try {
+        const parsed = JSON.parse(variant);
+        if (Array.isArray(parsed)) {
+          const firstObj = parsed.find((x) => x && typeof x === 'object' && !Array.isArray(x));
+          if (firstObj) return firstObj;
+        }
+        if (parsed && typeof parsed === 'object') return parsed;
+      } catch {
+        // continue
+      }
+    }
+  }
+
+  return null;
 }
 
 function heuristicIntent(message: string, reason: string): TaskIntent {
@@ -113,12 +146,162 @@ function heuristicIntent(message: string, reason: string): TaskIntent {
   };
 }
 
+function wordCount(message: string): number {
+  const normalized = String(message || '').trim();
+  if (!normalized) return 0;
+  return normalized.split(/\s+/).filter(Boolean).length;
+}
+
+function extractBasicParams(message: string): Record<string, any> {
+  const text = String(message || '').trim();
+  const lower = text.toLowerCase();
+  const params: Record<string, any> = {};
+
+  // Grade level
+  const gradeMatch = lower.match(/\b(?:grade|gr)\s*(\d{1,2})\b/);
+  if (gradeMatch) {
+    params.gradeLevel = gradeMatch[1];
+  } else if (/\bkindergarten\b/.test(lower)) {
+    params.gradeLevel = 'K';
+  }
+
+  // Count (questions/cards/etc.)
+  const countMatch = lower.match(/\b(\d{1,2})\s+(?:question|questions|cards|flashcards|items|problems)\b/);
+  if (countMatch) {
+    params.count = Number(countMatch[1]);
+  }
+
+  // Difficulty
+  if (/\b(?:easy|beginner)\b/.test(lower)) params.difficulty = 'easy';
+  else if (/\b(?:hard|challenging|advanced)\b/.test(lower)) params.difficulty = 'hard';
+  else if (/\b(?:medium|intermediate)\b/.test(lower)) params.difficulty = 'medium';
+
+  // Subject
+  const subjectMap: Array<[RegExp, string]> = [
+    [/\b(?:math|mathematics|maths)\b/, 'MATH'],
+    [/\b(?:science)\b/, 'SCIENCE'],
+    [/\b(?:english|ela|language arts|reading|writing|literature)\b/, 'ENGLISH'],
+    [/\b(?:social studies|history|geography|civics)\b/, 'SOCIAL_STUDIES'],
+    [/\b(?:arabic)\b/, 'ARABIC'],
+    [/\b(?:islamic studies|quran)\b/, 'ISLAMIC_STUDIES'],
+  ];
+  for (const [pattern, value] of subjectMap) {
+    if (pattern.test(lower)) {
+      params.subject = value;
+      break;
+    }
+  }
+
+  // Topic (best-effort for short requests)
+  const topic = lower
+    .replace(/\b(?:create|make|generate|draft|write|build|plan)\b/g, ' ')
+    .replace(/\b(?:a|an|the|please)\b/g, ' ')
+    .replace(/\b(?:quiz|test|assessment|exit ticket|exam|flashcards?|lesson|sub plan|substitute|iep|audio|podcast|email|report)\b/g, ' ')
+    .replace(/\b(?:on|about|for|of)\b/g, ' ')
+    .replace(/\b(?:grade|gr)\s*\d{1,2}\b/g, ' ')
+    .replace(/\bkindergarten\b/g, ' ')
+    .replace(/\b\d{1,2}\s+(?:question|questions|cards|flashcards|items|problems)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (topic) {
+    params.topic = topic;
+  }
+
+  return params;
+}
+
+function ruleBasedIntent(message: string): TaskIntent | null {
+  const trimmed = String(message || '').trim();
+  if (!trimmed) {
+    return {
+      type: 'chat',
+      confidence: 0.2,
+      extractedParams: {},
+      reasoning: 'Empty message',
+    };
+  }
+
+  const navigationIntent = detectPlannerNavigationIntent(trimmed);
+  if (navigationIntent.isNavigation) {
+    return {
+      type: 'open_calendar',
+      confidence: navigationIntent.forceFresh ? 0.86 : 0.8,
+      extractedParams: {},
+      reasoning: 'Detected planner navigation phrasing',
+    };
+  }
+
+  // Ultra-common: short replies that are almost always follow-ups. Skip the classifier for these,
+  // and let the chat model interpret the reply with conversation context.
+  const wc = wordCount(trimmed);
+  const isBrief = wc <= 4 && trimmed.length <= 40;
+  const isShortFollowUp = wc <= 4 && trimmed.length <= 20;
+  if (isShortFollowUp) {
+    // But don't skip if it's an obvious request keyword.
+    if (!/\b(?:quiz|test|assessment|flashcard|lesson|iep|sub(?:stitute)?|weekly prep|export|download|pdf|pptx|powerpoint|slides)\b/i.test(trimmed)) {
+      return {
+        type: 'chat',
+        confidence: 0.35,
+        extractedParams: {},
+        reasoning: 'Short/ambiguous reply; skipped classifier',
+      };
+    }
+    // else fall through to keyword heuristics below
+  }
+
+  // Keyword heuristics to avoid unnecessary classifier calls and reduce "classification failed" noise.
+  {
+    const lower = trimmed.toLowerCase();
+    const hasExportKeyword = /\b(?:export|download|pdf|pptx|powerpoint|print)\b/i.test(lower);
+    const hasSlidesNoun = /\bslides?\b/i.test(lower);
+    const hasFindVerb = /\b(?:where|find|locate|located|access)\b/i.test(lower);
+    if (hasExportKeyword || (hasSlidesNoun && hasFindVerb)) {
+      return { type: 'export', confidence: 0.72, extractedParams: {}, reasoning: 'Matched export/download heuristic' };
+    }
+  }
+  if (/\b(?:weekly prep|plan (?:my|the) week|plan for next week|next week|this week)\b/i.test(trimmed)) {
+    return { type: 'weekly_prep', confidence: 0.72, extractedParams: {}, reasoning: 'Matched weekly planning heuristic' };
+  }
+  if (isBrief && /\b(?:quiz|test|assessment|exit ticket|exam)\b/i.test(trimmed)) {
+    return { type: 'generate_quiz', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief quiz keyword heuristic' };
+  }
+  if (isBrief && /\b(?:flashcards?|review cards?|study cards?)\b/i.test(trimmed)) {
+    return { type: 'generate_flashcards', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief flashcards keyword heuristic' };
+  }
+  if (isBrief && /\b(?:sub plan|substitute|cover my class|covering|absence)\b/i.test(trimmed)) {
+    return { type: 'generate_sub_plan', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief substitute keyword heuristic' };
+  }
+  if (isBrief && /\b(?:iep|accommodations?|present levels|special education)\b/i.test(trimmed)) {
+    return { type: 'generate_iep', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief IEP keyword heuristic' };
+  }
+  if (isBrief && /\b(?:audio|podcast|parent update)\b/i.test(trimmed)) {
+    return { type: 'generate_audio', confidence: 0.68, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief audio keyword heuristic' };
+  }
+  if (isBrief && /\b(?:email (?:to )?parents?|parent letter|parent communication)\b/i.test(trimmed)) {
+    return { type: 'generate_parent_email', confidence: 0.68, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief parent email keyword heuristic' };
+  }
+  if (isBrief && /\b(?:report card|progress report|report comments|student comments)\b/i.test(trimmed)) {
+    return { type: 'generate_report_comments', confidence: 0.68, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief report comments keyword heuristic' };
+  }
+  if (isBrief && /\b(?:pacing|standards|covered|taught today|curriculum)\b/i.test(trimmed)) {
+    return { type: 'update_curriculum', confidence: 0.62, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief curriculum update keyword heuristic' };
+  }
+  if (isBrief && /\b(?:lesson plan|lesson|unit plan|teach(?:ing)? plan)\b/i.test(trimmed)) {
+    return { type: 'generate_lesson', confidence: 0.62, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief lesson keyword heuristic' };
+  }
+
+  return null;
+}
+
 async function classifyIntent(
   message: string,
   recentMessages?: Array<{ role: string; content: string }>,
   agentContext?: string
 ): Promise<TaskIntent> {
   try {
+    const fast = ruleBasedIntent(message);
+    if (fast) return fast;
+
     const model = genAI.getGenerativeModel({
       model: config.gemini.models.flash,
       safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
@@ -144,6 +327,9 @@ async function classifyIntent(
     const text = result.response.text().trim();
 
     const parsed = parseIntentJson(text);
+    if (!parsed) {
+      return heuristicIntent(message, 'Classifier response was not parseable; used heuristic fallback');
+    }
     const rawType = String(parsed.type || 'chat') as IntentType;
     const type: IntentType = VALID_INTENTS.has(rawType) ? rawType : 'chat';
     const confidence = Math.min(1, Math.max(0, parsed.confidence || 0.5));
