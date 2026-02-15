@@ -112,10 +112,20 @@ async function runScheduledWeeklyPreps(): Promise<void> {
       if (!isWithinWindow(day, time, tz)) continue;
 
       try {
-        const { prepId, weekLabel } = await weeklyPrepService.initiateWeeklyPrep(
+        const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(
           agent.teacherId,
           { triggeredBy: 'scheduled' }
         );
+
+        // If a prep already exists for the upcoming week, don't re-queue the same job.
+        if (existed) {
+          logger.debug('Scheduled weekly prep already exists; skipping queue', {
+            teacherId: agent.teacherId,
+            prepId,
+            weekLabel,
+          });
+          continue;
+        }
 
         await queueWeeklyPrep({
           prepId,
@@ -130,7 +140,7 @@ async function runScheduledWeeklyPreps(): Promise<void> {
           weekLabel,
         });
       } catch (error) {
-        // initiateWeeklyPrep throws if a prep already exists for this week — that's expected
+        // Most failures here should be logged; existing-week dedupe is handled by initiateWeeklyPrep + existed flag.
         const msg = error instanceof Error ? error.message : String(error);
         if (!msg.includes('already exists')) {
           logger.error('Failed to trigger scheduled weekly prep', {

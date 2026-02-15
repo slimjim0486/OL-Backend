@@ -294,6 +294,22 @@ async function processMessage(
     } else if (intent.type === 'export' && intent.confidence >= 0.6) {
       assistantContent = buildExportHelpMessage();
       totalTokens = 0;
+    } else if (
+      intent.type === 'weekly_prep' &&
+      intent.confidence >= 0.6 &&
+      (agent.planningAutonomy || PlanningAutonomy.COACH) === PlanningAutonomy.COACH
+    ) {
+      // Coach mode should suggest options before taking planning actions.
+      assistantContent =
+        `In **Coach** mode, I’ll suggest options and you choose what to generate.\n\n` +
+        `Pick one:\n` +
+        `1) **Quick outline** (goals + pacing + what to teach each day)\n` +
+        `2) **Generate Weekly Prep** (build the calendar + materials package)\n` +
+        `3) **Focus on one subject** (tell me which subject + grade)\n\n` +
+        `Reply with **1**, **2**, or **3**.`;
+      totalTokens = 0;
+      // Treat this as chat so analytics/feedback don't mark it as content generation.
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
     } else if (intent.type !== 'chat' && intent.type !== 'export' && intent.type !== 'unknown' && intent.confidence >= 0.6) {
       // Content generation intent
       try {

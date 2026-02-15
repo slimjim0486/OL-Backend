@@ -154,7 +154,7 @@ const REVIEWABLE_STATUSES: MaterialStatus[] = [
 async function initiateWeeklyPrep(
   teacherId: string,
   opts?: WeeklyPrepOptions
-): Promise<{ prepId: string; weekLabel: string }> {
+): Promise<{ prepId: string; weekLabel: string; existed: boolean }> {
   const agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) throw new Error('Agent not initialized.');
   if (!agent.onboardingComplete) throw new Error('Please complete onboarding first.');
@@ -176,7 +176,7 @@ async function initiateWeeklyPrep(
       },
     });
     if (existing) {
-      return { prepId: existing.id, weekLabel: existing.weekLabel };
+      return { prepId: existing.id, weekLabel: existing.weekLabel, existed: true };
     }
   }
 
@@ -193,7 +193,7 @@ async function initiateWeeklyPrep(
     },
   });
 
-  return { prepId: prep.id, weekLabel };
+  return { prepId: prep.id, weekLabel, existed: false };
 }
 
 // ============================================
