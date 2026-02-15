@@ -459,118 +459,7 @@ Keep up the great work! Every lesson brings ${childName} closer to their learnin
    * Welcome email for new teachers (green color scheme)
    */
   teacherWelcome: (teacherName: string) => ({
-    subject: 'Welcome to Orbit Learn for Educators! 🎓',
-    html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Orbit Learn for Educators!</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <!-- Header with Logo - Green Theme -->
-    <tr>
-      <td style="background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%); border-radius: 24px 24px 0 0; padding: 40px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 120px; height: 120px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">Welcome to Orbit Learn!</h1>
-        <p style="color: rgba(255,255,255,0.95); margin-top: 10px; font-size: 18px;">Empowering Educators with AI</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <h2 style="color: #064E3B; margin-top: 0; font-size: 24px;">Hi ${teacherName}! 👋</h2>
-
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Thank you for joining Orbit Learn! We're excited to have you as part of our educator community. Our platform is designed to help you create engaging educational content and streamline your grading workflow.
-        </p>
-
-        <!-- AI Features Box -->
-        <div style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); border-radius: 16px; padding: 24px; margin: 28px 0; text-align: center;">
-          <h3 style="color: #065F46; margin: 0 0 12px 0; font-size: 20px;">Powerful AI Tools at Your Fingertips</h3>
-          <p style="color: #047857; margin: 0; line-height: 1.6;">
-            Create lessons, quizzes, and flashcards in minutes. Our AI helps you focus on what matters most - teaching and inspiring students.
-          </p>
-        </div>
-
-        <h3 style="color: #064E3B; font-size: 18px;">What You Can Do:</h3>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 20px 0;">
-          <tr>
-            <td style="padding: 12px 0;">
-              <table role="presentation" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td style="background: #059669; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">1</td>
-                  <td style="padding-left: 16px; color: #4b5563; font-size: 15px;"><strong>Generate Content</strong> - Create AI-powered lessons, quizzes & flashcards</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 12px 0;">
-              <table role="presentation" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td style="background: #10B981; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">2</td>
-                  <td style="padding-left: 16px; color: #4b5563; font-size: 15px;"><strong>Grade Efficiently</strong> - Upload papers and get AI-assisted grading</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 12px 0;">
-              <table role="presentation" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td style="background: #34D399; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">3</td>
-                  <td style="padding-left: 16px; color: #4b5563; font-size: 15px;"><strong>Save Time</strong> - Focus on teaching while AI handles the rest</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-
-        <div style="text-align: center; margin: 36px 0;">
-          <a href="${config.frontendUrl}/teacher/dashboard" style="background: linear-gradient(135deg, #059669 0%, #10B981 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4);">
-            Go to Dashboard 🎓
-          </a>
-        </div>
-
-        <p style="color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; padding-top: 24px; margin-bottom: 0; text-align: center;">
-          Questions? Reply to this email - we're here to help!<br>
-          <span style="color: #10B981;">- The Orbit Learn Team 💚</span>
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `,
-    text: `
-Welcome to Orbit Learn for Educators!
-
-Hi ${teacherName}!
-
-Thank you for joining Orbit Learn! We're excited to have you as part of our educator community. Our platform is designed to help you create engaging educational content and streamline your grading workflow.
-
-Powerful AI Tools at Your Fingertips
-Create lessons, quizzes, and flashcards in minutes. Our AI helps you focus on what matters most - teaching and inspiring students.
-
-What You Can Do:
-1. Generate Content - Create AI-powered lessons, quizzes & flashcards
-2. Grade Efficiently - Upload papers and get AI-assisted grading
-3. Save Time - Focus on teaching while AI handles the rest
-
-Get started at: ${config.frontendUrl}/teacher/dashboard
-
-Questions? Reply to this email - we're here to help!
-- The Orbit Learn Team
-    `,
-  }),
-
-  /**
-   * Teacher trial welcome email (7-day unlimited trial)
-   */
-  teacherTrialWelcome: (teacherName: string, trialEndDateText: string) => ({
-    subject: 'Welcome to Orbit Learn! Your 7-day unlimited trial starts now ✨',
+    subject: 'Welcome to Orbit Learn — Meet Ollie, Your AI Teaching Assistant',
     html: `
 <!DOCTYPE html>
 <html>
@@ -579,48 +468,74 @@ Questions? Reply to this email - we're here to help!
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to Orbit Learn</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); border-radius: 24px 24px 0 0; padding: 36px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 96px; height: 96px; border-radius: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">Unlimited Trial Unlocked</h1>
-        <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 16px;">Make the most of your next 7 days</p>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 100px; height: 100px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Welcome to Orbit Learn</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 10px; font-size: 16px;">Your AI teaching assistant is ready</p>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <h2 style="color: #312E81; margin-top: 0; font-size: 22px;">Hi ${teacherName}! 👋</h2>
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Welcome to Orbit Learn! You now have <strong>7 days of unlimited access</strong> to all our AI-powered tools.
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 22px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Thanks for joining Orbit Learn. We built something a little different from the usual content generators — an AI assistant named <strong>Ollie</strong> who learns how you teach, remembers your classroom, and gets better the more you work together.
         </p>
 
-        <div style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border-radius: 16px; padding: 20px; margin: 24px 0;">
-          <p style="color: #4338CA; margin: 0; font-size: 15px;">
-            Your trial ends on <strong>${trialEndDateText}</strong>.
+        <!-- Ollie Introduction Box -->
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 24px; margin: 28px 0; border-left: 4px solid #2D5A4A;">
+          <h3 style="color: #2D5A4A; margin: 0 0 12px 0; font-size: 18px; font-family: 'Fraunces', Georgia, serif;">Meet Ollie, your AI teaching assistant</h3>
+          <p style="color: #3D4F66; margin: 0; line-height: 1.6; font-size: 15px;">
+            Ollie remembers your students, your standards, and your style. From weekly lesson plans to parent emails, Ollie handles the prep so you can focus on teaching.
           </p>
         </div>
 
-        <ul style="color: #4b5563; margin: 0 0 20px 18px; font-size: 15px; line-height: 1.7;">
-          <li>Generate unlimited lessons</li>
-          <li>Create quizzes and flashcards</li>
-          <li>Build substitute teacher plans</li>
-          <li>Write IEP goals and more</li>
-        </ul>
+        <h3 style="color: #1E2A3A; font-size: 17px; font-family: 'Fraunces', Georgia, serif;">Getting started is simple:</h3>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 20px 0;">
+          <tr>
+            <td style="padding: 12px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background: #2D5A4A; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">1</td>
+                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px;"><strong>Set up your classroom</strong> — Tell Ollie about your grades, subjects, and students</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background: #3D7A6A; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">2</td>
+                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px;"><strong>Let Ollie plan your week</strong> — Differentiated materials, ready to review</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background: #D4A853; color: #1E2A3A; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">3</td>
+                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px;"><strong>Review, approve, teach</strong> — You stay in control of every lesson</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
 
-        <p style="color: #4b5563; line-height: 1.7; font-size: 15px;">
-          After your trial, you'll have <strong>30 free credits per month</strong> — or you can upgrade for 500 credits/month.
-        </p>
-
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${config.frontendUrl}/teacher/dashboard" style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: 700; font-size: 15px; display: inline-block;">
-            Start Creating →
+        <div style="text-align: center; margin: 36px 0;">
+          <a href="${config.frontendUrl}/teacher/agent/chat" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 40px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Meet Ollie
           </a>
         </div>
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 18px; margin: 0;">
+        <p style="color: #9CA3AF; font-size: 14px; border-top: 1px solid #E5E7EB; padding-top: 24px; margin-bottom: 0; text-align: center;">
           Questions? Reply to this email — we're here to help.<br>
-          <span style="color: #6366F1;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -629,16 +544,120 @@ Questions? Reply to this email - we're here to help!
 </html>
     `,
     text: `
-Welcome to Orbit Learn!
+Welcome to Orbit Learn
 
 Hi ${teacherName},
 
-You now have 7 days of unlimited access to all our AI-powered tools.
+Thanks for joining Orbit Learn. We built something a little different from the usual content generators — an AI assistant named Ollie who learns how you teach, remembers your classroom, and gets better the more you work together.
+
+Meet Ollie, your AI teaching assistant
+Ollie remembers your students, your standards, and your style. From weekly lesson plans to parent emails, Ollie handles the prep so you can focus on teaching.
+
+Getting started is simple:
+1. Set up your classroom — Tell Ollie about your grades, subjects, and students
+2. Let Ollie plan your week — Differentiated materials, ready to review
+3. Review, approve, teach — You stay in control of every lesson
+
+Meet Ollie at: ${config.frontendUrl}/teacher/agent/chat
+
+Questions? Reply to this email — we're here to help.
+— The Orbit Learn Team
+    `,
+  }),
+
+  /**
+   * Teacher trial welcome email (7-day unlimited trial)
+   */
+  teacherTrialWelcome: (teacherName: string, trialEndDateText: string) => ({
+    subject: 'Your 7-Day Pro Trial Starts Now — Orbit Learn',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Pro Trial Starts Now</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 36px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 96px; height: 96px; border-radius: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your 7-Day Pro Trial Starts Now</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 16px;">Unlock everything Ollie can do</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 22px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Welcome to Orbit Learn! For the next 7 days, you have full access to <strong>Ollie</strong>, your AI teaching assistant, plus every Pro feature.
+        </p>
+
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #D4A853;">
+          <p style="color: #1E2A3A; margin: 0; font-size: 15px;">
+            Your trial ends on <strong>${trialEndDateText}</strong>.
+          </p>
+        </div>
+
+        <h3 style="color: #1E2A3A; font-size: 16px; margin-bottom: 12px; font-family: 'Fraunces', Georgia, serif;">What's included in Pro:</h3>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 20px 0;">
+          <tr>
+            <td style="padding: 8px 0; color: #3D4F66; font-size: 15px; line-height: 1.6;">Weekly lesson prep with differentiated materials</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #3D4F66; font-size: 15px; line-height: 1.6;">AI-assisted grading and rubric builder</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #3D4F66; font-size: 15px; line-height: 1.6;">Audio updates for parents</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #3D4F66; font-size: 15px; line-height: 1.6;">Standards coverage tracking and gap analysis</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #3D4F66; font-size: 15px; line-height: 1.6;">Monthly and yearly review summaries</td>
+          </tr>
+        </table>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          After your trial, free generation continues — you only pay when downloading or exporting. Or upgrade to Pro to keep all features.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${config.frontendUrl}/teacher/agent/chat" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 36px; border-radius: 16px; font-weight: 700; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Start with Ollie
+          </a>
+        </div>
+
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 18px; margin: 0;">
+          Questions? Reply to this email — we're here to help.<br>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `
+Your 7-Day Pro Trial Starts Now
+
+Hi ${teacherName},
+
+Welcome to Orbit Learn! For the next 7 days, you have full access to Ollie, your AI teaching assistant, plus every Pro feature.
+
 Your trial ends on ${trialEndDateText}.
 
-After your trial, you'll have 30 free credits per month — or you can upgrade for 500 credits/month.
+What's included in Pro:
+- Weekly lesson prep with differentiated materials
+- AI-assisted grading and rubric builder
+- Audio updates for parents
+- Standards coverage tracking and gap analysis
+- Monthly and yearly review summaries
 
-Start creating: ${config.frontendUrl}/teacher/dashboard
+After your trial, free generation continues — you only pay when downloading or exporting. Or upgrade to Pro to keep all features.
+
+Start with Ollie: ${config.frontendUrl}/teacher/agent/chat
 
 — The Orbit Learn Team
     `,
@@ -648,7 +667,7 @@ Start creating: ${config.frontendUrl}/teacher/dashboard
    * Teacher trial expiring email (24 hours remaining)
    */
   teacherTrialExpiring: (teacherName: string, trialEndDateText: string) => ({
-    subject: '⏰ Your unlimited trial ends tomorrow',
+    subject: 'Your Pro trial ends tomorrow — Orbit Learn',
     html: `
 <!DOCTYPE html>
 <html>
@@ -657,28 +676,33 @@ Start creating: ${config.frontendUrl}/teacher/dashboard
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trial Ending Soon</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%); border-radius: 20px 20px 0 0; padding: 28px; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Your trial ends tomorrow</h1>
+      <td style="background: linear-gradient(135deg, #C75B39 0%, #E07B6B 100%); border-radius: 16px 16px 0 0; padding: 28px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-family: 'Fraunces', Georgia, serif;">Your Pro trial ends tomorrow</h1>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 28px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 18px rgba(0,0,0,0.08);">
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin-top: 0;">
-          Hi ${teacherName}, your 7-day unlimited trial ends <strong>tomorrow (${trialEndDateText})</strong>.
+      <td style="background-color: #ffffff; padding: 28px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; font-size: 16px; line-height: 1.7; margin-top: 0;">
+          Hi ${teacherName}, your 7-day Pro trial ends <strong>tomorrow (${trialEndDateText})</strong>.
         </p>
-        <p style="color: #4b5563; font-size: 15px; line-height: 1.7;">
-          Upgrade now to keep creating without limits. After your trial, you'll have 30 free credits per month.
+        <p style="color: #3D4F66; font-size: 15px; line-height: 1.7;">
+          Ollie is ready to keep planning your week, tracking your standards, and generating materials. Upgrade to Pro to keep all features unlocked.
         </p>
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 16px 20px; margin: 20px 0; border-left: 4px solid #C75B39;">
+          <p style="color: #1E2A3A; margin: 0; font-size: 14px;">
+            After your trial, free content generation continues — you only pay when exporting. Pro adds weekly prep, AI grading, audio updates, and more.
+          </p>
+        </div>
         <div style="text-align: center; margin: 24px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; display: inline-block;">
-            Upgrade to Teacher Plus →
+          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 32px; border-radius: 16px; font-weight: 700; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Upgrade to Pro
           </a>
         </div>
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0;">
-          — The Orbit Learn Team
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 16px; margin: 0;">
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -689,10 +713,13 @@ Start creating: ${config.frontendUrl}/teacher/dashboard
     text: `
 Hi ${teacherName},
 
-Your 7-day unlimited trial ends tomorrow (${trialEndDateText}).
-Upgrade now to keep creating without limits. After your trial, you'll have 30 free credits per month.
+Your 7-day Pro trial ends tomorrow (${trialEndDateText}).
 
-Upgrade: ${config.frontendUrl}/teacher/billing
+Ollie is ready to keep planning your week, tracking your standards, and generating materials. Upgrade to Pro to keep all features unlocked.
+
+After your trial, free content generation continues — you only pay when exporting. Pro adds weekly prep, AI grading, audio updates, and more.
+
+Upgrade to Pro: ${config.frontendUrl}/teacher/billing
 
 — The Orbit Learn Team
     `,
@@ -702,7 +729,7 @@ Upgrade: ${config.frontendUrl}/teacher/billing
    * Teacher trial expired email
    */
   teacherTrialExpired: (teacherName: string) => ({
-    subject: 'Your trial has ended — here’s what happens next',
+    subject: 'Your Pro trial has ended — here is what stays',
     html: `
 <!DOCTYPE html>
 <html>
@@ -711,28 +738,40 @@ Upgrade: ${config.frontendUrl}/teacher/billing
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trial Ended</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: #111827; border-radius: 20px 20px 0 0; padding: 26px; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Your trial has ended</h1>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 26px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-family: 'Fraunces', Georgia, serif;">Your Pro trial has ended</h1>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 28px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 18px rgba(0,0,0,0.08);">
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin-top: 0;">
-          Hi ${teacherName}, your 7-day unlimited trial has ended. You now have <strong>30 free credits per month</strong>.
+      <td style="background-color: #ffffff; padding: 28px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; font-size: 16px; line-height: 1.7; margin-top: 0;">
+          Hi ${teacherName}, your 7-day Pro trial has ended, but Ollie is still here.
         </p>
-        <p style="color: #4b5563; font-size: 15px; line-height: 1.7;">
-          Upgrade to Teacher Plus for 500 credits/month, or grab a credit pack for a quick top‑up.
-        </p>
-        <div style="text-align: center; margin: 22px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: #111827; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; display: inline-block;">
-            View Plans →
+
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7BAE7F;">
+          <h4 style="color: #1E2A3A; margin: 0 0 10px 0; font-size: 15px;">What stays free:</h4>
+          <p style="color: #3D4F66; margin: 0; font-size: 14px; line-height: 1.7;">
+            Chat with Ollie, generate lessons, quizzes, flashcards, sub plans, and IEP goals — all free. You only pay when you download or export.
+          </p>
+        </div>
+
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7B5EA7;">
+          <h4 style="color: #1E2A3A; margin: 0 0 10px 0; font-size: 15px;">Pro features (upgrade to keep):</h4>
+          <p style="color: #3D4F66; margin: 0; font-size: 14px; line-height: 1.7;">
+            Weekly prep packages, AI grading, audio updates, standards tracking, and review summaries.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 32px; border-radius: 16px; font-weight: 700; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            See Pro Features
           </a>
         </div>
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0;">
-          — The Orbit Learn Team
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 16px; margin: 0;">
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -743,17 +782,22 @@ Upgrade: ${config.frontendUrl}/teacher/billing
     text: `
 Hi ${teacherName},
 
-Your 7-day unlimited trial has ended. You now have 30 free credits per month.
-Upgrade to Teacher Plus for 500 credits/month, or grab a credit pack for a quick top‑up.
+Your 7-day Pro trial has ended, but Ollie is still here.
 
-View plans: ${config.frontendUrl}/teacher/billing
+What stays free:
+Chat with Ollie, generate lessons, quizzes, flashcards, sub plans, and IEP goals — all free. You only pay when you download or export.
+
+Pro features (upgrade to keep):
+Weekly prep packages, AI grading, audio updates, standards tracking, and review summaries.
+
+See Pro features: ${config.frontendUrl}/teacher/billing
 
 — The Orbit Learn Team
     `,
   }),
 
   /**
-   * OTP verification email for teachers (green color scheme)
+   * OTP verification email for teachers (Chalk branded)
    */
   teacherOtp: (otp: string, purpose: 'verify_email' | 'reset_password' | 'login') => {
     const purposes = {
@@ -789,43 +833,42 @@ View plans: ${config.frontendUrl}/teacher/billing
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <!-- Header with Logo - Green Theme -->
     <tr>
-      <td style="background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">${title}</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">${title}</h1>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px; text-align: center;">
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px; text-align: center;">
           ${message}
         </p>
 
-        <!-- OTP Code Box - Green Theme -->
-        <div style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); border-radius: 16px; padding: 32px; margin: 28px 0; text-align: center;">
-          <p style="color: #065F46; margin: 0 0 12px 0; font-size: 14px;">Your verification code:</p>
-          <div style="font-size: 44px; font-weight: bold; letter-spacing: 10px; color: #059669; font-family: 'Courier New', monospace; background: #ffffff; padding: 16px 24px; border-radius: 12px; display: inline-block; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);">
+        <!-- OTP Code Box -->
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 32px; margin: 28px 0; text-align: center; border: 1px solid #E5E7EB;">
+          <p style="color: #3D4F66; margin: 0 0 12px 0; font-size: 14px;">Your verification code:</p>
+          <div style="font-size: 44px; font-weight: bold; letter-spacing: 10px; color: #2D5A4A; font-family: 'Courier New', monospace; background: #ffffff; padding: 16px 24px; border-radius: 12px; display: inline-block; box-shadow: 0 2px 8px rgba(45, 90, 74, 0.12);">
             ${otp}
           </div>
         </div>
 
-        <p style="color: #6b7280; font-size: 14px; text-align: center;">
-          ⏱️ This code expires in <strong>10 minutes</strong>.
+        <p style="color: #3D4F66; font-size: 14px; text-align: center;">
+          This code expires in <strong>10 minutes</strong>.
         </p>
 
-        <!-- Security Tip - Green Themed -->
-        <div style="background-color: #ECFDF5; border-radius: 12px; padding: 16px 20px; margin-top: 24px; border-left: 4px solid #10B981;">
-          <p style="color: #065F46; margin: 0; font-size: 14px;">
-            <strong>🔒 Security tip:</strong> Never share this code with anyone. Orbit Learn will never ask for your code via phone or text.
+        <!-- Security Tip -->
+        <div style="background-color: #FAF7F2; border-radius: 12px; padding: 16px 20px; margin-top: 24px; border-left: 4px solid #2D5A4A;">
+          <p style="color: #1E2A3A; margin: 0; font-size: 14px;">
+            <strong>Security tip:</strong> Never share this code with anyone. Orbit Learn will never ask for your code via phone or text.
           </p>
         </div>
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
           If you didn't request this ${action}, please ignore this email or contact support if you have concerns.<br><br>
-          <span style="color: #10B981;">- The Orbit Learn Team 💚</span>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -846,7 +889,7 @@ Security tip: Never share this code with anyone. Orbit Learn will never ask for 
 
 If you didn't request this ${action}, please ignore this email or contact support if you have concerns.
 
-- The Orbit Learn Team
+— The Orbit Learn Team
       `,
     };
   },
@@ -855,7 +898,7 @@ If you didn't request this ${action}, please ignore this email or contact suppor
    * Teacher verification link email (click-to-verify, lower friction than OTP)
    */
   teacherVerificationLink: (teacherName: string, verificationUrl: string) => ({
-    subject: 'Verify Your Email - Orbit Learn for Educators',
+    subject: 'Verify Your Email — Orbit Learn for Educators',
     html: `
 <!DOCTYPE html>
 <html>
@@ -864,60 +907,58 @@ If you didn't request this ${action}, please ignore this email or contact suppor
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verify Your Email</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <!-- Header with Logo - Green Theme -->
     <tr>
-      <td style="background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">Verify Your Email</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Verify Your Email</h1>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <h2 style="color: #1e1b4b; margin-top: 0; font-size: 22px;">Hi ${teacherName}!</h2>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 22px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
 
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          You're almost ready to start creating amazing educational content with Orbit Learn!
-          Just click the button below to verify your email address.
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          You're one step away from meeting Ollie, your AI teaching assistant.
+          Click below to verify your email and get started.
         </p>
 
-        <!-- Verify Button - Green Theme -->
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${verificationUrl}" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10B981 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);">
+          <a href="${verificationUrl}" style="display: inline-block; background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; font-weight: 700; font-size: 16px; padding: 16px 40px; border-radius: 16px; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
             Verify My Email
           </a>
         </div>
 
-        <p style="color: #6b7280; font-size: 14px; text-align: center;">
+        <p style="color: #3D4F66; font-size: 14px; text-align: center;">
           This link expires in <strong>24 hours</strong>.
         </p>
 
         <!-- Alternative Link -->
-        <div style="background-color: #f9fafb; border-radius: 12px; padding: 16px 20px; margin-top: 24px;">
-          <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 13px;">
+        <div style="background-color: #FAF7F2; border-radius: 12px; padding: 16px 20px; margin-top: 24px;">
+          <p style="color: #3D4F66; margin: 0 0 8px 0; font-size: 13px;">
             If the button doesn't work, copy and paste this link into your browser:
           </p>
-          <p style="color: #059669; margin: 0; font-size: 12px; word-break: break-all;">
+          <p style="color: #2D5A4A; margin: 0; font-size: 12px; word-break: break-all;">
             ${verificationUrl}
           </p>
         </div>
 
-        <!-- What's Next Info -->
-        <div style="background-color: #ECFDF5; border-radius: 12px; padding: 20px; margin-top: 24px;">
-          <p style="color: #065F46; margin: 0 0 12px 0; font-size: 15px; font-weight: 600;">
-            Why verify your email?
+        <!-- Why Verify -->
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin-top: 24px; border-left: 4px solid #2D5A4A;">
+          <p style="color: #1E2A3A; margin: 0 0 12px 0; font-size: 15px; font-weight: 600;">
+            Why verify?
           </p>
-          <ul style="color: #047857; margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
-            <li>Unlock subscription upgrades</li>
-            <li>Purchase credit packs</li>
-            <li>Secure your account</li>
+          <ul style="color: #3D4F66; margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+            <li>Unlock Ollie's full toolkit</li>
+            <li>Set up your classroom</li>
+            <li>Access Pro features</li>
           </ul>
         </div>
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
           If you didn't create an account, please ignore this email.<br><br>
-          <span style="color: #10B981;">- The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -926,23 +967,23 @@ If you didn't request this ${action}, please ignore this email or contact suppor
 </html>
     `,
     text: `
-Hi ${teacherName}!
+Hi ${teacherName},
 
-You're almost ready to start creating amazing educational content with Orbit Learn!
-Click the link below to verify your email address:
+You're one step away from meeting Ollie, your AI teaching assistant.
+Click the link below to verify your email and get started:
 
 ${verificationUrl}
 
 This link expires in 24 hours.
 
-Why verify your email?
-- Unlock subscription upgrades
-- Purchase credit packs
-- Secure your account
+Why verify?
+- Unlock Ollie's full toolkit
+- Set up your classroom
+- Access Pro features
 
 If you didn't create an account, please ignore this email.
 
-- The Orbit Learn Team
+— The Orbit Learn Team
     `,
   }),
 
@@ -1074,7 +1115,7 @@ Questions? Reply to this email or contact support.
     const receiptSection = receiptUrl
       ? `
         <div style="text-align: center; margin: 24px 0 8px;">
-          <a href="${receiptUrl}" style="display: inline-block; background: #ffffff; color: #059669; text-decoration: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; border: 2px solid #A7F3D0;">
+          <a href="${receiptUrl}" style="display: inline-block; background: #ffffff; color: #2D5A4A; text-decoration: none; padding: 12px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; border: 2px solid #2D5A4A;">
             View Receipt
           </a>
         </div>
@@ -1084,14 +1125,14 @@ Questions? Reply to this email or contact support.
     const invoiceRow = invoiceNumber
       ? `
             <tr>
-              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Invoice:</td>
-              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${invoiceNumber}</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Invoice:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 600;">${invoiceNumber}</td>
             </tr>
         `
       : '';
 
     return {
-      subject: `✅ Subscription Renewed - ${planName}`,
+      subject: `Subscription Renewed — ${planName}`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -1100,54 +1141,54 @@ Questions? Reply to this email or contact support.
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subscription Renewed</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">Subscription Renewed</h1>
-        <p style="color: rgba(255,255,255,0.95); margin-top: 8px; font-size: 16px;">
-          Thanks for building with Orbit Learn!
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Subscription Renewed</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 16px;">
+          Ollie is ready for another month
         </p>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
           Hi ${teacherName},
         </p>
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
           Your ${planName} subscription has been renewed successfully.
         </p>
 
-        <div style="background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%); border-radius: 16px; padding: 20px; margin: 24px 0;">
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #7BAE7F;">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
             <tr>
-              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Plan:</td>
-              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${planName}</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Plan:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 600;">${planName}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Amount Paid:</td>
-              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${amountPaid}</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Amount Paid:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 600;">${amountPaid}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Next Billing Date:</td>
-              <td style="padding: 6px 0; color: #111827; font-size: 14px; font-weight: 600;">${nextBillingDate}</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Next Billing Date:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 600;">${nextBillingDate}</td>
             </tr>
             ${invoiceRow}
           </table>
         </div>
 
         <div style="text-align: center; margin: 28px 0 16px;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #059669 0%, #10B981 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
+          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: bold; font-size: 15px; display: inline-block; border: 2px solid #1E4035;">
             Manage Billing
           </a>
         </div>
         ${receiptSection}
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          Questions? Reply to this email or contact support.<br><br>
-          <span style="color: #10B981;">- The Orbit Learn Team</span>
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
+          Questions? Reply to this email — we're here to help.<br><br>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -1160,7 +1201,7 @@ Subscription Renewed
 
 Hi ${teacherName},
 
-Your ${planName} subscription has been renewed successfully.
+Your ${planName} subscription has been renewed successfully. Ollie is ready for another month.
 
 Plan: ${planName}
 Amount Paid: ${amountPaid}
@@ -1168,8 +1209,8 @@ Next Billing Date: ${nextBillingDate}
 ${invoiceNumber ? `Invoice: ${invoiceNumber}\n` : ''}${receiptUrl ? `Receipt: ${receiptUrl}\n` : ''}
 Manage billing: ${config.frontendUrl}/teacher/billing
 
-Questions? Reply to this email or contact support.
-- The Orbit Learn Team
+Questions? Reply to this email — we're here to help.
+— The Orbit Learn Team
       `,
     };
   },
@@ -1623,91 +1664,87 @@ Questions? Contact us at support@orbitlearn.app
     tier: string
   ) => {
     const isUrgent = threshold === 90;
-    const urgencyColor = isUrgent ? '#EF4444' : '#F59E0B';
-    const urgencyBgStart = isUrgent ? '#FEE2E2' : '#FEF3C7';
-    const urgencyBgEnd = isUrgent ? '#FECACA' : '#FDE68A';
+    const urgencyColor = isUrgent ? '#E07B6B' : '#D4A853';
+    const urgencyBgColor = isUrgent ? '#FEE2E2' : '#FEF3C7';
     const urgencyText = isUrgent ? '#991B1B' : '#92400E';
 
     return {
       subject: isUrgent
-        ? `⚠️ Only ${creditsRemaining} Credits Remaining! - Orbit Learn for Teachers`
-        : `📊 You've Used ${threshold}% of Your Monthly Credits - Orbit Learn for Teachers`,
+        ? `Only ${creditsRemaining} Credits Remaining — Orbit Learn`
+        : `You've Used ${threshold}% of Your Monthly Credits — Orbit Learn`,
       html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Credit Usage Warning</title>
+  <title>Credit Usage Update</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: linear-gradient(135deg, ${urgencyColor} 0%, ${isUrgent ? '#F87171' : '#FBBF24'} 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+      <td style="background: linear-gradient(135deg, ${isUrgent ? '#C75B39' : '#2D5A4A'} 0%, ${isUrgent ? '#E07B6B' : '#3D7A6A'} 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
-          ${isUrgent ? '⚠️ Credits Running Low!' : '📊 Credit Usage Update'}
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">
+          ${isUrgent ? 'Credits Running Low' : 'Credit Usage Update'}
         </h1>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Hi ${teacherName}! 👋
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Hi ${teacherName},
         </p>
 
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
           ${isUrgent
-            ? `You've used <strong>${threshold}%</strong> of your monthly credits. You only have <strong>${creditsRemaining} credits</strong> remaining.`
-            : `You've used <strong>${threshold}%</strong> of your monthly credits. Keep creating great content!`
+            ? `You've used <strong>${threshold}%</strong> of your monthly credits. You have <strong>${creditsRemaining} credits</strong> remaining.`
+            : `You've used <strong>${threshold}%</strong> of your monthly credits.`
           }
         </p>
 
         <!-- Usage Progress Box -->
-        <div style="background: linear-gradient(135deg, ${urgencyBgStart} 0%, ${urgencyBgEnd} 100%); border-radius: 16px; padding: 24px; margin: 28px 0; border-left: 4px solid ${urgencyColor};">
+        <div style="background: ${urgencyBgColor}; border-radius: 12px; padding: 24px; margin: 28px 0; border-left: 4px solid ${urgencyColor};">
           <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
             <span style="color: ${urgencyText}; font-weight: 600;">Credits Used</span>
             <span style="color: ${urgencyText}; font-weight: 700;">${creditsUsed} / ${creditsTotal}</span>
           </div>
           <div style="background-color: #ffffff; border-radius: 8px; height: 12px; overflow: hidden;">
-            <div style="background: linear-gradient(90deg, ${urgencyColor} 0%, ${isUrgent ? '#F87171' : '#FBBF24'} 100%); height: 100%; width: ${threshold}%; border-radius: 8px;"></div>
+            <div style="background: ${urgencyColor}; height: 100%; width: ${threshold}%; border-radius: 8px;"></div>
           </div>
           <p style="color: ${urgencyText}; margin: 12px 0 0 0; font-size: 14px; text-align: center;">
             <strong>${creditsRemaining} credits</strong> remaining this month
           </p>
         </div>
 
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
           ${isUrgent
-            ? `Don't let your workflow stop! Purchase a credit pack or upgrade your plan to keep creating.`
-            : `Need more credits? Upgrade your plan or purchase a credit pack anytime.`
+            ? `Upgrade your plan to keep Ollie generating content without interruption.`
+            : `Need more? Upgrade to Pro for unlimited generation plus weekly prep, AI grading, and more.`
           }
         </p>
 
         <!-- Current Plan Info -->
-        <div style="background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%); border-radius: 16px; padding: 20px; margin: 24px 0;">
-          <h4 style="color: #5B21B6; margin: 0 0 12px 0; font-size: 16px;">📋 Your Current Plan: ${tier}</h4>
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #2D5A4A;">
+          <h4 style="color: #1E2A3A; margin: 0 0 12px 0; font-size: 16px;">Your Plan: ${tier}</h4>
           <table role="presentation" cellspacing="0" cellpadding="0">
             <tr>
-              <td style="padding: 6px 0; color: #4b5563; font-size: 14px;">💳 <strong>${creditsTotal} credits</strong> per month</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;"><strong>${creditsTotal} credits</strong> per month</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #4b5563; font-size: 14px;">📦 <strong>Credit packs</strong> available for purchase</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #4b5563; font-size: 14px;">🔄 <strong>Unused credits</strong> roll over (up to ${creditsTotal * 2})</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Upgrade to <strong>Professional</strong> for more credits and Pro features</td>
             </tr>
           </table>
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${config.frontendUrl}${isUrgent ? '/teacher/billing' : '/teacher/usage'}" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 50px; font-weight: bold; font-size: 17px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
-            ${isUrgent ? 'Get More Credits Now 🚀' : 'View Usage Details 📊'}
+          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            ${isUrgent ? 'Upgrade Now' : 'View Plans'}
           </a>
         </div>
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -1716,28 +1753,25 @@ Questions? Contact us at support@orbitlearn.app
 </html>
       `,
       text: `
-Credit Usage Warning
+Credit Usage Update
 
 Hi ${teacherName},
 
 ${isUrgent
-  ? `You've used ${threshold}% of your monthly credits. You only have ${creditsRemaining} credits remaining.`
-  : `You've used ${threshold}% of your monthly credits. Keep creating great content!`
+  ? `You've used ${threshold}% of your monthly credits. You have ${creditsRemaining} credits remaining.`
+  : `You've used ${threshold}% of your monthly credits.`
 }
 
 Usage: ${creditsUsed} / ${creditsTotal} credits (${creditsRemaining} remaining)
 
 ${isUrgent
-  ? "Don't let your workflow stop! Purchase a credit pack or upgrade your plan to keep creating."
-  : "Need more credits? Upgrade your plan or purchase a credit pack anytime."
+  ? 'Upgrade your plan to keep Ollie generating content without interruption.'
+  : 'Need more? Upgrade to Pro for unlimited generation plus weekly prep, AI grading, and more.'
 }
 
-${isUrgent
-  ? `Get more credits at: ${config.frontendUrl}/teacher/billing`
-  : `View your usage details at: ${config.frontendUrl}/teacher/usage`
-}
+View plans: ${config.frontendUrl}/teacher/billing
 
-- The Orbit Learn Team
+— The Orbit Learn Team
       `,
     };
   },
@@ -1750,7 +1784,7 @@ ${isUrgent
     creditsTotal: number,
     tier: string
   ) => ({
-    subject: `🚫 Monthly Credit Limit Reached - Orbit Learn for Teachers`,
+    subject: `Monthly Credit Limit Reached — Orbit Learn`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -1759,66 +1793,62 @@ ${isUrgent
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Credit Limit Reached</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+      <td style="background: linear-gradient(135deg, #C75B39 0%, #E07B6B 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">
           Monthly Credit Limit Reached
         </h1>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Hi ${teacherName}! 👋
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Hi ${teacherName},
         </p>
 
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          You've used all <strong>${creditsTotal} credits</strong> included in your ${tier} plan this month.
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          You've used all <strong>${creditsTotal} credits</strong> in your ${tier} plan this month.
         </p>
 
         <!-- Limit Box -->
-        <div style="background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%); border-radius: 16px; padding: 24px; margin: 28px 0; text-align: center; border: 2px solid #F87171;">
-          <div style="font-size: 48px; margin-bottom: 8px;">🚫</div>
-          <h3 style="color: #991B1B; margin: 0 0 8px 0; font-size: 20px;">No Credits Remaining</h3>
+        <div style="background: #FEE2E2; border-radius: 12px; padding: 24px; margin: 28px 0; text-align: center; border-left: 4px solid #E07B6B;">
+          <h3 style="color: #991B1B; margin: 0 0 8px 0; font-size: 18px;">No credits remaining</h3>
           <p style="color: #B91C1C; margin: 0; font-size: 14px;">
-            Your credits will reset on the 1st of next month
+            Credits reset on the 1st of next month
           </p>
         </div>
 
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Don't let your productivity stop! <strong>Purchase a credit pack</strong> to continue creating content immediately, or <strong>upgrade your plan</strong> for more monthly credits.
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          You can still chat with Ollie and generate content for free — you only need credits when downloading or exporting files. Or upgrade your plan for more monthly credits.
         </p>
 
         <!-- Options Box -->
-        <div style="background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%); border-radius: 16px; padding: 20px; margin: 24px 0;">
-          <h4 style="color: #5B21B6; margin: 0 0 12px 0; font-size: 16px;">💡 Your Options:</h4>
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #2D5A4A;">
+          <h4 style="color: #1E2A3A; margin: 0 0 12px 0; font-size: 16px;">Your options:</h4>
           <table role="presentation" cellspacing="0" cellpadding="0">
             <tr>
-              <td style="padding: 6px 0; color: #4b5563; font-size: 14px;">📦 <strong>Credit Pack</strong> - 100 credits for $4.99 (instant)</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;"><strong>Upgrade to Professional</strong> — More credits + weekly prep, AI grading, audio updates</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #4b5563; font-size: 14px;">⭐ <strong>Upgrade to Basic</strong> - 500 credits/month for $9.99</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;"><strong>Pay per download</strong> — Export individual files as needed</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #4b5563; font-size: 14px;">🚀 <strong>Upgrade to Pro</strong> - 2,000 credits/month for $24.99</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #4b5563; font-size: 14px;">⏰ <strong>Wait</strong> - Credits reset on the 1st of next month</td>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;"><strong>Wait</strong> — Credits reset on the 1st of next month</td>
             </tr>
           </table>
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 50px; font-weight: bold; font-size: 17px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
-            Get More Credits Now 🚀
+          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            View Plans
           </a>
         </div>
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -1831,21 +1861,18 @@ Monthly Credit Limit Reached
 
 Hi ${teacherName},
 
-You've used all ${creditsTotal} credits included in your ${tier} plan this month.
+You've used all ${creditsTotal} credits in your ${tier} plan this month. Credits reset on the 1st of next month.
 
-Your credits will reset on the 1st of next month.
+You can still chat with Ollie and generate content for free — you only need credits when downloading or exporting files.
 
-Don't let your productivity stop! Purchase a credit pack to continue creating content immediately, or upgrade your plan for more monthly credits.
+Your options:
+- Upgrade to Professional — More credits + weekly prep, AI grading, audio updates
+- Pay per download — Export individual files as needed
+- Wait — Credits reset on the 1st of next month
 
-Your Options:
-- Credit Pack - 100 credits for $4.99 (instant)
-- Upgrade to Basic - 500 credits/month for $9.99
-- Upgrade to Pro - 2,000 credits/month for $24.99
-- Wait - Credits reset on the 1st of next month
+View plans: ${config.frontendUrl}/teacher/billing
 
-Manage your billing at: ${config.frontendUrl}/teacher/billing
-
-- The Orbit Learn Team
+— The Orbit Learn Team
     `,
   }),
 
@@ -1859,7 +1886,7 @@ Manage your billing at: ${config.frontendUrl}/teacher/billing
     downloadUrl: string,
     fileSize: string
   ) => ({
-    subject: `Your ${formatName} is Ready! - ${contentTitle}`,
+    subject: `Your ${formatName} is Ready — ${contentTitle}`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -1868,47 +1895,47 @@ Manage your billing at: ${config.frontendUrl}/teacher/billing
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Export Ready</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: linear-gradient(135deg, #10B981 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
-          Your ${formatName} is Ready!
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">
+          Your ${formatName} is Ready
         </h1>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Hi ${teacherName}! 👋
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Hi ${teacherName},
         </p>
 
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Great news! Your <strong>${formatName}</strong> export is ready for download.
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Your <strong>${formatName}</strong> export is ready for download.
         </p>
 
         <!-- File Info Box -->
-        <div style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); border-radius: 16px; padding: 24px; margin: 28px 0; text-align: center; border: 2px solid #34D399;">
-          <div style="font-size: 48px; margin-bottom: 8px;">${formatName === 'PowerPoint' ? '📊' : '📄'}</div>
-          <h3 style="color: #047857; margin: 0 0 8px 0; font-size: 18px;">${contentTitle}</h3>
-          <p style="color: #059669; margin: 0; font-size: 14px;">
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 24px; margin: 28px 0; text-align: center; border-left: 4px solid #7BAE7F;">
+          <div style="font-size: 40px; margin-bottom: 8px;">${formatName === 'PowerPoint' ? '📊' : '📄'}</div>
+          <h3 style="color: #1E2A3A; margin: 0 0 8px 0; font-size: 18px;">${contentTitle}</h3>
+          <p style="color: #3D4F66; margin: 0; font-size: 14px;">
             ${formatName} • ${fileSize}
           </p>
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${downloadUrl}" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 50px; font-weight: bold; font-size: 17px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
-            Download ${formatName} ⬇️
+          <a href="${downloadUrl}" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Download ${formatName}
           </a>
         </div>
 
-        <p style="color: #6b7280; font-size: 14px; text-align: center;">
-          You can also find this file in your <a href="${config.frontendUrl}/teacher/downloads" style="color: #7C3AED;">Downloads</a> section.
+        <p style="color: #3D4F66; font-size: 14px; text-align: center;">
+          You can also find this file in your <a href="${config.frontendUrl}/teacher/downloads" style="color: #2D5A4A; font-weight: 600;">Downloads</a> section.
         </p>
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -1917,11 +1944,11 @@ Manage your billing at: ${config.frontendUrl}/teacher/billing
 </html>
     `,
     text: `
-Your ${formatName} is Ready!
+Your ${formatName} is Ready
 
 Hi ${teacherName},
 
-Great news! Your ${formatName} export is ready for download.
+Your ${formatName} export is ready for download.
 
 File: ${contentTitle}
 Format: ${formatName}
@@ -1931,7 +1958,7 @@ Download your file: ${downloadUrl}
 
 You can also find this file in your Downloads section at: ${config.frontendUrl}/teacher/downloads
 
-- The Orbit Learn Team
+— The Orbit Learn Team
     `,
   }),
 
@@ -1948,7 +1975,7 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
     const dayRows = Object.entries(dayBreakdown)
       .map(
         ([day, count]) =>
-          `<tr><td style="padding: 8px 16px; color: #4b5563; font-size: 15px; border-bottom: 1px solid #f3f4f6;">${day}</td><td style="padding: 8px 16px; color: #5B21B6; font-weight: 600; font-size: 15px; text-align: right; border-bottom: 1px solid #f3f4f6;">${count} materials</td></tr>`
+          `<tr><td style="padding: 8px 16px; color: #3D4F66; font-size: 15px; border-bottom: 1px solid #FAF7F2;">${day}</td><td style="padding: 8px 16px; color: #2D5A4A; font-weight: 600; font-size: 15px; text-align: right; border-bottom: 1px solid #FAF7F2;">${count} materials</td></tr>`
       )
       .join('');
 
@@ -1957,7 +1984,7 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
       .join('\n');
 
     return {
-      subject: `Your weekly prep is ready — ${weekLabel}`,
+      subject: `Ollie finished your weekly prep — ${weekLabel}`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -1966,39 +1993,39 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Weekly Prep Ready</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
-      <td style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">Your Weekly Prep is Ready!</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your Weekly Prep is Ready</h1>
         <p style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 16px;">${weekLabel}</p>
       </td>
     </tr>
     <tr>
-      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <h2 style="color: #1e1b4b; margin-top: 0; font-size: 20px;">Hi ${teacherName}!</h2>
-        <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Your AI assistant has finished generating <strong>${materialCount} materials</strong> for the week. Here's the breakdown:
+      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 20px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
+          Ollie has finished generating <strong>${materialCount} materials</strong> for the week. Here's the breakdown:
         </p>
 
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #F9FAFB; border-radius: 12px; overflow: hidden; margin: 24px 0;">
-          <tr style="background: #EDE9FE;">
-            <td style="padding: 10px 16px; color: #5B21B6; font-weight: 600; font-size: 14px;">Day</td>
-            <td style="padding: 10px 16px; color: #5B21B6; font-weight: 600; font-size: 14px; text-align: right;">Materials</td>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #FAF7F2; border-radius: 12px; overflow: hidden; margin: 24px 0;">
+          <tr style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%);">
+            <td style="padding: 10px 16px; color: #ffffff; font-weight: 600; font-size: 14px;">Day</td>
+            <td style="padding: 10px 16px; color: #ffffff; font-weight: 600; font-size: 14px; text-align: right;">Materials</td>
           </tr>
           ${dayRows}
         </table>
 
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${reviewUrl}" style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 50px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);">
+          <a href="${reviewUrl}" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
             Review & Approve
           </a>
         </div>
 
-        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-bottom: 0; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-bottom: 0; border-top: 1px solid #E5E7EB; padding-top: 20px;">
           You received this because you set up weekly prep scheduling.<br>
-          <span style="color: #a78bfa;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -2009,9 +2036,9 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
       text: `
 Your Weekly Prep is Ready — ${weekLabel}
 
-Hi ${teacherName}!
+Hi ${teacherName},
 
-Your AI assistant has finished generating ${materialCount} materials for the week.
+Ollie has finished generating ${materialCount} materials for the week.
 
 Day-by-day breakdown:
 ${dayText}
@@ -2215,7 +2242,7 @@ export const emailService = {
   },
 
   /**
-   * Send welcome email to new teacher (green themed)
+   * Send welcome email to new teacher
    */
   async sendTeacherWelcomeEmail(email: string, teacherName: string): Promise<boolean> {
     if (config.email.skipEmails || !resend) {
