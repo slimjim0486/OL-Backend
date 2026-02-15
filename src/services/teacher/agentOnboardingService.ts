@@ -50,9 +50,9 @@ Tell me about yourself — what school do you teach at, and what grades and subj
 
 How many students do you have? Do you use any grouping system (like leveled groups, table groups, etc.)? Any important things I should know about your classroom setup?`,
 
-  curriculum: `Perfect! One last thing — where are your classes right now?
+  curriculum: `Perfect! One last thing — what are you teaching right now?
 
-For each subject, share what you've already covered, what you're teaching now, and what is coming up next. Add standards if you have them.`,
+You can answer for just one subject to start. If you want, also share what's coming up next. (You can also say "skip for now".)`,
 
   confirmation: `Here's a summary of what I've learned about you. Does everything look right? You can say "looks good" to finish, or tell me what needs to be changed.`,
 };
@@ -167,6 +167,39 @@ async function processOnboardingResponse(
       };
     }
 
+    // Allow teachers to explicitly skip curriculum details.
+    if (step === 'curriculum') {
+      const normalized = userMessage.trim().toLowerCase();
+      const wantsSkip =
+        normalized === 'skip' ||
+        normalized === 'skip for now' ||
+        normalized === 'skip curriculum' ||
+        normalized === 'later' ||
+        normalized === 'not sure' ||
+        normalized === 'not sure yet' ||
+        normalized === 'idk' ||
+        normalized === "i don't know" ||
+        normalized === "i dont know" ||
+        normalized === 'n/a' ||
+        normalized === 'na';
+
+      if (wantsSkip) {
+        await agentMemoryService.completeSetupStep(teacherId, STEP_TO_STATUS.curriculum);
+        const agentMessage = await generateConfirmationMessage(teacherId);
+        return {
+          parsedData: { skippedCurriculum: true },
+          agentMessage,
+          nextStep: {
+            step: 'confirmation',
+            prompt: STEP_PROMPTS.confirmation,
+            progress: Math.round((STEP_ORDER.indexOf('confirmation') / STEP_ORDER.length) * 100),
+            isComplete: false,
+          },
+          isComplete: false,
+        };
+      }
+    }
+
     // Extract structured data from user message using Gemini
     const parsedData = await extractStructuredData(step, userMessage);
 
@@ -188,19 +221,21 @@ async function processOnboardingResponse(
       } else {
         const knownSubjects = normalizeSubjectArray(agent.subjectsTaught);
         let clarificationPrompt =
-          `Quick clarification so I can plan accurately:\n\n` +
-          `1) Which subject(s) should we focus on first (e.g., MATH, ENGLISH, SCIENCE)?\n` +
-          `2) What unit/topic are you teaching right now, and what's coming up next?`;
+          `Quick question so I can personalize things:\n\n` +
+          `What are you teaching right now? If you want, also share what's coming up next.\n\n` +
+          `Tip: you can start with a subject, like "MATH: Fractions. Next: Decimals". Or say "skip for now".`;
 
         if (knownSubjects.length === 1) {
           clarificationPrompt =
-            `Quick clarification so I can map this accurately:\n\n` +
-            `For **${knownSubjects[0]}**, what unit/topic are you teaching right now, and what's coming up next?`;
+            `Quick question for **${knownSubjects[0]}**:\n\n` +
+            `What are you teaching right now? (Optional: what's coming up next.)\n\n` +
+            `You can also say "skip for now".`;
         } else if (knownSubjects.length > 1) {
           clarificationPrompt =
-            `Quick clarification so I can map this accurately:\n\n` +
-            `1) Which of these subjects does this apply to: ${knownSubjects.join(', ')}?\n` +
-            `2) What unit/topic are you teaching right now, and what's coming up next?`;
+            `Quick question so I can personalize things:\n\n` +
+            `What are you teaching right now? (Optional: what's coming up next.)\n\n` +
+            `Subjects you selected: ${knownSubjects.join(', ')}\n` +
+            `Tip: you can start with a subject, like "MATH: Fractions". Or say "skip for now".`;
         }
 
         return {
