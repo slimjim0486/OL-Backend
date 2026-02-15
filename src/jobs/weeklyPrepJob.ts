@@ -34,6 +34,10 @@ interface WeeklyPrepJobResult {
 let weeklyPrepQueue: Queue<WeeklyPrepJobData, WeeklyPrepJobResult> | null = null;
 let weeklyPrepWorker: Worker<WeeklyPrepJobData, WeeklyPrepJobResult> | null = null;
 
+export function isWeeklyPrepJobInitialized(): boolean {
+  return Boolean(weeklyPrepQueue && weeklyPrepWorker);
+}
+
 /**
  * Initialize the weekly prep job queue
  */
@@ -110,6 +114,8 @@ export async function initializeWeeklyPrepJob(): Promise<void> {
     logger.info('Weekly prep job queue initialized');
   } catch (error) {
     logger.error('Failed to initialize weekly prep job queue', { error });
+    // Let the caller decide whether to continue running the server without the queue.
+    throw error;
   }
 }
 

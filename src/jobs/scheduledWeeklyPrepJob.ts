@@ -12,8 +12,10 @@ import cron from 'node-cron';
 import { prisma } from '../config/database.js';
 import { PlanningAutonomy } from '@prisma/client';
 import { weeklyPrepService } from '../services/teacher/weeklyPrepService.js';
-import { queueWeeklyPrep } from './weeklyPrepJob.js';
+import { isWeeklyPrepJobInitialized, queueWeeklyPrep } from './weeklyPrepJob.js';
 import { logger } from '../utils/logger.js';
+import { redis } from '../config/redis.js';
+import { TeacherPlanRequiredError } from '../middleware/teacherPlanGate.js';
 
 // Day name → JS getDay() value (0=Sun, 6=Sat)
 const DAY_MAP: Record<string, number> = {
@@ -25,6 +27,42 @@ const DAY_MAP: Record<string, number> = {
   FRIDAY: 5,
   SATURDAY: 6,
 };
+
+const SCHED_LOCK_KEY = 'locks:scheduled-weekly-prep';
+const SCHED_LOCK_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+async function withSchedulerLock(fn: () => Promise<void>): Promise<void> {
+  // Best-effort distributed lock. If Redis is down, do not schedule (prevents duplicate work across instances).
+  const token = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  try {
+    const ok = await redis.set(SCHED_LOCK_KEY, token, 'PX', SCHED_LOCK_TTL_MS, 'NX');
+    if (ok !== 'OK') {
+      logger.debug('Scheduled weekly prep check skipped (lock held by another instance)');
+      return;
+    }
+  } catch (error) {
+    logger.warn('Scheduled weekly prep check skipped (failed to acquire Redis lock)', { error });
+    return;
+  }
+
+  try {
+    await fn();
+  } finally {
+    // Release lock only if we still own it.
+    try {
+      const script = `
+        if redis.call("GET", KEYS[1]) == ARGV[1] then
+          return redis.call("DEL", KEYS[1])
+        else
+          return 0
+        end
+      `;
+      await redis.eval(script, 1, SCHED_LOCK_KEY, token);
+    } catch (error) {
+      logger.warn('Failed to release scheduled weekly prep lock', { error });
+    }
+  }
+}
 
 /**
  * Check if the current time in the teacher's timezone falls within
@@ -78,6 +116,11 @@ async function runScheduledWeeklyPreps(): Promise<void> {
   logger.info('Running scheduled weekly prep check');
 
   try {
+    if (!isWeeklyPrepJobInitialized()) {
+      logger.warn('Scheduled weekly prep check skipped (weekly prep queue not initialized)');
+      return;
+    }
+
     // Find all teachers with scheduling preferences set and onboarding complete
     const agents = await prisma.teacherAgent.findMany({
       where: {
@@ -140,8 +183,15 @@ async function runScheduledWeeklyPreps(): Promise<void> {
           weekLabel,
         });
       } catch (error) {
-        // Most failures here should be logged; existing-week dedupe is handled by initiateWeeklyPrep + existed flag.
         const msg = error instanceof Error ? error.message : String(error);
+        if (error instanceof TeacherPlanRequiredError) {
+          logger.info('Scheduled weekly prep skipped (plan required)', {
+            teacherId: agent.teacherId,
+            requiredTier: error.requiredTier,
+            code: error.code,
+          });
+          continue;
+        }
         if (!msg.includes('already exists')) {
           logger.error('Failed to trigger scheduled weekly prep', {
             teacherId: agent.teacherId,
@@ -163,11 +213,13 @@ async function runScheduledWeeklyPreps(): Promise<void> {
 export function scheduleWeeklyPrepDelivery(): void {
   // Every 30 minutes: at 0 and 30 minutes past every hour
   cron.schedule('0,30 * * * *', async () => {
-    try {
-      await runScheduledWeeklyPreps();
-    } catch (error) {
-      logger.error('Scheduled weekly prep cron failed', { error });
-    }
+    await withSchedulerLock(async () => {
+      try {
+        await runScheduledWeeklyPreps();
+      } catch (error) {
+        logger.error('Scheduled weekly prep cron failed', { error });
+      }
+    });
   });
 
   logger.info('Weekly prep delivery scheduled (every 30 minutes)');

@@ -270,6 +270,40 @@ async function processMessage(
     intent = { type: 'open_calendar', confidence: 1, extractedParams: {} };
     totalTokens = 0;
   } else {
+    // Coach-mode follow-ups: allow quick numeric confirmation from the Coach weekly-planning prompt.
+    const trimmed = String(message || '').trim();
+    const recentAssistant = session.messages.find((m) => m.role === MessageRole.ASSISTANT);
+    const recentActionType =
+      recentAssistant && typeof (recentAssistant as any).actionType === 'string'
+        ? (recentAssistant as any).actionType
+        : (recentAssistant as any)?.actionResult && typeof (recentAssistant as any).actionResult === 'object'
+          ? String(((recentAssistant as any).actionResult as any).type || '')
+          : '';
+
+    const isCoach = (agent as any).planningAutonomy === PlanningAutonomy.COACH;
+    const fromCoachWeeklyPrompt = recentActionType === 'coach_weekly_prep_prompt';
+    const wantsGenerateWeeklyPrep = /^2\b/.test(trimmed) || /\b(?:generate|create|make)\b[\s\S]*\bweekly\s+prep\b/i.test(trimmed);
+
+    if (isCoach && fromCoachWeeklyPrompt && wantsGenerateWeeklyPrep) {
+      const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
+        triggeredBy: 'chat',
+      });
+
+      if (!existed) {
+        await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
+      }
+      actionResult = {
+        type: 'weekly_prep',
+        content: { prepId, weekLabel },
+        preview: existed
+          ? `Opening your weekly prep for "${weekLabel}" now.`
+          : `I'm generating your weekly prep package for "${weekLabel}" now. This usually takes 2-3 minutes. You can check the progress on the Weekly Prep page.`,
+        contentId: prepId,
+      };
+      assistantContent = actionResult.preview;
+      intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
+      totalTokens = 0;
+    } else {
     // 5. Assemble context
     const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
 
@@ -301,13 +335,24 @@ async function processMessage(
     ) {
       // Coach mode should suggest options before taking planning actions.
       assistantContent =
-        `In **Coach** mode, I’ll suggest options and you choose what to generate.\n\n` +
+        `In **Coach** mode, I'll suggest options and you choose what to generate.\n\n` +
         `Pick one:\n` +
         `1) **Quick outline** (goals + pacing + what to teach each day)\n` +
         `2) **Generate Weekly Prep** (build the calendar + materials package)\n` +
         `3) **Focus on one subject** (tell me which subject + grade)\n\n` +
         `Reply with **1**, **2**, or **3**.`;
       totalTokens = 0;
+      actionResult = {
+        type: 'coach_weekly_prep_prompt',
+        content: {
+          options: [
+            { id: 'outline', label: 'Quick outline', hint: 'Goals + pacing + what to teach each day', send: 'Give me a quick outline for my week (no materials yet).' },
+            { id: 'weekly_prep', label: 'Generate Weekly Prep', hint: 'Build the calendar + materials package', takeToCalendar: true },
+            { id: 'one_subject', label: 'Focus on one subject', hint: 'Tell me which subject + grade', send: "Let's plan one subject. Ask me what subject and grade first." },
+          ],
+        },
+        preview: 'Choose how you want to plan this week.',
+      };
       // Treat this as chat so analytics/feedback don't mark it as content generation.
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
     } else if (intent.type !== 'chat' && intent.type !== 'export' && intent.type !== 'unknown' && intent.confidence >= 0.6) {
@@ -338,6 +383,7 @@ async function processMessage(
       );
       assistantContent = chatResult.response;
       totalTokens = chatResult.tokensUsed;
+    }
     }
   }
 

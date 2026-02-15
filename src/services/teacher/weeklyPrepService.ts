@@ -182,18 +182,52 @@ async function initiateWeeklyPrep(
 
   await enforceWeeklyPrepCreationAccess(teacherId, agent.id, weekStart, weekEnd);
 
-  const prep = await prisma.agentWeeklyPrep.create({
-    data: {
-      agentId: agent.id,
-      weekLabel,
-      weekStartDate: weekStart,
-      schoolYear: getCurrentSchoolYear(),
-      status: WeeklyPrepStatus.GENERATING,
-      triggeredBy: opts?.triggeredBy || 'manual',
-    },
-  });
+  let prep: { id: string; weekLabel: string } | null = null;
+  try {
+    prep = await prisma.agentWeeklyPrep.create({
+      data: {
+        agentId: agent.id,
+        weekLabel,
+        weekStartDate: weekStart,
+        schoolYear: getCurrentSchoolYear(),
+        status: WeeklyPrepStatus.GENERATING,
+        triggeredBy: opts?.triggeredBy || 'manual',
+      },
+      select: { id: true, weekLabel: true },
+    });
+  } catch (error: any) {
+    // Race-safe: if another server instance created the prep first, return the existing row.
+    const isUniqueViolation =
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002' &&
+      (() => {
+        const target = (error.meta as any)?.target;
+        if (Array.isArray(target)) return target.includes('agentId') && target.includes('weekStartDate');
+        if (typeof target === 'string') return target.includes('agentId') && target.includes('weekStartDate');
+        return false;
+      })();
 
-  return { prepId: prep.id, weekLabel, existed: false };
+    if (!isUniqueViolation) throw error;
+
+    const existing = await prisma.agentWeeklyPrep.findFirst({
+      where: {
+        agentId: agent.id,
+        weekStartDate: {
+          gte: weekStart,
+          lt: weekEnd,
+        },
+        status: { notIn: [WeeklyPrepStatus.FAILED] },
+      },
+      select: { id: true, weekLabel: true },
+    });
+    if (existing) {
+      return { prepId: existing.id, weekLabel: existing.weekLabel, existed: true };
+    }
+    // If we can't find it, surface the original error for investigation.
+    throw error;
+  }
+
+  return { prepId: prep.id, weekLabel: prep.weekLabel, existed: false };
 }
 
 // ============================================

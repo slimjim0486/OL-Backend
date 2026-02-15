@@ -8,6 +8,7 @@ import {
   CurriculumType,
   AgentTone,
   PlanningAutonomy,
+  WeeklyPrepStatus,
   ReviewType,
   ReviewStatus,
   MessageRole,
@@ -40,6 +41,59 @@ router.use(authenticateTeacher);
 // Validation Helpers
 // ============================================================================
 
+function isValidIanaTimezone(timezone: string): boolean {
+  const tz = String(timezone || '').trim();
+  if (!tz) return false;
+  try {
+    // Throws RangeError for invalid timeZone values.
+    new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function computeNextAutopilotRunAt(opts: {
+  preferredPlanningDay: string;
+  preferredDeliveryTime: string; // "HH:MM"
+  timezone: string;
+  now?: Date;
+}): Date | null {
+  const timezone = String(opts.timezone || '').trim();
+  const preferredDay = String(opts.preferredPlanningDay || '').trim().toUpperCase();
+  const preferredTime = String(opts.preferredDeliveryTime || '').trim();
+  if (!timezone || !preferredDay || !preferredTime) return null;
+  if (!isValidIanaTimezone(timezone)) return null;
+
+  const [prefHour, prefMinute] = preferredTime.split(':').map((n) => parseInt(n, 10));
+  if (!Number.isFinite(prefHour) || !Number.isFinite(prefMinute)) return null;
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const now = opts.now || new Date();
+  const MAX_MINUTES = 8 * 24 * 60; // search up to 8 days ahead
+
+  for (let i = 0; i <= MAX_MINUTES; i += 1) {
+    const candidate = new Date(now.getTime() + i * 60 * 1000);
+    const parts = formatter.formatToParts(candidate);
+    const day = parts.find((p) => p.type === 'weekday')?.value?.toUpperCase();
+    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+    const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+
+    if (day === preferredDay && hour === prefHour && minute === prefMinute) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 function validateBody<T>(schema: z.ZodSchema<T>) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
@@ -60,6 +114,10 @@ function validateBody<T>(schema: z.ZodSchema<T>) {
 
 const setupSchema = z.object({});
 
+const PLANNING_DAY_ENUM = z.enum([
+  'SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
+]);
+
 const updateIdentitySchema = z.object({
   schoolName: z.string().optional(),
   schoolType: z.string().optional(),
@@ -68,9 +126,11 @@ const updateIdentitySchema = z.object({
   curriculumType: z.nativeEnum(CurriculumType).optional(),
   yearsExperience: z.number().int().min(0).max(50).optional(),
   teachingPhilosophy: z.string().max(2000).optional(),
-  preferredPlanningDay: z.string().optional(),
-  preferredDeliveryTime: z.string().optional(),
-  timezone: z.string().optional(),
+  preferredPlanningDay: z
+    .preprocess((v) => (typeof v === 'string' ? v.toUpperCase() : v), PLANNING_DAY_ENUM)
+    .optional(),
+  preferredDeliveryTime: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format').optional(),
+  timezone: z.string().refine(isValidIanaTimezone, 'Invalid IANA timezone').optional(),
   agentTone: z.nativeEnum(AgentTone).optional(),
   planningAutonomy: z.nativeEnum(PlanningAutonomy).optional(),
   planningAutonomyAcknowledged: z.boolean().optional(),
@@ -135,16 +195,12 @@ const feedbackSchema = z.object({
   subject: z.string().optional(),
 });
 
-const PLANNING_DAY_ENUM = z.enum([
-  'SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
-]);
-
 const schedulingSchema = z.object({
   preferredPlanningDay: z
     .preprocess((v) => (typeof v === 'string' ? v.toUpperCase() : v), PLANNING_DAY_ENUM)
     .optional(),
   preferredDeliveryTime: z.string().regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format').optional(),
-  timezone: z.string().optional(),
+  timezone: z.string().refine(isValidIanaTimezone, 'Invalid IANA timezone').optional(),
 });
 
 // ============================================================================
@@ -238,6 +294,54 @@ router.patch(
     }
   }
 );
+
+// Autopilot status (next run + last scheduled generation)
+router.get('/autopilot/status', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const teacherId = (req as any).teacher.id;
+    const agent = await agentMemoryService.getAgent(teacherId);
+    if (!agent) return res.status(404).json({ error: 'Agent not found' });
+
+    const enabled =
+      agent.onboardingComplete &&
+      agent.planningAutonomy === PlanningAutonomy.AUTOPILOT &&
+      Boolean(agent.preferredPlanningDay && agent.preferredDeliveryTime && agent.timezone);
+
+    const nextRunAt = enabled
+      ? computeNextAutopilotRunAt({
+          preferredPlanningDay: agent.preferredPlanningDay as any,
+          preferredDeliveryTime: agent.preferredDeliveryTime as any,
+          timezone: agent.timezone,
+        })
+      : null;
+
+    const last = await prisma.agentWeeklyPrep.findFirst({
+      where: {
+        agentId: agent.id,
+        triggeredBy: 'scheduled',
+        status: { not: WeeklyPrepStatus.FAILED },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, weekLabel: true, createdAt: true },
+    });
+
+    res.json({
+      enabled,
+      schedule: {
+        preferredPlanningDay: agent.preferredPlanningDay,
+        preferredDeliveryTime: agent.preferredDeliveryTime,
+        timezone: agent.timezone,
+      },
+      nextRunAt: nextRunAt ? nextRunAt.toISOString() : null,
+      nextWindowEndAt: nextRunAt ? new Date(nextRunAt.getTime() + 30 * 60 * 1000).toISOString() : null,
+      lastScheduledPrep: last
+        ? { id: last.id, weekLabel: last.weekLabel, createdAt: last.createdAt.toISOString() }
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // ============================================================================
 // Onboarding Chat

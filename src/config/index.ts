@@ -108,6 +108,10 @@ export const config = {
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
   debug: process.env.DEBUG === 'true',
+
+  // Schedulers
+  // In multi-instance deployments, run cron jobs on a single instance (or keep enabled but rely on Redis locks).
+  enableWeeklyPrepScheduler: process.env.ENABLE_WEEKLY_PREP_SCHEDULER !== 'false',
 } as const;
 
 // Validate required environment variables

@@ -3173,6 +3173,8 @@ model AgentWeeklyPrep {
   @@index([agentId, createdAt])
   @@index([agentId, weekStartDate])
   @@index([status])
+  // Enforce at-most-one weekly prep per agent per week (race-safe across multiple server instances).
+  @@unique([agentId, weekStartDate])
 }
 
 model AgentMaterial {
