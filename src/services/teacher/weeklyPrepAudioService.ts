@@ -2,30 +2,12 @@
 // Wraps audioUpdateService without modifying it. Formats weekly prep plan into lesson summaries.
 import { prisma } from '../../config/database.js';
 import { audioUpdateService } from './audioUpdateService.js';
-import { agentMemoryService } from './agentMemoryService.js';
 import { logger } from '../../utils/logger.js';
+import { buildLessonSummariesFromPlan, type WeeklyPlan } from './weeklyPrepAudioUtils.js';
 
 // ============================================
 // TYPES
 // ============================================
-
-interface PlanSubject {
-  subject: string;
-  topic: string;
-  standards?: string[];
-  materials?: Array<{ type: string; title: string; description: string }>;
-}
-
-interface PlanDay {
-  dayOfWeek: number;
-  date: string;
-  subjects: PlanSubject[];
-}
-
-interface WeeklyPlan {
-  days: PlanDay[];
-  weekSummary?: string;
-}
 
 // ============================================
 // SERVICE
@@ -75,7 +57,7 @@ async function generateAudioFromWeeklyPrep(prepId: string): Promise<string | nul
     // Generate the script using existing audio service
     const scriptResult = await audioUpdateService.generateScript(teacherId, {
       lessonIds: [], // No direct lesson IDs — we're using custom notes instead
-      customNotes: lessonSummaries,
+      lessonSummaries,
       weekLabel: prep.weekLabel,
       duration: 'medium',
     });
@@ -111,46 +93,6 @@ async function generateAudioFromWeeklyPrep(prepId: string): Promise<string | nul
     });
     return null;
   }
-}
-
-/**
- * Build lesson summary text from weekly prep plan JSON.
- * Formats each day's subjects and topics into a readable summary.
- */
-function buildLessonSummariesFromPlan(plan: WeeklyPlan, weekLabel: string): string {
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const parts: string[] = [];
-
-  parts.push(`WEEKLY PLAN OVERVIEW: ${weekLabel}`);
-  if (plan.weekSummary) {
-    parts.push(`Summary: ${plan.weekSummary}`);
-  }
-  parts.push('');
-
-  for (const day of plan.days) {
-    const dayName = dayNames[day.dayOfWeek] || `Day ${day.dayOfWeek + 1}`;
-    const subjectLines: string[] = [];
-
-    for (const subj of day.subjects) {
-      let line = `  - ${subj.subject}: ${subj.topic}`;
-      if (subj.standards?.length) {
-        line += ` (Standards: ${subj.standards.slice(0, 3).join(', ')})`;
-      }
-      if (subj.materials?.length) {
-        const materialTypes = subj.materials.map(m => m.type).join(', ');
-        line += ` [Materials: ${materialTypes}]`;
-      }
-      subjectLines.push(line);
-    }
-
-    if (subjectLines.length > 0) {
-      parts.push(`${dayName}:`);
-      parts.push(...subjectLines);
-      parts.push('');
-    }
-  }
-
-  return parts.join('\n');
 }
 
 // ============================================

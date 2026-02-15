@@ -15,6 +15,7 @@ import { contentGenerationService } from './contentGenerationService.js';
 import { reinforcementService } from './reinforcementService.js';
 import { logger } from '../../utils/logger.js';
 import { TeacherPlanRequiredError, hasTeacherTierAccess } from '../../middleware/teacherPlanGate.js';
+import { z } from 'zod';
 
 // ============================================
 // TYPES
@@ -45,6 +46,85 @@ interface WeeklyPlan {
   days: PlanDay[];
   weekSummary: string;
   totalMaterialCount: number;
+}
+
+const weeklyPlanSchema = z.object({
+  days: z.array(z.object({
+    dayOfWeek: z.number().int().min(0).max(4),
+    date: z.string().min(1),
+    subjects: z.array(z.object({
+      subject: z.string().min(1),
+      topic: z.string().min(1),
+      standards: z.array(z.string()).optional(),
+      materials: z.array(z.object({
+        type: z.string().min(1),
+        title: z.string().min(1),
+        description: z.string().optional().default(''),
+      })).min(1),
+    })).min(1),
+  })).min(1),
+  weekSummary: z.string().optional().default(''),
+  totalMaterialCount: z.number().int().optional().default(0),
+}).passthrough();
+
+function extractJSON(text: string): string {
+  const normalized = String(text || '').replace(/^\uFEFF/, '').trim();
+  if (!normalized) return normalized;
+
+  // Try to extract JSON from markdown code blocks
+  const jsonBlockMatch = normalized.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (jsonBlockMatch) {
+    return jsonBlockMatch[1].trim();
+  }
+
+  // Try to find a JSON object within surrounding text
+  const jsonObjectMatch = normalized.match(/\{[\s\S]*\}/);
+  if (jsonObjectMatch) {
+    return jsonObjectMatch[0].trim();
+  }
+
+  return normalized;
+}
+
+function repairJSON(jsonLike: string): string {
+  // Minimal repair: remove trailing commas which commonly appear in model output.
+  return jsonLike.replace(/,\s*([}\]])/g, '$1');
+}
+
+function parseWeeklyPlanFromAIResponse(text: string): WeeklyPlan {
+  const raw = String(text || '').trim();
+  if (!raw) {
+    throw new Error('Empty response');
+  }
+
+  const attempts: Array<{ strategy: string; value: string }> = [
+    { strategy: 'raw', value: raw },
+    { strategy: 'extract', value: extractJSON(raw) },
+  ];
+
+  for (const attempt of attempts) {
+    for (const variant of [attempt.value, repairJSON(attempt.value)]) {
+      try {
+        const parsed = JSON.parse(variant);
+        const validated = weeklyPlanSchema.safeParse(parsed);
+        if (validated.success) {
+          return validated.data as unknown as WeeklyPlan;
+        }
+      } catch {
+        // continue
+      }
+    }
+  }
+
+  // Final try: parse JSON first, then surface validation errors for logging upstream.
+  const extracted = extractJSON(raw);
+  const parsed = JSON.parse(repairJSON(extracted));
+  const validated = weeklyPlanSchema.safeParse(parsed);
+  if (!validated.success) {
+    const issues = validated.error.issues.slice(0, 5).map(i => `${i.path.join('.')}: ${i.message}`);
+    throw new Error(`Invalid plan schema: ${issues.join(' | ')}`);
+  }
+  return validated.data as unknown as WeeklyPlan;
 }
 
 interface MaterialGenerationOptions {
@@ -151,14 +231,22 @@ async function generateWeeklyPlan(prepId: string): Promise<void> {
 
   let plan: WeeklyPlan;
   try {
-    plan = JSON.parse(text);
-  } catch {
-    logger.error('Failed to parse weekly plan JSON', { prepId, text: text.substring(0, 500) });
+    plan = parseWeeklyPlanFromAIResponse(text);
+  } catch (error) {
+    const candidates = (result.response as any)?.candidates;
+    const finishReason = candidates?.[0]?.finishReason;
+    logger.error('Failed to parse weekly plan JSON', {
+      prepId,
+      finishReason,
+      textLength: text.length,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      textPreview: text.substring(0, 800),
+    });
     await prisma.agentWeeklyPrep.update({
       where: { id: prepId },
       data: { status: WeeklyPrepStatus.FAILED },
     });
-    throw new Error('Failed to parse weekly plan from AI');
+    throw new Error(`Failed to parse weekly plan from AI (prepId=${prepId})`);
   }
 
   // Create AgentMaterial records in PENDING status
@@ -1038,6 +1126,7 @@ INSTRUCTIONS:
 - Use the curriculum state to pick appropriate topics and standards
 - Vary activity types throughout the week
 - Build on Monday's concepts through Friday (progressive complexity)
+- Return ONLY valid JSON. Do not include markdown, code fences, or commentary.
 
 Return a JSON object with this exact structure:
 {

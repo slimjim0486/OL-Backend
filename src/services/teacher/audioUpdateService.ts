@@ -8,6 +8,8 @@ import { logger } from '../../utils/logger.js';
 import { uploadFile } from '../storage/storageService.js';
 import { v4 as uuidv4 } from 'uuid';
 import { getTTSClient } from '../../config/tts.js';
+import { NotFoundError, ValidationError } from '../../middleware/errorHandler.js';
+import { buildLessonSummariesFromPlan, type WeeklyPlan } from './weeklyPrepAudioUtils.js';
 
 // ============================================
 // TYPES
@@ -15,6 +17,9 @@ import { getTTSClient } from '../../config/tts.js';
 
 export interface GenerateAudioScriptInput {
   lessonIds: string[];           // IDs of TeacherContent to summarize
+  // Optional override used by internal callers (e.g., weekly prep) to avoid depending on TeacherContent IDs.
+  // When provided, this text is used as LESSON CONTENT and lessonIds may be empty.
+  lessonSummaries?: string;
   customNotes?: string;          // Teacher's custom notes to include
   weekLabel?: string;            // e.g., "Week of Dec 23"
   focusAreas?: string[];         // Topics to emphasize
@@ -96,38 +101,45 @@ export const audioUpdateService = {
       language: input.language || 'en'
     });
 
-    // Fetch the lesson content
-    const lessons = await prisma.teacherContent.findMany({
-      where: {
-        id: { in: input.lessonIds },
-        teacherId,
-      },
-      select: {
-        id: true,
-        title: true,
-        subject: true,
-        gradeLevel: true,
-        lessonContent: true,
-        description: true,
-      },
-    });
+    let lessonSummaries = (input.lessonSummaries || '').trim();
+    if (!lessonSummaries) {
+      if (!input.lessonIds?.length) {
+        throw new ValidationError('At least one lesson is required');
+      }
 
-    if (lessons.length === 0) {
-      throw new Error('Selected lessons were not found. They may have been deleted. Please select different lessons.');
-    }
+      // Fetch the lesson content
+      const lessons = await prisma.teacherContent.findMany({
+        where: {
+          id: { in: input.lessonIds },
+          teacherId,
+        },
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          gradeLevel: true,
+          lessonContent: true,
+          description: true,
+        },
+      });
 
-    // Build lesson summaries for the prompt
-    const lessonSummaries = lessons.map(lesson => {
-      const content = lesson.lessonContent as { title?: string; summary?: string; sections?: { title: string }[] } | null;
-      return `
+      if (lessons.length === 0) {
+        throw new NotFoundError('Selected lessons were not found. They may have been deleted. Please select different lessons.');
+      }
+
+      // Build lesson summaries for the prompt
+      lessonSummaries = lessons.map(lesson => {
+        const content = lesson.lessonContent as { title?: string; summary?: string; sections?: { title: string }[] } | null;
+        return `
 LESSON: ${lesson.title}
 Subject: ${lesson.subject || 'General'}
 Grade Level: ${lesson.gradeLevel || 'N/A'}
 ${content?.summary ? `Summary: ${content.summary}` : ''}
 ${lesson.description ? `Description: ${lesson.description}` : ''}
 ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join(', ')}` : ''}
-      `.trim();
-    }).join('\n\n---\n\n');
+        `.trim();
+      }).join('\n\n---\n\n');
+    }
 
     const duration = input.duration || 'medium';
     const durationMinutes = duration === 'short' ? '2-3' : duration === 'medium' ? '4-5' : '6-8';
@@ -438,10 +450,35 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
       throw new Error('Audio update not found. It may have been deleted. Go back to create a new one.');
     }
 
+    // Weekly prep audio updates don't have lessonIds; rebuild lesson summaries from the weekly prep plan.
+    // This avoids failing with "Selected lessons were not found" when regenerating weekly-prep sourced updates.
+    let weeklyPrepLessonSummaries: string | undefined;
+    let weeklyPrepWeekLabel: string | undefined;
+    if ((!existing.lessonIds || existing.lessonIds.length === 0) && existing.weeklyPrepId) {
+      const prep = await prisma.agentWeeklyPrep.findUnique({
+        where: { id: existing.weeklyPrepId },
+        select: { weekLabel: true, plan: true },
+      });
+
+      if (!prep) {
+        throw new NotFoundError('Weekly prep not found for this audio update. Create a new audio update instead.');
+      }
+
+      const plan = prep?.plan as unknown as WeeklyPlan | null;
+      if (!prep.weekLabel || !plan?.days?.length) {
+        throw new ValidationError('Weekly prep plan is not available yet. Try again after generating your weekly prep.');
+      }
+
+      weeklyPrepLessonSummaries = buildLessonSummariesFromPlan(plan, prep.weekLabel);
+      weeklyPrepWeekLabel = prep.weekLabel;
+    }
+
     // Regenerate the script
     const scriptResult = await this.generateScript(teacherId, {
       lessonIds: existing.lessonIds,
+      ...(weeklyPrepLessonSummaries ? { lessonSummaries: weeklyPrepLessonSummaries } : {}),
       customNotes: input?.customNotes || existing.customNotes || undefined,
+      weekLabel: weeklyPrepWeekLabel,
       language: input?.language || existing.language,
       duration: input?.duration,
       focusAreas: input?.focusAreas,

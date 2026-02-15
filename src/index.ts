@@ -113,8 +113,25 @@ async function connectDatabaseWithRetry(): Promise<void> {
 
 // Trust proxy - required for Railway/reverse proxy deployments
 // This allows express-rate-limit to correctly identify users via X-Forwarded-For
-if (config.isProduction) {
-  app.set('trust proxy', 1);
+const isRailway =
+  Boolean(process.env.RAILWAY_ENVIRONMENT) ||
+  Boolean(process.env.RAILWAY_PROJECT_ID) ||
+  Boolean(process.env.RAILWAY_SERVICE_ID) ||
+  Boolean(process.env.RAILWAY_DEPLOYMENT_ID);
+
+// Allow explicit override: TRUST_PROXY=true|false|<number>
+const trustProxyEnv = process.env.TRUST_PROXY;
+const shouldTrustProxy =
+  trustProxyEnv != null ? (trustProxyEnv !== 'false' && trustProxyEnv !== '0') : (config.isProduction || isRailway);
+
+if (shouldTrustProxy) {
+  let trustProxyValue: any = 1;
+  if (trustProxyEnv === 'true') trustProxyValue = true;
+  else if (trustProxyEnv && trustProxyEnv !== 'false' && trustProxyEnv !== '0') {
+    const maybeNum = Number(trustProxyEnv);
+    if (Number.isFinite(maybeNum)) trustProxyValue = maybeNum;
+  }
+  app.set('trust proxy', trustProxyValue);
 }
 
 // Security headers
@@ -152,8 +169,9 @@ app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoute
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Rate limiting (global)
-app.use(standardRateLimit);
+// Rate limiting (API only)
+// Use auth-aware keying in the limiter to avoid grouping many users behind a proxy/NAT into a single bucket.
+app.use('/api', standardRateLimit);
 
 // ============================================
 // ROUTES

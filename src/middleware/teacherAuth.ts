@@ -52,7 +52,10 @@ export async function authenticateTeacher(
       throw new UnauthorizedError('No token provided');
     }
 
-    const token = authHeader.substring(7);
+    const token = authHeader.substring(7).trim();
+    if (!token || token === 'null' || token === 'undefined') {
+      throw new UnauthorizedError('No token provided');
+    }
 
     // Verify token with the access token secret
     const payload = jwt.verify(token, config.jwtAccessSecret) as TeacherAccessTokenPayload;
