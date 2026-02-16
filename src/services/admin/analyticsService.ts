@@ -57,6 +57,102 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+const WEEKLY_PREP_MATERIAL_MARKER = 'weekly_prep_material_id:';
+
+type DateRangeFilter = {
+  gte: Date;
+  lt?: Date;
+  lte?: Date;
+};
+
+function buildNonWeeklyTeacherContentWhere({
+  dateRange,
+  teacherId,
+}: {
+  dateRange?: DateRangeFilter;
+  teacherId?: string;
+}) {
+  return {
+    ...(teacherId ? { teacherId } : {}),
+    ...(dateRange ? { createdAt: dateRange } : {}),
+    OR: [
+      { extractedText: null },
+      {
+        extractedText: {
+          not: {
+            contains: WEEKLY_PREP_MATERIAL_MARKER,
+          },
+        },
+      },
+    ],
+  };
+}
+
+async function countGeneratedTeacherContent({
+  dateRange,
+  teacherId,
+}: {
+  dateRange?: DateRangeFilter;
+  teacherId?: string;
+}): Promise<number> {
+  const [savedContentCount, weeklyPrepGeneratedCount] = await Promise.all([
+    prisma.teacherContent.count({
+      where: buildNonWeeklyTeacherContentWhere({ dateRange, teacherId }),
+    }),
+    prisma.agentMaterial.count({
+      where: {
+        ...(dateRange ? { generatedAt: dateRange } : { generatedAt: { not: null } }),
+        ...(teacherId
+          ? {
+            weeklyPrep: {
+              is: {
+                agent: {
+                  is: {
+                    teacherId,
+                  },
+                },
+              },
+            },
+          }
+          : {}),
+      },
+    }),
+  ]);
+
+  return savedContentCount + weeklyPrepGeneratedCount;
+}
+
+async function countTeachersWithGeneratedContent(dateRange: DateRangeFilter): Promise<number> {
+  const [savedContentTeacherIds, weeklyPrepTeacherIds] = await Promise.all([
+    prisma.teacherContent.findMany({
+      where: buildNonWeeklyTeacherContentWhere({ dateRange }),
+      select: { teacherId: true },
+      distinct: ['teacherId'],
+    }),
+    prisma.teacherAgent.findMany({
+      where: {
+        weeklyPreps: {
+          some: {
+            materials: {
+              some: {
+                generatedAt: dateRange,
+              },
+            },
+          },
+        },
+      },
+      select: { teacherId: true },
+      distinct: ['teacherId'],
+    }),
+  ]);
+
+  const teacherIds = new Set<string>();
+  savedContentTeacherIds.forEach((row) => teacherIds.add(row.teacherId));
+  weeklyPrepTeacherIds.forEach((row) => teacherIds.add(row.teacherId));
+
+  return teacherIds.size;
+}
+
 export interface OverviewMetrics {
   dau: number;
   wau: number;
@@ -1045,7 +1141,7 @@ export const analyticsService = {
     contentCreated: number;
     activeTeachers7d: number;
   }> {
-    const cacheKey = 'analytics:teacher:overview:v2';
+    const cacheKey = 'analytics:teacher:overview:v3';
 
     const cached = await redis.get(cacheKey);
     if (cached !== null) {
@@ -1113,9 +1209,9 @@ export const analyticsService = {
           id: true,
         },
       }),
-      prisma.teacherContent.count({
-        where: {
-          createdAt: { gte: monthAgo },
+      countGeneratedTeacherContent({
+        dateRange: {
+          gte: monthAgo,
         },
       }),
     ]);
@@ -1394,7 +1490,7 @@ export const analyticsService = {
     usersCount: number;
     trend7d: number;
   }[]> {
-    const cacheKey = 'analytics:teacher:feature-adoption';
+    const cacheKey = 'analytics:teacher:feature-adoption:v2';
 
     const cached = await redis.get(cacheKey);
     if (cached !== null) {
@@ -1416,15 +1512,12 @@ export const analyticsService = {
     const features = [
       {
         name: 'Content Creation',
-        currentQuery: prisma.teacher.count({
-          where: {
-            content: { some: { createdAt: { gte: weekAgo } } },
-          },
+        currentQuery: countTeachersWithGeneratedContent({
+          gte: weekAgo,
         }),
-        previousQuery: prisma.teacher.count({
-          where: {
-            content: { some: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } } },
-          },
+        previousQuery: countTeachersWithGeneratedContent({
+          gte: twoWeeksAgo,
+          lt: weekAgo,
         }),
       },
       {
@@ -1651,7 +1744,7 @@ export const analyticsService = {
       allLimit,
     } = options;
 
-    const cacheKey = `analytics:teacher:repeat:${minDistinctDays}d:${minUsageEvents}e:${minContentCreated}c:${limit}:all:${includeAll ? '1' : '0'}:${allLimit ?? 'na'}`;
+    const cacheKey = `analytics:teacher:repeat:v2:${minDistinctDays}d:${minUsageEvents}e:${minContentCreated}c:${limit}:all:${includeAll ? '1' : '0'}:${allLimit ?? 'na'}`;
 
     const cached = await redis.get(cacheKey);
     if (cached !== null) {
@@ -1707,9 +1800,9 @@ export const analyticsService = {
           },
           orderBy: { createdAt: 'asc' }
         }),
-        prisma.teacherContent.count({
-          where: { teacherId: teacher.id }
-        })
+        countGeneratedTeacherContent({
+          teacherId: teacher.id,
+        }),
       ]);
 
       // Calculate distinct usage days

@@ -4,6 +4,44 @@ import { prisma } from '../../config/database.js';
 import { redis } from '../../config/redis.js';
 import { logger } from '../../utils/logger.js';
 
+const WEEKLY_PREP_MATERIAL_MARKER = 'weekly_prep_material_id:';
+
+async function countGeneratedTeacherContentForTeacher(teacherId: string): Promise<number> {
+  const [savedContentCount, weeklyPrepGeneratedCount] = await Promise.all([
+    prisma.teacherContent.count({
+      where: {
+        teacherId,
+        OR: [
+          { extractedText: null },
+          {
+            extractedText: {
+              not: {
+                contains: WEEKLY_PREP_MATERIAL_MARKER,
+              },
+            },
+          },
+        ],
+      },
+    }),
+    prisma.agentMaterial.count({
+      where: {
+        generatedAt: { not: null },
+        weeklyPrep: {
+          is: {
+            agent: {
+              is: {
+                teacherId,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return savedContentCount + weeklyPrepGeneratedCount;
+}
+
 // Cache TTLs in seconds
 const CACHE_TTL = {
   COHORT_MATRIX: 60 * 60,    // 1 hour for cohort retention (expensive query)
@@ -626,7 +664,7 @@ export const cohortService = {
     subscriptionTier: string;
     contentCreated: number;
   }[]> {
-    const cacheKey = `analytics:teacher:at-risk:${inactiveDays}d:${limit}`;
+    const cacheKey = `analytics:teacher:at-risk:v2:${inactiveDays}d:${limit}`;
 
     const cached = await redis.get(cacheKey);
     if (cached !== null) {
@@ -652,17 +690,20 @@ export const cohortService = {
         lastName: true,
         lastLoginAt: true,
         subscriptionTier: true,
-        _count: {
-          select: {
-            content: true,
-          },
-        },
       },
       orderBy: {
         lastLoginAt: 'asc',
       },
       take: limit,
     });
+
+    const generatedContentCounts = await Promise.all(
+      teachers.map(async (teacher) => [
+        teacher.id,
+        await countGeneratedTeacherContentForTeacher(teacher.id),
+      ] as const)
+    );
+    const generatedContentMap = new Map(generatedContentCounts);
 
     const result = teachers.map(teacher => {
       const daysSinceActive = teacher.lastLoginAt
@@ -676,7 +717,7 @@ export const cohortService = {
         lastLoginAt: teacher.lastLoginAt?.toISOString() || null,
         daysSinceActive: daysSinceActive === -1 ? 999 : daysSinceActive,
         subscriptionTier: teacher.subscriptionTier,
-        contentCreated: teacher._count.content,
+        contentCreated: generatedContentMap.get(teacher.id) || 0,
       };
     });
 

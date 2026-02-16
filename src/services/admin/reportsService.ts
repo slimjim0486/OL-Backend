@@ -4,6 +4,44 @@ import { prisma } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
 import type { Prisma } from '@prisma/client';
 
+const WEEKLY_PREP_MATERIAL_MARKER = 'weekly_prep_material_id:';
+
+async function countGeneratedTeacherContentForTeacher(teacherId: string): Promise<number> {
+  const [savedContentCount, weeklyPrepGeneratedCount] = await Promise.all([
+    prisma.teacherContent.count({
+      where: {
+        teacherId,
+        OR: [
+          { extractedText: null },
+          {
+            extractedText: {
+              not: {
+                contains: WEEKLY_PREP_MATERIAL_MARKER,
+              },
+            },
+          },
+        ],
+      },
+    }),
+    prisma.agentMaterial.count({
+      where: {
+        generatedAt: { not: null },
+        weeklyPrep: {
+          is: {
+            agent: {
+              is: {
+                teacherId,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return savedContentCount + weeklyPrepGeneratedCount;
+}
+
 // Query options interface
 export interface ReportQueryOptions {
   page: number;
@@ -545,20 +583,29 @@ export const reportsService = {
       ]);
 
       const teacherIds = teachers.map(teacher => teacher.id);
-      const completedExports = teacherIds.length > 0
-        ? await prisma.teacherExport.groupBy({
-          by: ['teacherId'],
-          where: {
-            teacherId: { in: teacherIds },
-            status: 'COMPLETED',
-          },
-          _count: { _all: true },
-        })
-        : [];
+      const [completedExports, generatedContentCounts] = await Promise.all([
+        teacherIds.length > 0
+          ? prisma.teacherExport.groupBy({
+            by: ['teacherId'],
+            where: {
+              teacherId: { in: teacherIds },
+              status: 'COMPLETED',
+            },
+            _count: { _all: true },
+          })
+          : Promise.resolve([]),
+        Promise.all(
+          teacherIds.map(async (teacherId) => [
+            teacherId,
+            await countGeneratedTeacherContentForTeacher(teacherId),
+          ] as const)
+        ),
+      ]);
 
       const completedExportMap = new Map(
         completedExports.map(item => [item.teacherId, item._count._all])
       );
+      const generatedContentMap = new Map(generatedContentCounts);
 
       const totalPages = Math.ceil(total / limit);
 
@@ -568,7 +615,7 @@ export const reportsService = {
           // Convert BigInt to Number for JSON serialization
           monthlyTokenQuota: Number(teacher.monthlyTokenQuota),
           currentMonthUsage: Number(teacher.currentMonthUsage),
-          contentCount: teacher._count.content,
+          contentCount: generatedContentMap.get(teacher.id) || 0,
           audioUpdatesCount: teacher._count.audioUpdates,
           subPlansCount: teacher._count.substitutePlans,
           iepGoalsCount: teacher._count.iepGoalSessions,
@@ -688,13 +735,14 @@ export const reportsService = {
           },
         }),
       ]);
+      const generatedContentCount = await countGeneratedTeacherContentForTeacher(teacherId);
 
       return {
         ...teacher,
         // Convert BigInt to Number for JSON serialization
         monthlyTokenQuota: Number(teacher.monthlyTokenQuota),
         currentMonthUsage: Number(teacher.currentMonthUsage),
-        contentCount: teacher._count.content,
+        contentCount: generatedContentCount,
         rubricsCount: teacher._count.rubrics,
         gradingJobsCount: teacher._count.gradingJobs,
         templatesCount: teacher._count.templates,
