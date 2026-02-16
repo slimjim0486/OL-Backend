@@ -145,6 +145,13 @@ const onboardingResetSchema = z.object({
   fromStep: z.enum(['identity', 'classroom', 'curriculum']).optional(),
 });
 
+const quickSetupSchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(100),
+  gradesTaught: z.array(z.string()).min(1, 'At least one grade band is required'),
+  subjectsTaught: z.array(z.nativeEnum(Subject)).min(1, 'At least one subject is required'),
+  currentTopic: z.string().max(500).optional(),
+});
+
 const classroomSchema = z.object({
   name: z.string().min(1),
   gradeLevel: z.string().optional(),
@@ -390,6 +397,21 @@ router.get('/onboarding/status', async (req: Request, res: Response, next: NextF
     next(error);
   }
 });
+
+// Quick setup (streamlined 2-step onboarding)
+router.post(
+  '/quick-setup',
+  validateBody(quickSetupSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = (req as any).teacher.id;
+      const result = await agentOnboardingService.quickSetup(teacherId, req.body);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // ============================================================================
 // Classrooms

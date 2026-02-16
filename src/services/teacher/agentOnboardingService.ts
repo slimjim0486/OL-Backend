@@ -707,6 +707,64 @@ function normalizeCurriculumType(value: any): CurriculumType | undefined {
 }
 
 // ============================================
+// QUICK SETUP (Streamlined 2-step onboarding)
+// ============================================
+
+interface QuickSetupInput {
+  firstName: string;
+  gradesTaught: string[];
+  subjectsTaught: string[];
+  currentTopic?: string;
+}
+
+async function quickSetup(teacherId: string, data: QuickSetupInput): Promise<{
+  agent: any;
+  success: boolean;
+}> {
+  const agent = await agentMemoryService.getOrCreateAgent(teacherId);
+
+  // Update teacher name
+  if (data.firstName) {
+    await agentMemoryService.updateTeacherNameIfBlank(teacherId, {
+      firstName: data.firstName,
+    });
+  }
+
+  // Filter to valid subjects
+  const validSubjects = data.subjectsTaught.filter(
+    (s: string) => Object.values(Subject).includes(s as Subject)
+  ) as Subject[];
+
+  // Update agent identity with minimal data
+  await agentMemoryService.updateIdentity(teacherId, {
+    gradesTaught: data.gradesTaught,
+    subjectsTaught: validSubjects.length ? validSubjects : undefined,
+    curriculumType: CurriculumType.AMERICAN,
+  });
+
+  // Create a default classroom
+  const existingClassrooms = await agentMemoryService.getClassroomContexts(agent.id);
+  if (existingClassrooms.length === 0) {
+    await agentMemoryService.upsertClassroomContext(agent.id, {
+      name: 'My Classroom',
+    });
+  }
+
+  // Mark fully set up
+  await agentMemoryService.completeSetupStep(teacherId, AgentSetupStatus.FULLY_SETUP);
+
+  // Fetch updated agent
+  const updatedAgent = await agentMemoryService.getAgent(teacherId);
+
+  logger.info('Quick setup completed', { teacherId, gradesTaught: data.gradesTaught, subjectsTaught: validSubjects });
+
+  return {
+    agent: updatedAgent,
+    success: true,
+  };
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -715,4 +773,5 @@ export const agentOnboardingService = {
   getOnboardingStatus,
   processOnboardingResponse,
   parsePacingGuide,
+  quickSetup,
 };
