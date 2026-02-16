@@ -76,14 +76,25 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
-  // Log error
-  logger.error({
+  const statusCode = err instanceof AppError ? err.statusCode : 500;
+  const logPayload = {
     message: err.message,
-    stack: err.stack,
+    statusCode,
+    code: (err as any).code,
     requestId: req.requestId,
     path: req.path,
     method: req.method,
-  });
+  };
+
+  // 4xx AppErrors are expected client-side failures; reserve error-level stacks for 5xx/unexpected faults.
+  if (err instanceof AppError && statusCode < 500) {
+    logger.warn(logPayload);
+  } else {
+    logger.error({
+      ...logPayload,
+      stack: err.stack,
+    });
+  }
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {
