@@ -714,6 +714,8 @@ interface QuickSetupInput {
   firstName: string;
   gradesTaught: string[];
   subjectsTaught: string[];
+  curriculumType?: CurriculumType;
+  studentCount?: number;
   currentTopic?: string;
 }
 
@@ -739,14 +741,22 @@ async function quickSetup(teacherId: string, data: QuickSetupInput): Promise<{
   await agentMemoryService.updateIdentity(teacherId, {
     gradesTaught: data.gradesTaught,
     subjectsTaught: validSubjects.length ? validSubjects : undefined,
-    curriculumType: CurriculumType.AMERICAN,
+    curriculumType: data.curriculumType || CurriculumType.AMERICAN,
   });
 
-  // Create a default classroom
+  // Create a default classroom with student count if provided
   const existingClassrooms = await agentMemoryService.getClassroomContexts(agent.id);
   if (existingClassrooms.length === 0) {
     await agentMemoryService.upsertClassroomContext(agent.id, {
       name: 'My Classroom',
+      studentCount: data.studentCount || undefined,
+    });
+  } else if (data.studentCount && existingClassrooms[0]) {
+    // Update existing classroom with student count
+    await agentMemoryService.upsertClassroomContext(agent.id, {
+      id: existingClassrooms[0].id,
+      name: existingClassrooms[0].name,
+      studentCount: data.studentCount,
     });
   }
 

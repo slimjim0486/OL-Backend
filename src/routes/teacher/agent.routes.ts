@@ -149,6 +149,8 @@ const quickSetupSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
   gradesTaught: z.array(z.string()).min(1, 'At least one grade band is required'),
   subjectsTaught: z.array(z.nativeEnum(Subject)).min(1, 'At least one subject is required'),
+  curriculumType: z.nativeEnum(CurriculumType).optional(),
+  studentCount: z.number().int().min(1).max(200).optional(),
   currentTopic: z.string().max(500).optional(),
 });
 
