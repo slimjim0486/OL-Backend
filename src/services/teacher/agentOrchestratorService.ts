@@ -48,6 +48,9 @@ interface SessionWithMessages extends AgentChatSession {
 }
 
 const MAX_HISTORY_FOR_CONTEXT = 20;
+const PLANNER_WEEKLY_PREP_PROMPT_TYPE = 'planner_weekly_prep_prompt';
+
+type PlannerWeeklyPrepChoice = 'tell_more' | 'generate_now' | null;
 
 function toSessionTitleFromFirstPrompt(prompt: string): string {
   const normalized = String(prompt || '')
@@ -124,6 +127,101 @@ function buildExportHelpMessage(): string {
     `3. Use **Export** to download **PDF** or **PowerPoint (PPTX slides)**.\n\n` +
     `Tell me the lesson title (or paste the first few words), and I can help you locate the right one.`
   );
+}
+
+function normalizePromptChoiceText(input: string): string {
+  return String(input || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\w\s']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function detectPlannerWeeklyPrepChoice(message: string): PlannerWeeklyPrepChoice {
+  const normalized = normalizePromptChoiceText(message);
+  if (!normalized) return null;
+
+  if (/^1(?:\b|$)/.test(normalized)) return 'tell_more';
+  if (/^2(?:\b|$)/.test(normalized)) return 'generate_now';
+
+  const tellMorePatterns: RegExp[] = [
+    /\b(?:tell me more|ask me more|ask me a few questions|ask me questions)\b/,
+    /\b(?:let me add|i want to add|i need to add|i would like to add)\b[\s\S]*\b(?:context|details|info|information)\b/,
+    /\b(?:more context|more details|more info|more information|additional context)\b/,
+    /\b(?:before you generate|before generating|don't generate yet|do not generate yet|not yet)\b/,
+    /\b(?:hold off|wait a sec|wait a second|pause for now|let me think|thinking)\b/,
+    /\b(?:let's discuss|keep discussing|talk it through|clarify first|i need to clarify|i want to explain)\b/,
+  ];
+
+  const generateNowPatterns: RegExp[] = [
+    /\b(?:generate(?: it| now)?|create(?: it| now)?|build(?: it| now)?|make(?: it| now)?|draft(?: it| now)?)\b/,
+    /\b(?:go ahead|proceed|continue|do it|run with it|ship it|send it)\b/,
+    /\b(?:use|based on)\s+(?:what|the)\s+(?:you|u)\s+(?:know|have)\b/,
+    /\b(?:no more questions|no follow up|no followups|skip follow up|skip followups)\b/,
+    /\b(?:that's enough info|that is enough info|ready now|good to generate|ready to generate)\b/,
+  ];
+
+  if (tellMorePatterns.some((pattern) => pattern.test(normalized))) return 'tell_more';
+  if (generateNowPatterns.some((pattern) => pattern.test(normalized))) return 'generate_now';
+  return null;
+}
+
+function isBriefAcknowledgement(message: string): boolean {
+  const normalized = normalizePromptChoiceText(message);
+  if (!normalized) return false;
+  return /^(?:ok|okay|kk|got it|sounds good|cool|thanks|thank you|sure|yep|yeah|alright|all right)$/i.test(normalized);
+}
+
+function buildPlannerWeeklyPrepPromptActionResult(
+  mode: PlanningAutonomy,
+  stage: 'initial' | 'details' = 'initial'
+): NonNullable<AgentResponse['actionResult']> {
+  const modeLabel = mode === PlanningAutonomy.AUTOPILOT ? 'Autopilot' : 'Planner';
+  const preview =
+    stage === 'details'
+      ? `Share any must-haves for this week, or say "generate now" and I'll build it immediately.`
+      : `Would you like to tell me more about the lessons, or should I generate the week based on what I know now?`;
+
+  return {
+    type: PLANNER_WEEKLY_PREP_PROMPT_TYPE,
+    content: {
+      mode: modeLabel,
+      stage,
+      options: [
+        {
+          id: 'tell_more',
+          label: 'Tell me more first',
+          hint: 'Add context before I build the week',
+          send: 'Tell me more first. Ask me a few questions before generating weekly prep.',
+        },
+        {
+          id: 'generate_now',
+          label: 'Generate now',
+          hint: 'Use what you know and open my calendar',
+          send: 'Generate my weekly prep now using what you already know.',
+        },
+      ],
+    },
+    preview,
+  };
+}
+
+async function buildWeeklyPrepGenerationActionResult(
+  teacherId: string
+): Promise<NonNullable<AgentResponse['actionResult']>> {
+  const { prepId, weekLabel } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
+    triggeredBy: 'chat',
+    forceCreate: true,
+  });
+  await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
+
+  return {
+    type: 'weekly_prep',
+    content: { prepId, weekLabel },
+    preview: `I'm generating your weekly prep package for "${weekLabel}" now. This usually takes 2-3 minutes. You can check the progress on the Weekly Prep page.`,
+    contentId: prepId,
+  };
 }
 
 async function buildCalendarNavigationActionResult(
@@ -258,10 +356,48 @@ async function processMessage(
 
   const commandResult = await maybeHandleSlashCommand(teacherId, agent as any, message);
   const navigationIntent = detectPlannerNavigationIntent(message);
+  const trimmed = String(message || '').trim();
+  const recentAssistant = session.messages.find((m) => m.role === MessageRole.ASSISTANT);
+  const recentActionType =
+    recentAssistant && typeof (recentAssistant as any).actionType === 'string'
+      ? (recentAssistant as any).actionType
+      : (recentAssistant as any)?.actionResult && typeof (recentAssistant as any).actionResult === 'object'
+        ? String(((recentAssistant as any).actionResult as any).type || '')
+        : '';
+  const planningMode = (agent.planningAutonomy || PlanningAutonomy.COACH) as PlanningAutonomy;
+  const isCoach = planningMode === PlanningAutonomy.COACH;
+  const isPlannerOrAutopilot =
+    planningMode === PlanningAutonomy.PLANNER || planningMode === PlanningAutonomy.AUTOPILOT;
+  const fromCoachWeeklyPrompt = recentActionType === 'coach_weekly_prep_prompt';
+  const fromPlannerWeeklyPrompt = recentActionType === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
+  const plannerPromptChoice = detectPlannerWeeklyPrepChoice(trimmed);
   if (commandResult) {
     assistantContent = commandResult.assistantContent;
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
+  } else if (isPlannerOrAutopilot && fromPlannerWeeklyPrompt) {
+    const shouldKeepDiscussing =
+      plannerPromptChoice === 'tell_more' || isBriefAcknowledgement(trimmed) || /\?$/.test(trimmed);
+    if (shouldKeepDiscussing) {
+      assistantContent =
+        `Perfect. Tell me anything you'd like me to account for this week (subjects, standards, pacing, assessments, accommodations, or special events).\n\n` +
+        `When you're ready, say **"generate now"** and I'll take you to the calendar.`;
+      actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'details');
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+      totalTokens = 0;
+    } else {
+      actionResult = await buildWeeklyPrepGenerationActionResult(teacherId);
+      assistantContent = actionResult.preview;
+      intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
+      totalTokens = 0;
+    }
+  } else if (isPlannerOrAutopilot && navigationIntent.isNavigation) {
+    assistantContent =
+      `Before I open Weekly Prep, would you like to tell me more about the lessons, or should I generate the week based on what I know now?\n\n` +
+      `Reply with **1) Tell me more first** or **2) Generate now**.`;
+    actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'initial');
+    intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    totalTokens = 0;
   } else if (navigationIntent.isNavigation) {
     actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message, {
       forceFresh: navigationIntent.forceFresh,
@@ -271,18 +407,10 @@ async function processMessage(
     totalTokens = 0;
   } else {
     // Coach-mode follow-ups: allow quick numeric confirmation from the Coach weekly-planning prompt.
-    const trimmed = String(message || '').trim();
-    const recentAssistant = session.messages.find((m) => m.role === MessageRole.ASSISTANT);
-    const recentActionType =
-      recentAssistant && typeof (recentAssistant as any).actionType === 'string'
-        ? (recentAssistant as any).actionType
-        : (recentAssistant as any)?.actionResult && typeof (recentAssistant as any).actionResult === 'object'
-          ? String(((recentAssistant as any).actionResult as any).type || '')
-          : '';
-
-    const isCoach = (agent as any).planningAutonomy === PlanningAutonomy.COACH;
-    const fromCoachWeeklyPrompt = recentActionType === 'coach_weekly_prep_prompt';
-    const wantsGenerateWeeklyPrep = /^2\b/.test(trimmed) || /\b(?:generate|create|make)\b[\s\S]*\bweekly\s+prep\b/i.test(trimmed);
+    const wantsGenerateWeeklyPrep =
+      /^2\b/.test(trimmed) ||
+      detectPlannerWeeklyPrepChoice(trimmed) === 'generate_now' ||
+      /\b(?:generate|create|make)\b[\s\S]*\bweekly\s+prep\b/i.test(trimmed);
 
     if (isCoach && fromCoachWeeklyPrompt && wantsGenerateWeeklyPrep) {
       const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
@@ -323,15 +451,35 @@ async function processMessage(
 
     // 7. Route to handler
     if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
-      actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message);
-      assistantContent = 'Opening your calendar now.';
+      if (isPlannerOrAutopilot) {
+        assistantContent =
+          `Before I open Weekly Prep, would you like to tell me more about the lessons, or should I generate the week based on what I know now?\n\n` +
+          `Reply with **1) Tell me more first** or **2) Generate now**.`;
+        actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'initial');
+        totalTokens = 0;
+        intent = { type: 'chat', confidence: 1, extractedParams: {} };
+      } else {
+        actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message);
+        assistantContent = 'Opening your calendar now.';
+      }
     } else if (intent.type === 'export' && intent.confidence >= 0.6) {
       assistantContent = buildExportHelpMessage();
       totalTokens = 0;
     } else if (
       intent.type === 'weekly_prep' &&
       intent.confidence >= 0.6 &&
-      (agent.planningAutonomy || PlanningAutonomy.COACH) === PlanningAutonomy.COACH
+      isPlannerOrAutopilot
+    ) {
+      assistantContent =
+        `Before I generate this week, would you like to tell me more about the lessons, or should I generate based on what I know now?\n\n` +
+        `Reply with **1) Tell me more first** or **2) Generate now**.`;
+      totalTokens = 0;
+      actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'initial');
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    } else if (
+      intent.type === 'weekly_prep' &&
+      intent.confidence >= 0.6 &&
+      isCoach
     ) {
       // Coach mode should suggest options before taking planning actions.
       assistantContent =
@@ -506,17 +654,13 @@ async function routeToContentBridge(
     case 'generate_report_comments':
       return agentContentBridge.generateReportCommentsWithContext(teacherId, intent as any);
     case 'weekly_prep': {
-      const { prepId, weekLabel } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
-        triggeredBy: 'chat',
-        forceCreate: true,
-      });
-      await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
+      const actionResult = await buildWeeklyPrepGenerationActionResult(teacherId);
       return {
-        content: { prepId, weekLabel },
-        preview: `I'm generating your weekly prep package for "${weekLabel}" now. This usually takes 2-3 minutes. You can check the progress on the Weekly Prep page.`,
+        content: actionResult.content,
+        preview: actionResult.preview,
         tokensUsed: 0,
         contentType: 'weekly_prep',
-        contentId: prepId,
+        contentId: actionResult.contentId,
       };
     }
     default:
