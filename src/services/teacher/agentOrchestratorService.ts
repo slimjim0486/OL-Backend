@@ -50,6 +50,7 @@ interface SessionWithMessages extends AgentChatSession {
 
 const MAX_HISTORY_FOR_CONTEXT = 20;
 const PLANNER_WEEKLY_PREP_PROMPT_TYPE = 'planner_weekly_prep_prompt';
+const IEP_GOALS_QUICK_REPLY = 'Generate IEP goals';
 
 type PlannerWeeklyPrepChoice = 'tell_more' | 'generate_now' | null;
 
@@ -323,25 +324,24 @@ function formatSubjectName(subject: string): string {
 function computeSuggestedReplies(
   intent: IntentType,
   actionResult: AgentResponse['actionResult'] | undefined,
-  classrooms: Array<{ subject?: string | null }> | undefined
+  classrooms: Array<{ subject?: string | null }> | undefined,
+  hasPriorAssistantMessages: boolean
 ): string[] {
-  // Content was generated -- ActionResultCard already shows Approve/Edit/Regenerate
-  if (
+  let replies: string[] = [];
+  const suppressContextualReplies =
     actionResult?.type === 'quiz' ||
     actionResult?.type === 'flashcards' ||
     actionResult?.type === 'lesson' ||
     actionResult?.type === 'sub_plan' ||
     actionResult?.type === 'iep' ||
-    actionResult?.type === 'weekly_prep'
-  ) {
-    return [];
-  }
-
-  // Coach/planner prompts already have their own inline options
-  if (
+    actionResult?.type === 'weekly_prep' ||
     actionResult?.type === 'coach_weekly_prep_prompt' ||
-    actionResult?.type === PLANNER_WEEKLY_PREP_PROMPT_TYPE
-  ) {
+    actionResult?.type === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
+
+  if (suppressContextualReplies) {
+    if (hasPriorAssistantMessages) {
+      return [IEP_GOALS_QUICK_REPLY];
+    }
     return [];
   }
 
@@ -357,23 +357,28 @@ function computeSuggestedReplies(
     intent === 'generate_flashcards'
   ) {
     if (uniqueSubjects.length > 0) {
-      return [
+      replies = [
         ...uniqueSubjects.slice(0, 3).map(formatSubjectName),
         "I'll type the topic",
       ];
+    } else {
+      replies = [];
     }
-    return [];
-  }
-
-  // Chat intent -- offer common tasks, subject-aware if possible
-  if (intent === 'chat') {
+  } else if (intent === 'chat') {
+    // Chat intent -- offer common tasks, subject-aware if possible
     if (uniqueSubjects.length > 0) {
-      return uniqueSubjects.slice(0, 3).map(formatSubjectName);
+      replies = uniqueSubjects.slice(0, 3).map(formatSubjectName);
+    } else {
+      replies = ['Create a lesson', 'Make a quiz', 'Plan my week'];
     }
-    return ['Create a lesson', 'Make a quiz', 'Plan my week'];
   }
 
-  return [];
+  // After the initial assistant answer in a session, always offer a fixed IEP handoff chip.
+  if (hasPriorAssistantMessages && !replies.includes(IEP_GOALS_QUICK_REPLY)) {
+    replies = [IEP_GOALS_QUICK_REPLY, ...replies];
+  }
+
+  return replies;
 }
 
 // ============================================
@@ -402,6 +407,7 @@ async function processMessage(
   if (!session) {
     throw new Error('Chat session not found.');
   }
+  const hasPriorAssistantMessages = session.messages.some((m) => m.role === MessageRole.ASSISTANT);
 
   // 3. Save user message
   const userMessage = await prisma.agentChatMessage.create({
@@ -657,7 +663,8 @@ async function processMessage(
   const suggestedReplies = computeSuggestedReplies(
     intent.type,
     persistedActionResult,
-    (agent as any).classrooms
+    (agent as any).classrooms,
+    hasPriorAssistantMessages
   );
 
   return {
