@@ -41,6 +41,7 @@ export interface AgentResponse {
     interactionId?: string;
   };
   tokensUsed: number;
+  suggestedReplies?: string[];
 }
 
 interface SessionWithMessages extends AgentChatSession {
@@ -306,6 +307,73 @@ async function maybeHandleSlashCommand(
   }
 
   return null;
+}
+
+// ============================================
+// SUGGESTED REPLIES (deterministic, no LLM call)
+// ============================================
+
+function formatSubjectName(subject: string): string {
+  return subject
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function computeSuggestedReplies(
+  intent: IntentType,
+  actionResult: AgentResponse['actionResult'] | undefined,
+  classrooms: Array<{ subject?: string | null }> | undefined
+): string[] {
+  // Content was generated -- ActionResultCard already shows Approve/Edit/Regenerate
+  if (
+    actionResult?.type === 'quiz' ||
+    actionResult?.type === 'flashcards' ||
+    actionResult?.type === 'lesson' ||
+    actionResult?.type === 'sub_plan' ||
+    actionResult?.type === 'iep' ||
+    actionResult?.type === 'weekly_prep'
+  ) {
+    return [];
+  }
+
+  // Coach/planner prompts already have their own inline options
+  if (
+    actionResult?.type === 'coach_weekly_prep_prompt' ||
+    actionResult?.type === PLANNER_WEEKLY_PREP_PROMPT_TYPE
+  ) {
+    return [];
+  }
+
+  const subjects = (classrooms || [])
+    .map((c) => c.subject)
+    .filter((s): s is string => !!s);
+  const uniqueSubjects = [...new Set(subjects)];
+
+  // Generate lesson/quiz/flashcards intent where AI is likely asking for details
+  if (
+    intent === 'generate_lesson' ||
+    intent === 'generate_quiz' ||
+    intent === 'generate_flashcards'
+  ) {
+    if (uniqueSubjects.length > 0) {
+      return [
+        ...uniqueSubjects.slice(0, 3).map(formatSubjectName),
+        "I'll type the topic",
+      ];
+    }
+    return [];
+  }
+
+  // Chat intent -- offer common tasks, subject-aware if possible
+  if (intent === 'chat') {
+    if (uniqueSubjects.length > 0) {
+      return uniqueSubjects.slice(0, 3).map(formatSubjectName);
+    }
+    return ['Create a lesson', 'Make a quiz', 'Plan my week'];
+  }
+
+  return [];
 }
 
 // ============================================
@@ -577,6 +645,13 @@ async function processMessage(
     select: { title: true },
   });
 
+  // 11. Compute suggested replies (deterministic, no LLM call)
+  const suggestedReplies = computeSuggestedReplies(
+    intent.type,
+    persistedActionResult,
+    (agent as any).classrooms
+  );
+
   return {
     message: assistantContent,
     sessionId,
@@ -586,6 +661,7 @@ async function processMessage(
     intent: intent.type,
     actionResult: persistedActionResult,
     tokensUsed: totalTokens,
+    suggestedReplies,
   };
 }
 
