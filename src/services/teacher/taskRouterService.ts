@@ -73,7 +73,15 @@ For generate_iep requests, always try to extract:
 - strengths: Student strengths if stated
 - challenges: Student challenges if stated
 - studentName or studentIdentifier if provided
-- additionalContext when useful`;
+- additionalContext when useful
+
+For generate_sub_plan requests, always try to extract:
+- subject
+- gradeLevel
+- date (YYYY-MM-DD if possible)
+- timePeriod (morning, afternoon, full_day)
+- title
+- classroomNotes / emergencyProcedures / helpfulStudents when present`;
 
 const VALID_INTENTS: Set<IntentType> = new Set([
   'chat',
@@ -161,6 +169,15 @@ function wordCount(message: string): number {
   return normalized.split(/\s+/).filter(Boolean).length;
 }
 
+const BASIC_SUBJECT_MAP: Array<[RegExp, string]> = [
+  [/\b(?:math|mathematics|maths)\b/i, 'MATH'],
+  [/\b(?:science)\b/i, 'SCIENCE'],
+  [/\b(?:english|ela|language arts|reading|writing|literature)\b/i, 'ENGLISH'],
+  [/\b(?:social studies|history|geography|civics)\b/i, 'SOCIAL_STUDIES'],
+  [/\b(?:arabic)\b/i, 'ARABIC'],
+  [/\b(?:islamic studies|quran)\b/i, 'ISLAMIC_STUDIES'],
+];
+
 function extractBasicParams(message: string): Record<string, any> {
   const text = String(message || '').trim();
   const lower = text.toLowerCase();
@@ -186,15 +203,7 @@ function extractBasicParams(message: string): Record<string, any> {
   else if (/\b(?:medium|intermediate)\b/.test(lower)) params.difficulty = 'medium';
 
   // Subject
-  const subjectMap: Array<[RegExp, string]> = [
-    [/\b(?:math|mathematics|maths)\b/, 'MATH'],
-    [/\b(?:science)\b/, 'SCIENCE'],
-    [/\b(?:english|ela|language arts|reading|writing|literature)\b/, 'ENGLISH'],
-    [/\b(?:social studies|history|geography|civics)\b/, 'SOCIAL_STUDIES'],
-    [/\b(?:arabic)\b/, 'ARABIC'],
-    [/\b(?:islamic studies|quran)\b/, 'ISLAMIC_STUDIES'],
-  ];
-  for (const [pattern, value] of subjectMap) {
+  for (const [pattern, value] of BASIC_SUBJECT_MAP) {
     if (pattern.test(lower)) {
       params.subject = value;
       break;
@@ -384,6 +393,138 @@ function enrichIepExtractedParams(
   return merged;
 }
 
+function normalizeSubjectValue(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+  const upper = raw.toUpperCase();
+  if (/^[A-Z_]+$/.test(upper)) return upper;
+  for (const [pattern, mapped] of BASIC_SUBJECT_MAP) {
+    if (pattern.test(raw)) return mapped;
+  }
+  return raw;
+}
+
+function inferSubjectFromText(text: string): string | undefined {
+  for (const [pattern, mapped] of BASIC_SUBJECT_MAP) {
+    if (pattern.test(text)) return mapped;
+  }
+  return undefined;
+}
+
+function normalizeTimePeriod(value: unknown): 'morning' | 'afternoon' | 'full_day' | undefined {
+  if (value === null || value === undefined) return undefined;
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) return undefined;
+  if (raw === 'morning' || raw.includes('morning') || /\bam\b/.test(raw)) return 'morning';
+  if (raw === 'afternoon' || raw.includes('afternoon') || /\bpm\b/.test(raw)) return 'afternoon';
+  if (raw === 'full_day' || raw === 'full day' || raw === 'fullday' || raw.includes('all day')) return 'full_day';
+  return undefined;
+}
+
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function deriveDateFromText(text: string, now = new Date()): string | undefined {
+  const normalized = String(text || '').toLowerCase();
+  if (!normalized) return undefined;
+
+  const isoMatch = normalized.match(/\b(20\d{2}-\d{1,2}-\d{1,2})\b/);
+  if (isoMatch?.[1]) {
+    const parsed = new Date(isoMatch[1]);
+    if (!Number.isNaN(parsed.getTime())) return formatDateInput(parsed);
+  }
+
+  const mdYMatch = normalized.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if (mdYMatch) {
+    const month = Number(mdYMatch[1]);
+    const day = Number(mdYMatch[2]);
+    const year = mdYMatch[3]
+      ? Number(mdYMatch[3].length === 2 ? `20${mdYMatch[3]}` : mdYMatch[3])
+      : now.getFullYear();
+    const parsed = new Date(year, month - 1, day);
+    if (!Number.isNaN(parsed.getTime())) return formatDateInput(parsed);
+  }
+
+  if (/\btoday\b/.test(normalized)) return formatDateInput(now);
+  if (/\btomorrow\b/.test(normalized)) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    return formatDateInput(d);
+  }
+
+  const weekdays: Array<{ name: string; index: number }> = [
+    { name: 'sunday', index: 0 },
+    { name: 'monday', index: 1 },
+    { name: 'tuesday', index: 2 },
+    { name: 'wednesday', index: 3 },
+    { name: 'thursday', index: 4 },
+    { name: 'friday', index: 5 },
+    { name: 'saturday', index: 6 },
+  ];
+  const weekdayMatch = normalized.match(/\b(?:next|this|on)?\s*(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+  if (weekdayMatch?.[1]) {
+    const target = weekdays.find((w) => w.name === weekdayMatch[1])?.index;
+    if (typeof target === 'number') {
+      const d = new Date(now);
+      const delta = (target - d.getDay() + 7) % 7 || 7;
+      d.setDate(d.getDate() + delta);
+      return formatDateInput(d);
+    }
+  }
+
+  return undefined;
+}
+
+function enrichSubPlanExtractedParams(
+  message: string,
+  recentMessages: Array<{ role: string; content: string }> | undefined,
+  extractedParams: Record<string, any>
+): Record<string, any> {
+  const merged: Record<string, any> = { ...(extractedParams || {}) };
+  const conversationText = [
+    ...(Array.isArray(recentMessages) ? recentMessages : [])
+      .slice(-6)
+      .map((m) => String(m?.content || '').trim())
+      .filter(Boolean),
+    String(message || '').trim(),
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const gradeLevel = normalizeGradeLevel(merged.gradeLevel) || normalizeGradeLevel(conversationText);
+  if (gradeLevel) merged.gradeLevel = gradeLevel;
+
+  const subject =
+    normalizeSubjectValue(merged.subject) ||
+    inferSubjectFromText(conversationText);
+  if (subject) merged.subject = subject;
+
+  const timePeriod = normalizeTimePeriod(merged.timePeriod) || normalizeTimePeriod(conversationText);
+  if (timePeriod) merged.timePeriod = timePeriod;
+
+  const date =
+    deriveDateFromText(String(merged.date || '')) ||
+    deriveDateFromText(conversationText);
+  if (date) merged.date = date;
+
+  const userTitle = String(merged.title || '').trim();
+  if (!userTitle) {
+    const titleSubject = String(subject || '').replace(/_/g, ' ').trim() || 'Class';
+    merged.title = `Sub Plan - ${titleSubject}`;
+  }
+
+  if (!merged.additionalContext && conversationText) {
+    merged.additionalContext = conversationText.slice(0, 1800);
+  }
+
+  return merged;
+}
+
 function ruleBasedIntent(
   message: string,
   recentMessages?: Array<{ role: string; content: string }>
@@ -446,7 +587,12 @@ function ruleBasedIntent(
     return { type: 'generate_flashcards', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief flashcards keyword heuristic' };
   }
   if (isBrief && /\b(?:sub plan|substitute|cover my class|covering|absence)\b/i.test(trimmed)) {
-    return { type: 'generate_sub_plan', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief substitute keyword heuristic' };
+    return {
+      type: 'generate_sub_plan',
+      confidence: 0.72,
+      extractedParams: enrichSubPlanExtractedParams(trimmed, recentMessages, extractBasicParams(trimmed)),
+      reasoning: 'Matched brief substitute keyword heuristic',
+    };
   }
   if (isBrief && /\b(?:iep|accommodations?|present levels|special education)\b/i.test(trimmed)) {
     return {
@@ -531,6 +677,8 @@ async function classifyIntent(
     const extractedParams =
       type === 'generate_iep'
         ? enrichIepExtractedParams(message, recentMessages, parsed.extractedParams || {})
+        : type === 'generate_sub_plan'
+          ? enrichSubPlanExtractedParams(message, recentMessages, parsed.extractedParams || {})
         : (parsed.extractedParams || {});
 
     return {

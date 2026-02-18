@@ -181,12 +181,24 @@ async function generateSubPlanWithContext(
     { subject: intent.extractedParams.subject }
   );
 
+  const contextNotes = contextAssemblerService.buildAdditionalContextString(context);
+  const explicitNotes = String(intent.extractedParams.additionalContext || '').trim();
+  const topicNotes = String(intent.extractedParams.topic || '').trim();
+  const additionalNotes = [explicitNotes, topicNotes ? `Requested focus: ${topicNotes}` : '', contextNotes]
+    .filter(Boolean)
+    .join('\n\n');
+
   const result = await subPlanService.createSubPlan(teacherId, {
     title: intent.extractedParams.title || `Sub Plan - ${new Date().toLocaleDateString()}`,
     date: intent.extractedParams.date || new Date().toISOString().split('T')[0],
     gradeLevel: intent.extractedParams.gradeLevel,
+    subject: intent.extractedParams.subject,
+    timePeriod: intent.extractedParams.timePeriod,
+    classroomNotes: intent.extractedParams.classroomNotes,
+    emergencyProcedures: intent.extractedParams.emergencyProcedures,
+    helpfulStudents: intent.extractedParams.helpfulStudents,
     lessonIds: intent.extractedParams.lessonIds || [],
-    additionalNotes: contextAssemblerService.buildAdditionalContextString(context),
+    additionalNotes: additionalNotes || undefined,
   });
 
   const agent = await agentMemoryService.getAgent(teacherId);
