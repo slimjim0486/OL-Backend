@@ -64,7 +64,16 @@ Extract relevant parameters like:
 - subject: Academic subject (MATH, SCIENCE, ENGLISH, etc.)
 - gradeLevel: Grade level mentioned
 - count: Number of items requested (e.g., "10 questions")
-- difficulty: Difficulty level if mentioned`;
+- difficulty: Difficulty level if mentioned
+
+For generate_iep requests, always try to extract:
+- disabilityCategory: One of IDEA categories (e.g., AUTISM_SPECTRUM, OTHER_HEALTH_IMPAIRMENT, SPECIFIC_LEARNING_DISABILITY)
+- subjectArea: One IEP domain (e.g., READING_COMPREHENSION, WRITTEN_EXPRESSION, EXECUTIVE_FUNCTIONING, SOCIAL_SKILLS)
+- presentLevels: Current performance statement (PLAAFP / present levels)
+- strengths: Student strengths if stated
+- challenges: Student challenges if stated
+- studentName or studentIdentifier if provided
+- additionalContext when useful`;
 
 const VALID_INTENTS: Set<IntentType> = new Set([
   'chat',
@@ -210,7 +219,175 @@ function extractBasicParams(message: string): Record<string, any> {
   return params;
 }
 
-function ruleBasedIntent(message: string): TaskIntent | null {
+const IEP_DISABILITY_VALUE_MAP: Array<{ value: string; patterns: RegExp[] }> = [
+  { value: 'AUTISM_SPECTRUM', patterns: [/\bautism\b/i, /\basd\b/i, /\bautistic\b/i] },
+  { value: 'OTHER_HEALTH_IMPAIRMENT', patterns: [/\badhd\b/i, /\bohi\b/i, /\battention\b/i] },
+  { value: 'SPECIFIC_LEARNING_DISABILITY', patterns: [/\bsld\b/i, /\bspecific learning disability\b/i, /\bdyslexia\b/i, /\bdysgraphia\b/i, /\bdyscalculia\b/i] },
+  { value: 'SPEECH_LANGUAGE_IMPAIRMENT', patterns: [/\bspeech\b/i, /\blanguage impairment\b/i, /\barticulation\b/i] },
+  { value: 'INTELLECTUAL_DISABILITY', patterns: [/\bintellectual disability\b/i] },
+  { value: 'EMOTIONAL_DISTURBANCE', patterns: [/\bemotional disturbance\b/i] },
+  { value: 'DEVELOPMENTAL_DELAY', patterns: [/\bdevelopmental delay\b/i] },
+  { value: 'MULTIPLE_DISABILITIES', patterns: [/\bmultiple disabilities\b/i] },
+  { value: 'HEARING_IMPAIRMENT', patterns: [/\bhearing impairment\b/i, /\bdeaf(?:ness)?\b/i] },
+  { value: 'VISUAL_IMPAIRMENT', patterns: [/\bvisual impairment\b/i, /\bblind(?:ness)?\b/i] },
+  { value: 'ORTHOPEDIC_IMPAIRMENT', patterns: [/\borthopedic\b/i] },
+  { value: 'TRAUMATIC_BRAIN_INJURY', patterns: [/\btraumatic brain injury\b/i, /\btbi\b/i] },
+  { value: 'DEAF_BLINDNESS', patterns: [/\bdeaf[\s-]?blind(?:ness)?\b/i] },
+];
+
+const IEP_SUBJECT_AREA_VALUE_MAP: Array<{ value: string; patterns: RegExp[] }> = [
+  { value: 'READING_COMPREHENSION', patterns: [/\breading comprehension\b/i, /\bmain idea\b/i, /\binference\b/i] },
+  { value: 'READING_FLUENCY', patterns: [/\breading fluency\b/i, /\bfluency\b/i] },
+  { value: 'WRITTEN_EXPRESSION', patterns: [/\bwritten expression\b/i, /\bwriting\b/i] },
+  { value: 'MATH_CALCULATION', patterns: [/\bmath calculation\b/i, /\bcalculation\b/i, /\bcomputation\b/i] },
+  { value: 'MATH_PROBLEM_SOLVING', patterns: [/\bmath problem solving\b/i, /\bword problem\b/i, /\bproblem solving\b/i] },
+  { value: 'SPEECH_ARTICULATION', patterns: [/\barticulation\b/i] },
+  { value: 'EXPRESSIVE_LANGUAGE', patterns: [/\bexpressive language\b/i] },
+  { value: 'RECEPTIVE_LANGUAGE', patterns: [/\breceptive language\b/i] },
+  { value: 'SOCIAL_SKILLS', patterns: [/\bsocial skills?\b/i, /\bsocial interaction\b/i] },
+  { value: 'BEHAVIOR_SELF_REGULATION', patterns: [/\bself[\s-]?regulation\b/i, /\bbehavior\b/i] },
+  { value: 'EXECUTIVE_FUNCTIONING', patterns: [/\bexecutive functioning\b/i, /\borganization\b/i, /\bfocus\b/i, /\battention\b/i] },
+  { value: 'FINE_MOTOR', patterns: [/\bfine motor\b/i] },
+  { value: 'GROSS_MOTOR', patterns: [/\bgross motor\b/i] },
+  { value: 'ADAPTIVE_LIVING_SKILLS', patterns: [/\badaptive\b/i, /\bdaily living\b/i] },
+  { value: 'TRANSITION_VOCATIONAL', patterns: [/\btransition\b/i, /\bvocational\b/i] },
+];
+
+function normalizeGradeLevel(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) return undefined;
+  if (raw === 'kindergarten' || raw === 'k') return 'K';
+  if (raw === 'pre-k' || raw === 'prek' || raw === 'pre k') return 'Pre-K';
+  const gradeMatch = raw.match(/^(\d{1,2})$/);
+  if (gradeMatch) return gradeMatch[1];
+  const embeddedMatch = raw.match(/\b(?:grade|gr)\s*(\d{1,2})\b/);
+  if (embeddedMatch) return embeddedMatch[1];
+  return undefined;
+}
+
+function normalizeByPatterns(
+  value: unknown,
+  mapping: Array<{ value: string; patterns: RegExp[] }>
+): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+  const upper = raw.toUpperCase();
+  const exact = mapping.find((item) => item.value === upper);
+  if (exact) return exact.value;
+  const matched = mapping.find((item) => item.patterns.some((pattern) => pattern.test(raw)));
+  return matched?.value;
+}
+
+function inferByPatterns(
+  text: string,
+  mapping: Array<{ value: string; patterns: RegExp[] }>
+): string | undefined {
+  const matched = mapping.find((item) => item.patterns.some((pattern) => pattern.test(text)));
+  return matched?.value;
+}
+
+function deriveIepPresentLevels(message: string, conversationText: string): string | undefined {
+  const candidates = [message, conversationText]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+
+  for (const candidate of candidates) {
+    const presentLevelMatch = candidate.match(
+      /\b(?:present levels?|plaafp|impact statement)\b[:\s-]*([\s\S]{30,})/i
+    );
+    if (presentLevelMatch?.[1]) {
+      return presentLevelMatch[1].trim().slice(0, 1400);
+    }
+    if (candidate.length >= 40) {
+      return candidate.slice(0, 1400);
+    }
+  }
+  return undefined;
+}
+
+function deriveIepChallenges(text: string): string | undefined {
+  const challengeMatch = text.match(
+    /\b(?:struggles?\s+with|has\s+difficulty\s+with|difficulty\s+with|challenge[sd]?\s+by|needs\s+support\s+with)\s+([^.;\n]+)/i
+  );
+  if (challengeMatch?.[1]) return challengeMatch[1].trim().slice(0, 400);
+  return undefined;
+}
+
+function deriveIepStrengths(text: string): string | undefined {
+  const strengthsMatch = text.match(/\bstrengths?\b[:\s-]*([^.;\n]+)/i);
+  if (strengthsMatch?.[1]) return strengthsMatch[1].trim().slice(0, 400);
+  return undefined;
+}
+
+function deriveStudentIdentifier(text: string): string | undefined {
+  const nameMatch = text.match(/\b(?:student(?:\s+name)?|learner)\s*(?:is|:)\s*([A-Za-z][A-Za-z\s'-]{1,40})/i);
+  if (!nameMatch?.[1]) return undefined;
+  return nameMatch[1].trim();
+}
+
+function enrichIepExtractedParams(
+  message: string,
+  recentMessages: Array<{ role: string; content: string }> | undefined,
+  extractedParams: Record<string, any>
+): Record<string, any> {
+  const merged: Record<string, any> = { ...(extractedParams || {}) };
+  const conversationText = [
+    ...(Array.isArray(recentMessages) ? recentMessages : [])
+      .slice(-6)
+      .map((m) => String(m?.content || '').trim())
+      .filter(Boolean),
+    String(message || '').trim(),
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const normalizedGrade = normalizeGradeLevel(merged.gradeLevel) || normalizeGradeLevel(conversationText);
+  if (normalizedGrade) merged.gradeLevel = normalizedGrade;
+
+  const disability =
+    normalizeByPatterns(merged.disabilityCategory, IEP_DISABILITY_VALUE_MAP) ||
+    inferByPatterns(conversationText, IEP_DISABILITY_VALUE_MAP);
+  if (disability) merged.disabilityCategory = disability;
+
+  const subjectArea =
+    normalizeByPatterns(merged.subjectArea, IEP_SUBJECT_AREA_VALUE_MAP) ||
+    inferByPatterns(conversationText, IEP_SUBJECT_AREA_VALUE_MAP);
+  if (subjectArea) merged.subjectArea = subjectArea;
+
+  const presentLevels =
+    String(merged.presentLevels || '').trim() ||
+    String(merged.topic || '').trim() ||
+    deriveIepPresentLevels(message, conversationText);
+  if (presentLevels) merged.presentLevels = presentLevels.slice(0, 1400);
+
+  const challenges = String(merged.challenges || '').trim() || deriveIepChallenges(conversationText);
+  if (challenges) merged.challenges = challenges;
+
+  const strengths = String(merged.strengths || '').trim() || deriveIepStrengths(conversationText);
+  if (strengths) merged.strengths = strengths;
+
+  const studentIdentifier =
+    String(merged.studentIdentifier || '').trim() ||
+    String(merged.studentName || '').trim() ||
+    deriveStudentIdentifier(conversationText);
+  if (studentIdentifier) {
+    merged.studentIdentifier = studentIdentifier;
+    if (!merged.studentName) merged.studentName = studentIdentifier;
+  }
+
+  if (!merged.additionalContext && conversationText) {
+    merged.additionalContext = conversationText.slice(0, 1800);
+  }
+
+  return merged;
+}
+
+function ruleBasedIntent(
+  message: string,
+  recentMessages?: Array<{ role: string; content: string }>
+): TaskIntent | null {
   const trimmed = String(message || '').trim();
   if (!trimmed) {
     return {
@@ -272,7 +449,12 @@ function ruleBasedIntent(message: string): TaskIntent | null {
     return { type: 'generate_sub_plan', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief substitute keyword heuristic' };
   }
   if (isBrief && /\b(?:iep|accommodations?|present levels|special education)\b/i.test(trimmed)) {
-    return { type: 'generate_iep', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief IEP keyword heuristic' };
+    return {
+      type: 'generate_iep',
+      confidence: 0.72,
+      extractedParams: enrichIepExtractedParams(trimmed, recentMessages, extractBasicParams(trimmed)),
+      reasoning: 'Matched brief IEP keyword heuristic',
+    };
   }
   if (isBrief && /\b(?:audio|podcast|parent update)\b/i.test(trimmed)) {
     return { type: 'generate_audio', confidence: 0.68, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief audio keyword heuristic' };
@@ -299,7 +481,7 @@ async function classifyIntent(
   agentContext?: string
 ): Promise<TaskIntent> {
   try {
-    const fast = ruleBasedIntent(message);
+    const fast = ruleBasedIntent(message, recentMessages);
     if (fast) return fast;
 
     const model = genAI.getGenerativeModel({
@@ -346,10 +528,15 @@ async function classifyIntent(
       };
     }
 
+    const extractedParams =
+      type === 'generate_iep'
+        ? enrichIepExtractedParams(message, recentMessages, parsed.extractedParams || {})
+        : (parsed.extractedParams || {});
+
     return {
       type,
       confidence,
-      extractedParams: parsed.extractedParams || {},
+      extractedParams,
       reasoning: parsed.reasoning,
     };
   } catch (error) {

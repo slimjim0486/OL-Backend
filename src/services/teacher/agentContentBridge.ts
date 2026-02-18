@@ -225,14 +225,19 @@ async function generateIEPWithContext(
     { subject: intent.extractedParams.subject }
   );
 
+  const modelContext = contextAssemblerService.buildAdditionalContextString(context);
+  const teacherAdditionalContext = String(intent.extractedParams.additionalContext || '').trim();
+  const additionalContext = [teacherAdditionalContext, modelContext].filter(Boolean).join('\n\n');
+
   const result = await iepGoalService.createIEPSession(teacherId, {
     gradeLevel: intent.extractedParams.gradeLevel || 'General',
     disabilityCategory: intent.extractedParams.disabilityCategory || 'SPECIFIC_LEARNING_DISABILITY',
     subjectArea: intent.extractedParams.subjectArea || 'READING_COMPREHENSION',
     presentLevels: intent.extractedParams.presentLevels || 'Student is performing below grade level.',
+    studentIdentifier: intent.extractedParams.studentIdentifier || intent.extractedParams.studentName,
     strengths: intent.extractedParams.strengths,
     challenges: intent.extractedParams.challenges,
-    additionalContext: contextAssemblerService.buildAdditionalContextString(context),
+    additionalContext: additionalContext || undefined,
   });
 
   const agent = await agentMemoryService.getAgent(teacherId);
