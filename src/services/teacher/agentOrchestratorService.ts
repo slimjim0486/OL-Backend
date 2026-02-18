@@ -368,7 +368,7 @@ function computeSuggestedReplies(
     // Chat intent -- offer common tasks, subject-aware if possible
     if (uniqueSubjects.length > 0) {
       replies = uniqueSubjects.slice(0, 3).map(formatSubjectName);
-    } else {
+    } else if (!hasPriorAssistantMessages) {
       replies = ['Create a lesson', 'Make a quiz', 'Plan my week'];
     }
   }
