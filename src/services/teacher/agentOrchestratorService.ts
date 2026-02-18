@@ -503,17 +503,25 @@ async function processMessage(
     // 5. Assemble context
     const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
 
+    // 5b. Pre-classify: detect common weekly-prep phrases before LLM call
+    const WEEKLY_PREP_REQUEST_RE = /\b(?:plan\s+my\s+week|plan\s+this\s+week|plan\s+the\s+week|help\s+me\s+plan\s+(?:my|this|the)\s+week|prepare?\s+(?:my|this|the)\s+week)\b/i;
+    const isExplicitWeeklyPrepRequest = WEEKLY_PREP_REQUEST_RE.test(message);
+
     // 6. Classify intent
     const recentMessages = session.messages
       .reverse()
       .slice(-5)
       .map((m) => ({ role: m.role, content: m.content }));
 
-    intent = await taskRouterService.classifyIntent(
-      message,
-      recentMessages,
-      context.identityContext
-    );
+    if (isExplicitWeeklyPrepRequest) {
+      intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
+    } else {
+      intent = await taskRouterService.classifyIntent(
+        message,
+        recentMessages,
+        context.identityContext
+      );
+    }
 
     logger.info('Intent classified', { teacherId, sessionId, intent: intent.type, confidence: intent.confidence });
 
