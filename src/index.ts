@@ -44,6 +44,7 @@ import { scheduleBrevoInactivityChecks } from './jobs/brevoInactivityChecks.js';
 import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
 import { scheduleWeeklyPrepDelivery } from './jobs/scheduledWeeklyPrepJob.js';
 import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/monthlyReviewJob.js';
+import { scheduleDownloadReminders } from './jobs/downloadReminderJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -362,6 +363,10 @@ async function startServer(): Promise<void> {
       // Schedule monthly review auto-generation (1st of month, 6 AM UTC)
       scheduleMonthlyReviewJob();
       logger.info('Monthly review job scheduled');
+
+      // Schedule download reminders (10 AM daily, 1h after Brevo checks)
+      scheduleDownloadReminders();
+      logger.info('Download reminders scheduled for 10:00 AM daily');
 
     });
 

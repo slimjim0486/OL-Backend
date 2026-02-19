@@ -2049,6 +2049,274 @@ Review & approve your materials at: ${reviewUrl}
       `,
     };
   },
+
+  /**
+   * Download Reminder — Stage 1: 24h nudge (content created, not downloaded)
+   */
+  downloadReminder24h: (
+    teacherName: string,
+    contentItems: Array<{ title: string; type: string }>,
+    downloadsRemaining: number
+  ) => ({
+    subject: 'Your content is ready to download — Orbit Learn',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your content is ready</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your Content is Ready</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 10px; font-size: 15px;">Download it before it gets buried</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 20px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          You created some great content recently — don't forget to download it so you can use it in class!
+        </p>
+
+        <!-- Content items list -->
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #2D5A4A;">
+          ${contentItems.map(item => `
+          <div style="padding: 8px 0; border-bottom: 1px solid rgba(30,42,58,0.08);">
+            <span style="color: #2D5A4A; font-weight: 600;">${item.type}</span>
+            <span style="color: #3D4F66;"> — ${item.title}</span>
+          </div>
+          `).join('')}
+        </div>
+
+        <!-- Quota reminder -->
+        <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-radius: 12px; padding: 16px; text-align: center; margin: 24px 0;">
+          <p style="color: #92400E; margin: 0; font-size: 14px;">You have <strong>${downloadsRemaining} of 3</strong> free downloads remaining this month</p>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${config.frontendUrl}/teacher/content" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 40px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Go to My Content
+          </a>
+        </div>
+
+        <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
+          You're receiving this because you have un-downloaded content. <a href="${config.frontendUrl}/teacher/settings" style="color: #9CA3AF;">Unsubscribe</a><br>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `Your content is ready to download
+
+Hi ${teacherName},
+
+You created some great content recently — don't forget to download it so you can use it in class!
+
+${contentItems.map(item => `- ${item.type}: ${item.title}`).join('\n')}
+
+You have ${downloadsRemaining} of 3 free downloads remaining this month.
+
+Go to My Content: ${config.frontendUrl}/teacher/content
+
+— The Orbit Learn Team
+    `,
+  }),
+
+  /**
+   * Download Reminder — Stage 2: 72h with inline content preview
+   */
+  downloadReminder72h: (
+    teacherName: string,
+    contentItems: Array<{ title: string; type: string }>,
+    previews: Array<{
+      title: string;
+      type: string;
+      sections: string[];
+      questionCount?: number;
+      vocabularyTerms: string[];
+      cardCount?: number;
+    }>,
+    downloadsRemaining: number
+  ) => ({
+    subject: "Here's a peek at what you made — Orbit Learn",
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview your content</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Remember What You Made?</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 10px; font-size: 15px;">Here's a quick look at your content</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 20px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          You created ${contentItems.length === 1 ? 'this' : 'these'} a few days ago. Here's what's inside:
+        </p>
+
+        <!-- Preview cards -->
+        ${previews.map(p => `
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 16px 0; border-left: 4px solid #2D5A4A;">
+          <h3 style="color: #2D5A4A; margin: 0 0 8px 0; font-size: 16px; font-family: 'Fraunces', Georgia, serif;">${p.title}</h3>
+          <p style="color: #7BAE7F; margin: 0 0 12px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${p.type}</p>
+          ${p.sections.length > 0 ? `
+          <div style="margin-bottom: 8px;">
+            <p style="color: #3D4F66; margin: 0 0 4px 0; font-size: 13px; font-weight: 600;">Includes:</p>
+            ${p.sections.map(s => `<p style="color: #3D4F66; margin: 0; font-size: 14px; padding-left: 12px;">&#8226; ${s}</p>`).join('')}
+          </div>
+          ` : ''}
+          ${p.questionCount ? `<p style="color: #3D4F66; margin: 4px 0 0; font-size: 14px;">${p.questionCount} questions</p>` : ''}
+          ${p.cardCount ? `<p style="color: #3D4F66; margin: 4px 0 0; font-size: 14px;">${p.cardCount} flashcards</p>` : ''}
+          ${p.vocabularyTerms.length > 0 ? `<p style="color: #3D4F66; margin: 4px 0 0; font-size: 14px;">Key terms: ${p.vocabularyTerms.join(', ')}</p>` : ''}
+        </div>
+        `).join('')}
+
+        <!-- Quota reminder -->
+        <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-radius: 12px; padding: 16px; text-align: center; margin: 24px 0;">
+          <p style="color: #92400E; margin: 0; font-size: 14px;">You have <strong>${downloadsRemaining} of 3</strong> free downloads remaining this month</p>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${config.frontendUrl}/teacher/content" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 40px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Download Your Content
+          </a>
+        </div>
+
+        <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
+          You're receiving this because you have un-downloaded content. <a href="${config.frontendUrl}/teacher/settings" style="color: #9CA3AF;">Unsubscribe</a><br>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `Here's a peek at what you made
+
+Hi ${teacherName},
+
+You created ${contentItems.length === 1 ? 'this' : 'these'} a few days ago. Here's what's inside:
+
+${previews.map(p => {
+  let detail = `${p.type}: ${p.title}`;
+  if (p.sections.length > 0) detail += `\n  Includes: ${p.sections.join(', ')}`;
+  if (p.questionCount) detail += `\n  ${p.questionCount} questions`;
+  if (p.cardCount) detail += `\n  ${p.cardCount} flashcards`;
+  if (p.vocabularyTerms.length > 0) detail += `\n  Key terms: ${p.vocabularyTerms.join(', ')}`;
+  return detail;
+}).join('\n\n')}
+
+You have ${downloadsRemaining} of 3 free downloads remaining this month.
+
+Download your content: ${config.frontendUrl}/teacher/content
+
+— The Orbit Learn Team
+    `,
+  }),
+
+  /**
+   * Download Reminder — Stage 3: Auto-gifted PDF
+   */
+  autoGiftPdf: (
+    teacherName: string,
+    contentTitle: string,
+    downloadUrl: string,
+    downloadsRemaining: number,
+    resetDate: string
+  ) => ({
+    subject: `Your "${contentTitle}" PDF is ready — on us!`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your free PDF is ready</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">We Made You a PDF</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 10px; font-size: 15px;">It's on the house</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 20px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          We noticed you've been creating content but haven't downloaded any of it yet. We want you to see just how polished your exports look, so we went ahead and generated a PDF of your most recent piece:
+        </p>
+
+        <!-- Content card -->
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #D4A853; text-align: center;">
+          <h3 style="color: #1E2A3A; margin: 0 0 8px 0; font-size: 18px; font-family: 'Fraunces', Georgia, serif;">${contentTitle}</h3>
+          <p style="color: #7BAE7F; margin: 0; font-size: 14px; font-weight: 600;">PDF ready for download</p>
+        </div>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${downloadUrl}" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 40px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Download Your Free PDF
+          </a>
+        </div>
+
+        <!-- Urgency box -->
+        <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-radius: 12px; padding: 16px; text-align: center; margin: 24px 0;">
+          <p style="color: #92400E; margin: 0; font-size: 14px;">
+            You have <strong>${downloadsRemaining} free download${downloadsRemaining === 1 ? '' : 's'}</strong> left this month — they reset on ${resetDate}
+          </p>
+        </div>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px; text-align: center;">
+          Want unlimited downloads? <a href="${config.frontendUrl}/teacher/billing" style="color: #2D5A4A; font-weight: 600;">Upgrade to Teacher Unlimited</a>
+        </p>
+
+        <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
+          This was a one-time gift. <a href="${config.frontendUrl}/teacher/settings" style="color: #9CA3AF;">Manage notifications</a><br>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `We made you a PDF — on the house!
+
+Hi ${teacherName},
+
+We noticed you've been creating content but haven't downloaded any yet. We want you to see how polished your exports look, so we generated a PDF of your most recent piece:
+
+"${contentTitle}" — PDF ready for download
+
+Download it here: ${downloadUrl}
+
+You have ${downloadsRemaining} free download${downloadsRemaining === 1 ? '' : 's'} left this month — they reset on ${resetDate}.
+
+Want unlimited downloads? Upgrade at ${config.frontendUrl}/teacher/billing
+
+— The Orbit Learn Team
+    `,
+  }),
 };
 
 export const emailService = {
@@ -3016,6 +3284,130 @@ Details:
       return true;
     } catch (error) {
       logger.error('Error sending weekly prep digest email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send 24h download reminder (Stage 1)
+   */
+  async sendDownloadReminder24hEmail(
+    email: string,
+    teacherName: string,
+    contentItems: Array<{ title: string; type: string }>,
+    downloadsRemaining: number
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped download reminder 24h email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.downloadReminder24h(teacherName, contentItems, downloadsRemaining);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send download reminder 24h email', { error, email });
+        return false;
+      }
+
+      logger.info(`Download reminder 24h email sent to ${email}`, { itemCount: contentItems.length });
+      return true;
+    } catch (error) {
+      logger.error('Error sending download reminder 24h email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send 72h download reminder with preview (Stage 2)
+   */
+  async sendDownloadReminder72hEmail(
+    email: string,
+    teacherName: string,
+    contentItems: Array<{ title: string; type: string }>,
+    previews: Array<{
+      title: string;
+      type: string;
+      sections: string[];
+      questionCount?: number;
+      vocabularyTerms: string[];
+      cardCount?: number;
+    }>,
+    downloadsRemaining: number
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped download reminder 72h email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.downloadReminder72h(teacherName, contentItems, previews, downloadsRemaining);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send download reminder 72h email', { error, email });
+        return false;
+      }
+
+      logger.info(`Download reminder 72h email sent to ${email}`, { itemCount: contentItems.length });
+      return true;
+    } catch (error) {
+      logger.error('Error sending download reminder 72h email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send auto-gifted PDF email (Stage 3)
+   */
+  async sendAutoGiftPdfEmail(
+    email: string,
+    teacherName: string,
+    contentTitle: string,
+    downloadUrl: string,
+    downloadsRemaining: number,
+    resetDate: string
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped auto gift PDF email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.autoGiftPdf(teacherName, contentTitle, downloadUrl, downloadsRemaining, resetDate);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send auto gift PDF email', { error, email });
+        return false;
+      }
+
+      logger.info(`Auto gift PDF email sent to ${email}`, { contentTitle });
+      return true;
+    } catch (error) {
+      logger.error('Error sending auto gift PDF email', { error, email });
       return false;
     }
   },
