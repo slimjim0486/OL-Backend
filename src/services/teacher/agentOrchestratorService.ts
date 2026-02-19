@@ -16,6 +16,8 @@ import { agentMemoryService } from './agentMemoryService.js';
 import { contextAssemblerService } from './contextAssemblerService.js';
 import { taskRouterService, IntentType } from './taskRouterService.js';
 import { agentContentBridge, BridgeResult } from './agentContentBridge.js';
+import { agentFlowPolicy } from './agentFlowPolicy.js';
+import type { AgentFlowType } from './agentFlowPolicy.js';
 import { weeklyPrepService } from './weeklyPrepService.js';
 import { detectPlannerNavigationIntent } from './plannerNavigationIntent.js';
 import { queueWeeklyPrep } from '../../jobs/index.js';
@@ -53,6 +55,7 @@ const PLANNER_WEEKLY_PREP_PROMPT_TYPE = 'planner_weekly_prep_prompt';
 const IEP_GOALS_QUICK_REPLY = 'Generate IEP goals';
 
 type PlannerWeeklyPrepChoice = 'tell_more' | 'generate_now' | null;
+type CoachWeeklyPrepChoice = 'outline' | 'generate_weekly_prep' | 'one_subject' | null;
 
 function toSessionTitleFromFirstPrompt(prompt: string): string {
   const normalized = String(prompt || '')
@@ -169,6 +172,37 @@ function detectPlannerWeeklyPrepChoice(message: string): PlannerWeeklyPrepChoice
   return null;
 }
 
+function detectCoachWeeklyPrepChoice(message: string): CoachWeeklyPrepChoice {
+  const normalized = normalizePromptChoiceText(message);
+  if (!normalized) return null;
+
+  if (/^1(?:\b|$)/.test(normalized)) return 'outline';
+  if (/^2(?:\b|$)/.test(normalized)) return 'generate_weekly_prep';
+  if (/^3(?:\b|$)/.test(normalized)) return 'one_subject';
+
+  const outlinePatterns: RegExp[] = [
+    /\b(?:quick outline|outline|pacing outline|weekly outline)\b/,
+    /\b(?:goals?\s+\+\s+pacing|goals and pacing)\b/,
+  ];
+
+  const generateNowPatterns: RegExp[] = [
+    /\b(?:generate(?: it| now)?|create(?: it| now)?|build(?: it| now)?|make(?: it| now)?|draft(?: it| now)?)\b[\s\S]{0,30}\b(?:weekly prep|week)\b/,
+    /\b(?:open|take me to|go to|show me)\b[\s\S]{0,30}\b(?:weekly prep|calendar|planner|schedule)\b/,
+    /\b(?:ready to generate|generate now|open it now)\b/,
+  ];
+
+  const oneSubjectPatterns: RegExp[] = [
+    /\b(?:one subject|focus on one subject|specific subject|subject first)\b/,
+    /\b(?:focus on|let'?s plan)\b[\s\S]{0,20}\b(?:reading|math|science|english|ela|social studies|history)\b/,
+  ];
+
+  if (outlinePatterns.some((pattern) => pattern.test(normalized))) return 'outline';
+  if (generateNowPatterns.some((pattern) => pattern.test(normalized))) return 'generate_weekly_prep';
+  if (oneSubjectPatterns.some((pattern) => pattern.test(normalized))) return 'one_subject';
+
+  return null;
+}
+
 function isBriefAcknowledgement(message: string): boolean {
   const normalized = normalizePromptChoiceText(message);
   if (!normalized) return false;
@@ -207,6 +241,98 @@ function buildPlannerWeeklyPrepPromptActionResult(
     },
     preview,
   };
+}
+
+function buildCoachWeeklyPrepPromptActionResult(
+  stage: 'initial' | 'one_subject_details' = 'initial'
+): NonNullable<AgentResponse['actionResult']> {
+  const options =
+    stage === 'one_subject_details'
+      ? [
+          {
+            id: 'generate_weekly_prep',
+            label: 'Generate Weekly Prep',
+            hint: 'Open weekly prep now using this focus',
+            send: 'Generate my weekly prep now using this focus.',
+          },
+          {
+            id: 'add_details',
+            label: 'Add one more detail',
+            hint: 'Add pacing, standards, or constraints first',
+            send: 'I want to add one more detail before generating weekly prep.',
+          },
+        ]
+      : [
+          {
+            id: 'outline',
+            label: 'Quick outline',
+            hint: 'Goals + pacing + what to teach each day',
+            send: 'Give me a quick outline for my week (no materials yet).',
+          },
+          {
+            id: 'weekly_prep',
+            label: 'Generate Weekly Prep',
+            hint: 'Build the calendar + materials package',
+            send: 'Generate my weekly prep now.',
+          },
+          {
+            id: 'one_subject',
+            label: 'Focus on one subject',
+            hint: 'Tell me which subject + grade first',
+            send: "Let's plan one subject. Ask me what subject and grade first.",
+          },
+        ];
+
+  return {
+    type: 'coach_weekly_prep_prompt',
+    content: { stage, options },
+    preview:
+      stage === 'one_subject_details'
+        ? 'Ready to open Weekly Prep when you are.'
+        : 'Choose how you want to plan this week.',
+  };
+}
+
+function buildFlowLockMessage(
+  activeFlow: AgentFlowType,
+  blockedFlow: Exclude<AgentFlowType, null>
+): string {
+  const current = agentFlowPolicy.describeFlow(activeFlow);
+  const blocked = agentFlowPolicy.describeFlow(blockedFlow);
+  const switchPhrase =
+    blockedFlow === 'weekly_prep'
+      ? 'weekly prep'
+      : blockedFlow === 'sub_plan'
+        ? 'sub plans'
+        : blockedFlow === 'flashcards'
+          ? 'flashcards'
+          : blockedFlow === 'iep'
+            ? 'iep goals'
+            : blockedFlow;
+
+  if (activeFlow === 'weekly_prep') {
+    return (
+      `You're currently in **${current}** flow. ` +
+      `To switch to **${blocked}**, say **"switch to ${switchPhrase}"**.\n\n` +
+      `Or say **"generate now"** to keep going in Weekly Prep.`
+    );
+  }
+
+  return (
+    `You're currently in **${current}** flow. ` +
+    `To switch to **${blocked}**, say **"switch to ${switchPhrase}"**.`
+  );
+}
+
+function buildFlowContinuationActionResult(
+  flow: AgentFlowType,
+  planningMode: PlanningAutonomy
+): AgentResponse['actionResult'] | undefined {
+  if (flow !== 'weekly_prep') return undefined;
+  if (planningMode === PlanningAutonomy.PLANNER || planningMode === PlanningAutonomy.AUTOPILOT) {
+    return buildPlannerWeeklyPrepPromptActionResult(planningMode, 'details');
+  }
+  return buildCoachWeeklyPrepPromptActionResult('one_subject_details');
 }
 
 async function buildWeeklyPrepGenerationActionResult(
@@ -325,8 +451,12 @@ function computeSuggestedReplies(
   intent: IntentType,
   actionResult: AgentResponse['actionResult'] | undefined,
   classrooms: Array<{ subject?: string | null }> | undefined,
-  hasPriorAssistantMessages: boolean
+  hasPriorAssistantMessages: boolean,
+  activeFlow: AgentFlowType
 ): string[] {
+  // Keep flow CTA surface strict: once a flow is active, the action cards should drive the flow.
+  if (activeFlow) return [];
+
   let replies: string[] = [];
   const suppressContextualReplies =
     actionResult?.type === 'quiz' ||
@@ -339,9 +469,6 @@ function computeSuggestedReplies(
     actionResult?.type === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
 
   if (suppressContextualReplies) {
-    if (hasPriorAssistantMessages) {
-      return [IEP_GOALS_QUICK_REPLY];
-    }
     return [];
   }
 
@@ -373,8 +500,16 @@ function computeSuggestedReplies(
     }
   }
 
-  // After the initial assistant answer in a session, always offer a fixed IEP handoff chip.
-  if (hasPriorAssistantMessages && !replies.includes(IEP_GOALS_QUICK_REPLY)) {
+  // Only show IEP handoff after concrete content-generation outputs.
+  // Avoid showing it during weekly prep navigation/prompt flows or general chat.
+  const shouldOfferIepQuickReply =
+    hasPriorAssistantMessages &&
+    (actionResult?.type === 'lesson' ||
+      actionResult?.type === 'quiz' ||
+      actionResult?.type === 'flashcards' ||
+      actionResult?.type === 'sub_plan');
+
+  if (shouldOfferIepQuickReply && !replies.includes(IEP_GOALS_QUICK_REPLY)) {
     replies = [IEP_GOALS_QUICK_REPLY, ...replies];
   }
 
@@ -408,6 +543,7 @@ async function processMessage(
     throw new Error('Chat session not found.');
   }
   const hasPriorAssistantMessages = session.messages.some((m) => m.role === MessageRole.ASSISTANT);
+  const activeFlow = agentFlowPolicy.deriveActiveFlowFromMessages(session.messages);
 
   // 3. Save user message
   const userMessage = await prisma.agentChatMessage.create({
@@ -431,6 +567,7 @@ async function processMessage(
   const commandResult = await maybeHandleSlashCommand(teacherId, agent as any, message);
   const navigationIntent = detectPlannerNavigationIntent(message);
   const trimmed = String(message || '').trim();
+  const explicitSwitchTarget = agentFlowPolicy.detectExplicitFlowSwitch(trimmed);
   const recentAssistant = session.messages.find((m) => m.role === MessageRole.ASSISTANT);
   const recentActionType =
     recentAssistant && typeof (recentAssistant as any).actionType === 'string'
@@ -445,11 +582,15 @@ async function processMessage(
   const fromCoachWeeklyPrompt = recentActionType === 'coach_weekly_prep_prompt';
   const fromPlannerWeeklyPrompt = recentActionType === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
   const plannerPromptChoice = detectPlannerWeeklyPrepChoice(trimmed);
+  const coachPromptChoice = detectCoachWeeklyPrepChoice(trimmed);
+  const switchingAwayFromActiveFlow = Boolean(
+    activeFlow && explicitSwitchTarget && explicitSwitchTarget !== activeFlow
+  );
   if (commandResult) {
     assistantContent = commandResult.assistantContent;
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
-  } else if (isPlannerOrAutopilot && fromPlannerWeeklyPrompt) {
+  } else if (isPlannerOrAutopilot && fromPlannerWeeklyPrompt && !switchingAwayFromActiveFlow) {
     const shouldKeepDiscussing =
       plannerPromptChoice === 'tell_more' || isBriefAcknowledgement(trimmed) || /\?$/.test(trimmed);
     if (shouldKeepDiscussing) {
@@ -480,31 +621,50 @@ async function processMessage(
     intent = { type: 'open_calendar', confidence: 1, extractedParams: {} };
     totalTokens = 0;
   } else {
-    // Coach-mode follow-ups: allow quick numeric confirmation from the Coach weekly-planning prompt.
+    // Coach-mode weekly prompt follow-ups: keep this path in weekly prep unless the teacher
+    // explicitly chooses quick outline.
     const wantsGenerateWeeklyPrep =
+      coachPromptChoice === 'generate_weekly_prep' ||
       /^2\b/.test(trimmed) ||
-      detectPlannerWeeklyPrepChoice(trimmed) === 'generate_now' ||
+      plannerPromptChoice === 'generate_now' ||
       /\b(?:generate|create|make)\b[\s\S]*\bweekly\s+prep\b/i.test(trimmed);
 
-    if (isCoach && fromCoachWeeklyPrompt && wantsGenerateWeeklyPrep) {
-      const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
-        triggeredBy: 'chat',
-      });
+    if (isCoach && fromCoachWeeklyPrompt && !switchingAwayFromActiveFlow && coachPromptChoice !== 'outline') {
+      if (wantsGenerateWeeklyPrep) {
+        const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
+          triggeredBy: 'chat',
+        });
 
-      if (!existed) {
-        await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
+        if (!existed) {
+          await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
+        }
+        actionResult = {
+          type: 'weekly_prep',
+          content: { prepId, weekLabel },
+          preview: existed
+            ? `Opening your weekly prep for "${weekLabel}" now.`
+            : `I'm generating your weekly prep package for "${weekLabel}" now. This usually takes 2-3 minutes. You can check the progress on the Weekly Prep page.`,
+          contentId: prepId,
+        };
+        assistantContent = actionResult.preview;
+        intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
+        totalTokens = 0;
+      } else {
+        const normalized = normalizePromptChoiceText(trimmed);
+        const providedSubjectFocus =
+          coachPromptChoice === 'one_subject' ||
+          /\b(?:reading|math|science|english|ela|social studies|history|subject|grade|fluency|comprehension|vocabulary|fiction|nonfiction)\b/i.test(
+            normalized
+          );
+        assistantContent = providedSubjectFocus
+          ? `Perfect. I'll focus Weekly Prep around that. Reply **"generate now"** and I'll open your weekly prep view, or add one more must-have first.`
+          : `I can open Weekly Prep as soon as you're ready. Reply **"generate now"**, or share one subject + grade to focus first.`;
+        actionResult = buildCoachWeeklyPrepPromptActionResult(
+          providedSubjectFocus ? 'one_subject_details' : 'initial'
+        );
+        intent = { type: 'chat', confidence: 1, extractedParams: {} };
+        totalTokens = 0;
       }
-      actionResult = {
-        type: 'weekly_prep',
-        content: { prepId, weekLabel },
-        preview: existed
-          ? `Opening your weekly prep for "${weekLabel}" now.`
-          : `I'm generating your weekly prep package for "${weekLabel}" now. This usually takes 2-3 minutes. You can check the progress on the Weekly Prep page.`,
-        contentId: prepId,
-      };
-      assistantContent = actionResult.preview;
-      intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
-      totalTokens = 0;
     } else {
     // 5. Assemble context
     const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
@@ -531,8 +691,34 @@ async function processMessage(
 
     logger.info('Intent classified', { teacherId, sessionId, intent: intent.type, confidence: intent.confidence });
 
+    const flowLock = agentFlowPolicy.applyFlowLock({
+      activeFlow,
+      explicitSwitchTarget,
+      intentType: intent.type,
+    });
+    const blockedCrossFlowTarget = flowLock.blockedCrossFlowTarget;
+    if (flowLock.intentType !== intent.type) {
+      logger.info('Flow lock blocked implicit cross-flow switch', {
+        teacherId,
+        sessionId,
+        activeFlow,
+        blockedCrossFlowTarget,
+        originalIntent: intent.type,
+      });
+      intent = {
+        ...intent,
+        type: flowLock.intentType,
+        confidence: 1,
+      };
+    }
+
     // 7. Route to handler
-    if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
+    if (blockedCrossFlowTarget) {
+      assistantContent = buildFlowLockMessage(activeFlow, blockedCrossFlowTarget);
+      actionResult = buildFlowContinuationActionResult(activeFlow, planningMode);
+      totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    } else if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
       if (isPlannerOrAutopilot) {
         assistantContent =
           `Before I open Weekly Prep, would you like to tell me more about the lessons, or should I generate the week based on what I know now?\n\n` +
@@ -573,15 +759,7 @@ async function processMessage(
         `Reply with **1**, **2**, or **3**.`;
       totalTokens = 0;
       actionResult = {
-        type: 'coach_weekly_prep_prompt',
-        content: {
-          options: [
-            { id: 'outline', label: 'Quick outline', hint: 'Goals + pacing + what to teach each day', send: 'Give me a quick outline for my week (no materials yet).' },
-            { id: 'weekly_prep', label: 'Generate Weekly Prep', hint: 'Build the calendar + materials package', takeToCalendar: true },
-            { id: 'one_subject', label: 'Focus on one subject', hint: 'Tell me which subject + grade', send: "Let's plan one subject. Ask me what subject and grade first." },
-          ],
-        },
-        preview: 'Choose how you want to plan this week.',
+        ...buildCoachWeeklyPrepPromptActionResult('initial'),
       };
       // Treat this as chat so analytics/feedback don't mark it as content generation.
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
@@ -660,11 +838,15 @@ async function processMessage(
   });
 
   // 11. Compute suggested replies (deterministic, no LLM call)
+  const responseFlow =
+    agentFlowPolicy.mapActionTypeToFlow(persistedActionResult?.type || '') ||
+    (explicitSwitchTarget && explicitSwitchTarget !== activeFlow ? explicitSwitchTarget : activeFlow);
   const suggestedReplies = computeSuggestedReplies(
     intent.type,
     persistedActionResult,
     (agent as any).classrooms,
-    hasPriorAssistantMessages
+    hasPriorAssistantMessages,
+    responseFlow
   );
 
   return {

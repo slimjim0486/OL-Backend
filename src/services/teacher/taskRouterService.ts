@@ -533,6 +533,75 @@ function enrichSubPlanExtractedParams(
   return merged;
 }
 
+function getRecentAssistantMessageContent(
+  recentMessages?: Array<{ role: string; content: string }>
+): string {
+  if (!Array.isArray(recentMessages) || !recentMessages.length) return '';
+  for (let idx = recentMessages.length - 1; idx >= 0; idx -= 1) {
+    const item = recentMessages[idx];
+    if (String(item?.role || '').toUpperCase() === 'ASSISTANT') {
+      return String(item?.content || '').trim();
+    }
+  }
+  return '';
+}
+
+function inferLessonFollowUpIntent(
+  message: string,
+  recentMessages?: Array<{ role: string; content: string }>
+): TaskIntent | null {
+  const trimmed = String(message || '').trim();
+  if (!trimmed || trimmed.length > 220) return null;
+
+  const normalized = trimmed.toLowerCase();
+  if (!normalized || normalized.includes('?')) return null;
+  if (/^\d{1,2}$/.test(normalized)) return null;
+  if (
+    /^(?:ok|okay|kk|got it|sounds good|cool|thanks|thank you|sure|yep|yeah|alright|all right)$/i.test(normalized)
+  ) {
+    return null;
+  }
+
+  if (
+    /\b(?:quiz|test|assessment|flashcards?|iep|sub(?:stitute)?|weekly prep|calendar|schedule|planner|export|download|pdf|pptx|powerpoint|slides)\b/i.test(
+      normalized
+    )
+  ) {
+    return null;
+  }
+
+  const assistantContent = getRecentAssistantMessageContent(recentMessages);
+  if (!assistantContent) return null;
+  const assistantNormalized = assistantContent.toLowerCase();
+  const referencesLesson = /\blesson(?:\s+plan)?\b/i.test(assistantNormalized);
+  const asksForLessonDetails =
+    /\b(?:what(?:'s| is)?|which|specific|focus|topic|genre|subject|grade|skill|standard|novel|story|common core|ccss|are we)\b/i.test(
+      assistantNormalized
+    ) && /\?/.test(assistantNormalized);
+
+  if (!referencesLesson || !asksForLessonDetails) return null;
+
+  const extractedParams = extractBasicParams(trimmed);
+  if (!extractedParams.topic) {
+    extractedParams.topic = trimmed;
+  }
+
+  const assistantHints = extractBasicParams(assistantContent);
+  if (!extractedParams.subject && assistantHints.subject) {
+    extractedParams.subject = assistantHints.subject;
+  }
+  if (!extractedParams.gradeLevel && assistantHints.gradeLevel) {
+    extractedParams.gradeLevel = assistantHints.gradeLevel;
+  }
+
+  return {
+    type: 'generate_lesson',
+    confidence: 0.78,
+    extractedParams,
+    reasoning: 'Detected lesson-detail follow-up to recent assistant clarification prompt',
+  };
+}
+
 function ruleBasedIntent(
   message: string,
   recentMessages?: Array<{ role: string; content: string }>
@@ -555,6 +624,13 @@ function ruleBasedIntent(
       extractedParams: {},
       reasoning: 'Detected planner navigation phrasing',
     };
+  }
+
+  // If the assistant just asked for lesson details and the teacher answers with those details,
+  // route directly to lesson generation so chat can open content without extra back-and-forth.
+  const lessonFollowUp = inferLessonFollowUpIntent(trimmed, recentMessages);
+  if (lessonFollowUp) {
+    return lessonFollowUp;
   }
 
   // Ultra-common: short replies that are almost always follow-ups. Skip the classifier for these,
