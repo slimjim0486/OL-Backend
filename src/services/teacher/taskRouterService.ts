@@ -670,8 +670,49 @@ function ruleBasedIntent(
     const hasGenerationCue = /\b(?:create|make|generate|build|draft|need|want|give me|help me|simple|quick)\b/i.test(normalized);
     const startsWithQuestionWord = /^(?:what|why|how|when|where|who|can|could|would|should|is|are|am|do|does|did)\b/i.test(normalized);
     const looksInformationalQuestion = startsWithQuestionWord || normalized.endsWith('?');
+    const hasQuizKeyword = /\b(?:quiz|test|assessment|exit ticket|exam|question set)\b/i.test(normalized);
+    const hasFlashcardsKeyword = /\b(?:flashcards?|flash cards?|study cards?|review cards?)\b/i.test(normalized);
+    const hasSubPlanKeyword = /\b(?:sub plan|substitute|cover my class|coverage plan|absence plan)\b/i.test(normalized);
+    const hasIepKeyword = /\b(?:iep|accommodations?|present levels|special education)\b/i.test(normalized);
+    const hasCompetingContentKeyword =
+      hasQuizKeyword || hasFlashcardsKeyword || hasSubPlanKeyword || hasIepKeyword;
+
+    if (hasQuizKeyword && hasGenerationCue) {
+      return {
+        type: 'generate_quiz',
+        confidence: 0.78,
+        extractedParams: extractBasicParams(trimmed),
+        reasoning: 'Matched quiz request heuristic',
+      };
+    }
+    if (hasFlashcardsKeyword && hasGenerationCue) {
+      return {
+        type: 'generate_flashcards',
+        confidence: 0.78,
+        extractedParams: extractBasicParams(trimmed),
+        reasoning: 'Matched flashcards request heuristic',
+      };
+    }
+    if (hasSubPlanKeyword && hasGenerationCue) {
+      return {
+        type: 'generate_sub_plan',
+        confidence: 0.76,
+        extractedParams: enrichSubPlanExtractedParams(trimmed, recentMessages, extractBasicParams(trimmed)),
+        reasoning: 'Matched substitute plan request heuristic',
+      };
+    }
+    if (hasIepKeyword && hasGenerationCue) {
+      return {
+        type: 'generate_iep',
+        confidence: 0.76,
+        extractedParams: enrichIepExtractedParams(trimmed, recentMessages, extractBasicParams(trimmed)),
+        reasoning: 'Matched IEP request heuristic',
+      };
+    }
+
     const likelyLessonRequest =
       hasLikelyLessonKeyword &&
+      !hasCompetingContentKeyword &&
       !/\blesson planner\b/i.test(normalized) &&
       (!looksInformationalQuestion || hasGenerationCue) &&
       (hasGenerationCue || wc <= 12);

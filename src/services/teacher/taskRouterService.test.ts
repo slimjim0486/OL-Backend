@@ -35,4 +35,13 @@ describe('taskRouterService lesson follow-up routing', () => {
 
     expect(intent.type).toBe('chat');
   });
+
+  it('prioritizes explicit quiz generation when lesson and quiz words are both present', async () => {
+    const intent = await taskRouterService.classifyIntent(
+      'Help me create a quiz from this lesson on fractions for 5th grade'
+    );
+
+    expect(intent.type).toBe('generate_quiz');
+    expect(intent.extractedParams.gradeLevel).toBe('5');
+  });
 });

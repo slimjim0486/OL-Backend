@@ -53,9 +53,21 @@ interface SessionWithMessages extends AgentChatSession {
 const MAX_HISTORY_FOR_CONTEXT = 20;
 const PLANNER_WEEKLY_PREP_PROMPT_TYPE = 'planner_weekly_prep_prompt';
 const IEP_GOALS_QUICK_REPLY = 'Generate IEP goals';
+const LESSON_FOLLOWUP_PROMPT_TYPE = 'lesson_followup_prompt';
 
 type PlannerWeeklyPrepChoice = 'tell_more' | 'generate_now' | null;
 type CoachWeeklyPrepChoice = 'outline' | 'generate_weekly_prep' | 'one_subject' | null;
+type LessonMissingField = 'topic' | 'subject' | 'gradeLevel';
+
+interface LessonPrefill {
+  title?: string;
+  subject?: string;
+  gradeLevel?: string;
+  curriculum?: string;
+  lessonType?: 'guide' | 'full';
+  objectives?: string[];
+  summary?: string;
+}
 
 function toSessionTitleFromFirstPrompt(prompt: string): string {
   const normalized = String(prompt || '')
@@ -387,6 +399,260 @@ async function buildCalendarNavigationActionResult(
   };
 }
 
+function normalizeLessonSubject(value: unknown): string | undefined {
+  const raw = String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_');
+  if (!raw) return undefined;
+  if (Object.values(Subject).includes(raw as Subject)) return raw;
+
+  const aliasMap: Record<string, string> = {
+    MATHEMATICS: 'MATH',
+    MATHS: 'MATH',
+    LANGUAGE_ARTS: 'ENGLISH',
+    ELA: 'ENGLISH',
+    LITERATURE: 'ENGLISH',
+    SOCIAL_STUDIES: 'SOCIAL_STUDIES',
+    HISTORY: 'HISTORY',
+    GEOGRAPHY: 'GEOGRAPHY',
+    CIVICS: 'SOCIAL_STUDIES',
+    COMPUTER_SCIENCE: 'COMPUTER_SCIENCE',
+    CS: 'COMPUTER_SCIENCE',
+    PE: 'PHYSICAL_EDUCATION',
+  };
+
+  const mapped = aliasMap[raw];
+  if (mapped && Object.values(Subject).includes(mapped as Subject)) return mapped;
+  return undefined;
+}
+
+function normalizeLessonGradeLevel(value: unknown): string | undefined {
+  const raw = String(value || '').trim().toUpperCase();
+  if (!raw) return undefined;
+  if (raw === 'K' || raw === 'KINDERGARTEN') return 'K';
+
+  const numericMatch =
+    raw.match(/\b(?:GRADE|GR)\s*(\d{1,2})\b/) ||
+    raw.match(/\b(\d{1,2})(?:ST|ND|RD|TH)?\s*GRADE\b/) ||
+    raw.match(/\b(\d{1,2})\b/);
+  const numeric = numericMatch?.[1];
+  if (!numeric) return undefined;
+  const gradeNumber = Number.parseInt(numeric, 10);
+  if (!Number.isFinite(gradeNumber) || gradeNumber < 1 || gradeNumber > 12) return undefined;
+  return String(gradeNumber);
+}
+
+function normalizeLessonType(value: unknown): 'guide' | 'full' | undefined {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return undefined;
+  if (raw === 'full' || raw === 'full_lesson' || raw === 'comprehensive') return 'full';
+  if (raw === 'guide' || raw === 'lesson_guide' || raw === 'outline') return 'guide';
+  return undefined;
+}
+
+function normalizeLessonTopic(value: unknown): string {
+  let topic = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!topic) return '';
+
+  topic = topic
+    .replace(/^(?:please\s+)?(?:can|could|would)\s+you\s+/i, '')
+    .replace(/^(?:help\s+me(?:\s+to)?|i\s+need\s+to|i\s+want\s+to)\s+/i, '')
+    .replace(/^(?:create|make|generate|build|draft|plan)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?/i, '')
+    .replace(/\blesson(?:\s+plan)?\b/gi, ' ')
+    .replace(/^(?:on|about|for)\s+/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return truncate(topic, 140);
+}
+
+function isMeaningfulLessonTopic(value: unknown): boolean {
+  const topic = normalizeLessonTopic(value);
+  if (!topic || topic.length < 3) return false;
+  const normalized = normalizePromptChoiceText(topic);
+  if (!normalized) return false;
+  if (
+    /^(?:general|new|lesson|topic|anything|something|whatever|class|classwork|work|teach|teaching)$/i.test(
+      normalized
+    )
+  ) {
+    return false;
+  }
+  if (/^(?:i|we)\s+(?:need|want|would|will)\b/.test(normalized)) return false;
+  if (/\blesson\b/.test(normalized) && normalized.split(' ').length <= 2) return false;
+  return true;
+}
+
+function normalizeObjectives(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function mergePrefillSummary(previous?: string, next?: string): string | undefined {
+  const previousText = String(previous || '').trim();
+  const nextText = String(next || '').trim();
+  if (!previousText && !nextText) return undefined;
+  if (!previousText) return truncate(nextText, 1800);
+  if (!nextText) return truncate(previousText, 1800);
+  if (previousText.toLowerCase().includes(nextText.toLowerCase())) return truncate(previousText, 1800);
+  if (nextText.toLowerCase().includes(previousText.toLowerCase())) return truncate(nextText, 1800);
+  return truncate(`${previousText}\n${nextText}`, 1800);
+}
+
+function buildLessonPrefillFromIntent(
+  message: string,
+  extractedParams: Record<string, any>
+): LessonPrefill {
+  const topicFromIntent = normalizeLessonTopic(
+    extractedParams.topic || extractedParams.title || extractedParams.lessonTopic
+  );
+  const topicFromMessage = normalizeLessonTopic(message);
+  const topic = isMeaningfulLessonTopic(topicFromIntent)
+    ? topicFromIntent
+    : isMeaningfulLessonTopic(topicFromMessage)
+      ? topicFromMessage
+      : '';
+
+  const summaryFromParams = String(extractedParams.additionalContext || extractedParams.notes || '').trim();
+  const summaryFromMessage = String(message || '').trim();
+  const summary = mergePrefillSummary(summaryFromParams, summaryFromMessage);
+
+  return {
+    title: topic || undefined,
+    subject: normalizeLessonSubject(extractedParams.subject),
+    gradeLevel: normalizeLessonGradeLevel(extractedParams.gradeLevel),
+    curriculum: String(extractedParams.curriculum || '').trim() || undefined,
+    lessonType: normalizeLessonType(extractedParams.lessonType),
+    objectives: normalizeObjectives(extractedParams.objectives),
+    summary,
+  };
+}
+
+function extractLessonPrefillFromActionResult(
+  actionResult: Prisma.JsonValue | null | undefined
+): LessonPrefill {
+  if (!actionResult || typeof actionResult !== 'object' || Array.isArray(actionResult)) return {};
+  const resultObj = actionResult as Record<string, any>;
+  const content = resultObj?.content && typeof resultObj.content === 'object' ? resultObj.content : {};
+  const prefill =
+    content?.prefill && typeof content.prefill === 'object' && !Array.isArray(content.prefill)
+      ? content.prefill
+      : {};
+
+  return {
+    title: normalizeLessonTopic(prefill.title || prefill.topic || content.title || content.topic) || undefined,
+    subject: normalizeLessonSubject(prefill.subject || content.subject),
+    gradeLevel: normalizeLessonGradeLevel(prefill.gradeLevel || content.gradeLevel),
+    curriculum: String(prefill.curriculum || content.curriculum || '').trim() || undefined,
+    lessonType: normalizeLessonType(prefill.lessonType || content.lessonType),
+    objectives: normalizeObjectives(prefill.objectives || content.objectives),
+    summary: String(prefill.summary || content.summary || '').trim() || undefined,
+  };
+}
+
+function mergeLessonPrefill(previous: LessonPrefill, current: LessonPrefill): LessonPrefill {
+  const previousTopic = normalizeLessonTopic(previous.title);
+  const currentTopic = normalizeLessonTopic(current.title);
+  const mergedTopic = isMeaningfulLessonTopic(currentTopic)
+    ? currentTopic
+    : isMeaningfulLessonTopic(previousTopic)
+      ? previousTopic
+      : '';
+
+  return {
+    title: mergedTopic || undefined,
+    subject: current.subject || previous.subject,
+    gradeLevel: current.gradeLevel || previous.gradeLevel,
+    curriculum: current.curriculum || previous.curriculum,
+    lessonType: current.lessonType || previous.lessonType || 'guide',
+    objectives:
+      (Array.isArray(current.objectives) && current.objectives.length > 0
+        ? current.objectives
+        : previous.objectives) || [],
+    summary: mergePrefillSummary(previous.summary, current.summary),
+  };
+}
+
+function getMissingLessonFields(prefill: LessonPrefill): LessonMissingField[] {
+  const missing: LessonMissingField[] = [];
+  if (!isMeaningfulLessonTopic(prefill.title)) missing.push('topic');
+  if (!prefill.subject) missing.push('subject');
+  if (!prefill.gradeLevel) missing.push('gradeLevel');
+  return missing;
+}
+
+function buildLessonFollowUpQuestion(missing: LessonMissingField[]): string {
+  const missingSet = new Set(missing);
+  if (missingSet.has('topic') && missingSet.has('subject') && missingSet.has('gradeLevel')) {
+    return `Before I set up your lesson, what topic, subject, and grade level should I use?`;
+  }
+  if (missingSet.has('topic') && missingSet.has('subject')) {
+    return `Before I set this up, what topic and subject should this lesson cover?`;
+  }
+  if (missingSet.has('topic') && missingSet.has('gradeLevel')) {
+    return `Before I set this up, what topic and grade level should I use?`;
+  }
+  if (missingSet.has('subject') && missingSet.has('gradeLevel')) {
+    return `What subject and grade level should this lesson target?`;
+  }
+  if (missingSet.has('topic')) {
+    return `What specific topic should this lesson cover?`;
+  }
+  if (missingSet.has('subject')) {
+    return `What subject is this lesson for?`;
+  }
+  return `What grade level is this lesson for?`;
+}
+
+function buildLessonFollowUpActionResult(
+  prefill: LessonPrefill,
+  missing: LessonMissingField[],
+  question: string
+): NonNullable<AgentResponse['actionResult']> {
+  return {
+    type: LESSON_FOLLOWUP_PROMPT_TYPE,
+    content: {
+      prefill,
+      missingFields: missing,
+    },
+    preview: question,
+  };
+}
+
+function buildLessonRedirectActionResult(
+  prefill: LessonPrefill,
+  missing: LessonMissingField[]
+): NonNullable<AgentResponse['actionResult']> {
+  const title = isMeaningfulLessonTopic(prefill.title) ? normalizeLessonTopic(prefill.title) : '';
+  const summary = String(prefill.summary || '').trim();
+  const preview =
+    missing.length === 0
+      ? `Great, that's enough to get started. Opening Lesson Generator with your details now.`
+      : `I have enough to start. Opening Lesson Generator with prefilled details so you can finish any missing fields quickly.`;
+
+  return {
+    type: 'lesson',
+    content: {
+      title: title || undefined,
+      subject: prefill.subject,
+      gradeLevel: prefill.gradeLevel,
+      curriculum: prefill.curriculum,
+      lessonType: prefill.lessonType || 'guide',
+      objectives: prefill.objectives || [],
+      summary: summary || undefined,
+      missingFields: missing,
+      prefillingSource: 'agent_chat',
+    },
+    preview,
+  };
+}
+
 async function maybeHandleSlashCommand(
   teacherId: string,
   agent: { preferredPlanningDay?: string | null; preferredDeliveryTime?: string | null; timezone?: string | null },
@@ -462,6 +728,7 @@ function computeSuggestedReplies(
     actionResult?.type === 'quiz' ||
     actionResult?.type === 'flashcards' ||
     actionResult?.type === 'lesson' ||
+    actionResult?.type === LESSON_FOLLOWUP_PROMPT_TYPE ||
     actionResult?.type === 'sub_plan' ||
     actionResult?.type === 'iep' ||
     actionResult?.type === 'weekly_prep' ||
@@ -717,6 +984,33 @@ async function processMessage(
       assistantContent = buildFlowLockMessage(activeFlow, blockedCrossFlowTarget);
       actionResult = buildFlowContinuationActionResult(activeFlow, planningMode);
       totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    } else if (intent.type === 'generate_lesson' && intent.confidence >= 0.6) {
+      const priorLessonPrefill =
+        recentActionType === LESSON_FOLLOWUP_PROMPT_TYPE
+          ? extractLessonPrefillFromActionResult(
+              (recentAssistant as any)?.actionResult as Prisma.JsonValue | null | undefined
+            )
+          : {};
+      const currentLessonPrefill = buildLessonPrefillFromIntent(message, intent.extractedParams);
+      const mergedLessonPrefill = mergeLessonPrefill(priorLessonPrefill, currentLessonPrefill);
+      const missingLessonFields = getMissingLessonFields(mergedLessonPrefill);
+      const followUpAlreadyAsked = recentActionType === LESSON_FOLLOWUP_PROMPT_TYPE;
+
+      if (!followUpAlreadyAsked && missingLessonFields.length > 0) {
+        const followUpQuestion = buildLessonFollowUpQuestion(missingLessonFields);
+        assistantContent = followUpQuestion;
+        actionResult = buildLessonFollowUpActionResult(
+          mergedLessonPrefill,
+          missingLessonFields,
+          followUpQuestion
+        );
+      } else {
+        actionResult = buildLessonRedirectActionResult(mergedLessonPrefill, missingLessonFields);
+        assistantContent = actionResult.preview;
+      }
+      totalTokens = 0;
+      // This path prepares handoff to Lesson Generator; no backend content generation yet.
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
     } else if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
       if (isPlannerOrAutopilot) {
