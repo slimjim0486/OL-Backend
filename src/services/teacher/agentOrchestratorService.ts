@@ -52,6 +52,7 @@ interface SessionWithMessages extends AgentChatSession {
 
 const MAX_HISTORY_FOR_CONTEXT = 20;
 const PLANNER_WEEKLY_PREP_PROMPT_TYPE = 'planner_weekly_prep_prompt';
+const COACH_WEEKLY_PREP_PROMPT_TYPE = 'coach_weekly_prep_prompt';
 const IEP_GOALS_QUICK_REPLY = 'Generate IEP goals';
 const LESSON_FOLLOWUP_PROMPT_TYPE = 'lesson_followup_prompt';
 
@@ -326,14 +327,22 @@ function buildFlowLockMessage(
     return (
       `You're currently in **${current}** flow. ` +
       `To switch to **${blocked}**, say **"switch to ${switchPhrase}"**.\n\n` +
-      `Or say **"generate now"** to keep going in Weekly Prep.`
+      `Or say **"generate now"** to keep going in Weekly Prep.\n\n` +
+      `If this keeps getting stuck on an older flow, start this request in a **new chat**.`
     );
   }
 
   return (
     `You're currently in **${current}** flow. ` +
-    `To switch to **${blocked}**, say **"switch to ${switchPhrase}"**.`
+    `To switch to **${blocked}**, say **"switch to ${switchPhrase}"**.\n\n` +
+    `If this keeps getting stuck on an older flow, start this request in a **new chat**.`
   );
+}
+
+function shouldEnforceFlowLock(activeFlow: AgentFlowType, recentActionType: string): boolean {
+  if (!activeFlow) return false;
+  if (activeFlow !== 'weekly_prep') return false;
+  return recentActionType === COACH_WEEKLY_PREP_PROMPT_TYPE || recentActionType === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
 }
 
 function buildFlowContinuationActionResult(
@@ -846,7 +855,7 @@ async function processMessage(
   const isCoach = planningMode === PlanningAutonomy.COACH;
   const isPlannerOrAutopilot =
     planningMode === PlanningAutonomy.PLANNER || planningMode === PlanningAutonomy.AUTOPILOT;
-  const fromCoachWeeklyPrompt = recentActionType === 'coach_weekly_prep_prompt';
+  const fromCoachWeeklyPrompt = recentActionType === COACH_WEEKLY_PREP_PROMPT_TYPE;
   const fromPlannerWeeklyPrompt = recentActionType === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
   const plannerPromptChoice = detectPlannerWeeklyPrepChoice(trimmed);
   const coachPromptChoice = detectCoachWeeklyPrepChoice(trimmed);
@@ -958,11 +967,13 @@ async function processMessage(
 
     logger.info('Intent classified', { teacherId, sessionId, intent: intent.type, confidence: intent.confidence });
 
-    const flowLock = agentFlowPolicy.applyFlowLock({
-      activeFlow,
-      explicitSwitchTarget,
-      intentType: intent.type,
-    });
+    const flowLock = shouldEnforceFlowLock(activeFlow, recentActionType)
+      ? agentFlowPolicy.applyFlowLock({
+          activeFlow,
+          explicitSwitchTarget,
+          intentType: intent.type,
+        })
+      : { intentType: intent.type, blockedCrossFlowTarget: null };
     const blockedCrossFlowTarget = flowLock.blockedCrossFlowTarget;
     if (flowLock.intentType !== intent.type) {
       logger.info('Flow lock blocked implicit cross-flow switch', {

@@ -56,6 +56,18 @@ const FLOW_TARGET_PATTERNS: Record<Exclude<AgentFlowType, null>, RegExp> = {
 
 const MANUAL_SWITCH_CUE_RE =
   /\b(?:switch|change|instead|now|let'?s|i\s+want|i\s+need|please|can\s+you|could\s+you|would\s+you|open|take\s+me\s+to|go\s+to|navigate|create|make|generate|build|draft|start)\b/i;
+const REQUEST_DETAIL_CUE_RE =
+  /\b(?:for|on|about|with|include|including|cover|covering|focus|focused|around|topic|subject|grade|worksheet|questions?|cards?|goals?)\b/i;
+const GRADE_CUE_RE =
+  /\b(?:grade\s*(?:\d{1,2}|k|pre[\s-]?k)|(?:\d{1,2}(?:st|nd|rd|th)?|k|kindergarten|pre[\s-]?k)\s*grade)\b/i;
+const BARE_TARGET_ONLY_RE: Record<Exclude<AgentFlowType, null>, RegExp> = {
+  weekly_prep: /^(?:weekly prep|weekly plan|planner|calendar|schedule)$/i,
+  lesson: /^(?:lesson|lesson plan|content editor)$/i,
+  quiz: /^(?:quiz|test|assessment|exit ticket)$/i,
+  flashcards: /^(?:flashcards?|flash cards?|study cards?|review cards?)$/i,
+  iep: /^(?:iep(?: goals?)?|special(?: education| ed)? goals?)$/i,
+  sub_plan: /^(?:sub(?:stitute)? plans?|coverage plans?|absence plans?)$/i,
+};
 
 function extractActionType(message: FlowMessageLike): string {
   const direct = String(message?.actionType || '').trim();
@@ -103,13 +115,20 @@ export function deriveActiveFlowFromMessages(messages: FlowMessageLike[]): Agent
 
 export function detectExplicitFlowSwitch(message: string): AgentFlowType {
   const normalized = normalizeMessage(message);
-  if (!normalized || normalized.length < 6) return null;
-  if (!MANUAL_SWITCH_CUE_RE.test(normalized)) return null;
+  if (!normalized || normalized.length < 3) return null;
 
   const matches = (Object.keys(FLOW_TARGET_PATTERNS) as Array<Exclude<AgentFlowType, null>>).filter((flow) =>
     FLOW_TARGET_PATTERNS[flow].test(normalized)
   );
   if (matches.length === 0) return null;
+  const hasManualCue = MANUAL_SWITCH_CUE_RE.test(normalized);
+  const hasSingleTargetRequestShape =
+    matches.length === 1 &&
+    (REQUEST_DETAIL_CUE_RE.test(normalized) ||
+      GRADE_CUE_RE.test(normalized) ||
+      BARE_TARGET_ONLY_RE[matches[0]].test(normalized));
+  if (!hasManualCue && !hasSingleTargetRequestShape) return null;
+
   if (matches.length === 1) return matches[0];
 
   // Prefer more specific targets over weekly planner words when multiple match.

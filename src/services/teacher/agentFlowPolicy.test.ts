@@ -43,6 +43,11 @@ describe('agentFlowPolicy', () => {
       expect(detectExplicitFlowSwitch('open my sub plans')).toBe('sub_plan');
     });
 
+    it('detects request-shaped target switches even without manual switch verbs', () => {
+      expect(detectExplicitFlowSwitch('12th grade survey and bias lesson with worksheet')).toBe('lesson');
+      expect(detectExplicitFlowSwitch('fractions quiz with answer key')).toBe('quiz');
+    });
+
     it('does not treat passive follow-up details as flow switches', () => {
       expect(detectExplicitFlowSwitch('reading longer paragraphs in sync')).toBeNull();
       expect(detectExplicitFlowSwitch('pick any')).toBeNull();
