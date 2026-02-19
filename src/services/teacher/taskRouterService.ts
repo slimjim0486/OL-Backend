@@ -40,7 +40,7 @@ const CLASSIFICATION_PROMPT = `You are an intent classifier for a teacher AI ass
 - chat: General conversation, questions about teaching, advice, or anything that doesn't require content generation
 - open_calendar: User wants to open/view the calendar, planner, weekly prep, or schedule view (keywords: open calendar, show my schedule, open planner, open weekly prep, let me see it on calendar, take me to week 9 calendar, open new calendar)
 - generate_lesson: Create a lesson plan (keywords: lesson, plan, teach, unit)
-- generate_quiz: Create a quiz or test (keywords: quiz, test, assessment, questions)
+- generate_quiz: Create a quiz or test (keywords: quiz, test, assessment)
 - generate_flashcards: Create flashcards (keywords: flashcards, review cards, study cards)
 - generate_sub_plan: Create a substitute teacher plan (keywords: sub plan, substitute, absence, cover)
 - generate_iep: Create IEP goals (keywords: IEP, goals, accommodation, special education)
@@ -65,6 +65,10 @@ Extract relevant parameters like:
 - gradeLevel: Grade level mentioned
 - count: Number of items requested (e.g., "10 questions")
 - difficulty: Difficulty level if mentioned
+
+Important intent rule:
+- If the teacher is asking for a lesson (including minor misspellings like "lessong"), classify as generate_lesson.
+- Do NOT classify as generate_quiz unless the teacher explicitly asks for quiz/test/assessment.
 
 For generate_iep requests, always try to extract:
 - disabilityCategory: One of IDEA categories (e.g., AUTISM_SPECTRUM, OTHER_HEALTH_IMPAIRMENT, SPECIFIC_LEARNING_DISABILITY)
@@ -184,8 +188,11 @@ function extractBasicParams(message: string): Record<string, any> {
   const params: Record<string, any> = {};
 
   // Grade level
-  const gradeMatch = lower.match(/\b(?:grade|gr)\s*(\d{1,2})\b/);
-  if (gradeMatch) {
+  const gradeMatch =
+    lower.match(/\b(?:grade|gr)\s*(\d{1,2})\b/) ||
+    lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s*grade\b/) ||
+    lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s*graders?\b/);
+  if (gradeMatch?.[1]) {
     params.gradeLevel = gradeMatch[1];
   } else if (/\bkindergarten\b/.test(lower)) {
     params.gradeLevel = 'K';
@@ -217,6 +224,7 @@ function extractBasicParams(message: string): Record<string, any> {
     .replace(/\b(?:quiz|test|assessment|exit ticket|exam|flashcards?|lesson|sub plan|substitute|iep|audio|podcast|email|report)\b/g, ' ')
     .replace(/\b(?:on|about|for|of)\b/g, ' ')
     .replace(/\b(?:grade|gr)\s*\d{1,2}\b/g, ' ')
+    .replace(/\b\d{1,2}(?:st|nd|rd|th)?\s*grade\b/g, ' ')
     .replace(/\bkindergarten\b/g, ' ')
     .replace(/\b\d{1,2}\s+(?:question|questions|cards|flashcards|items|problems)\b/g, ' ')
     .replace(/\s+/g, ' ')
@@ -551,12 +559,13 @@ function ruleBasedIntent(
 
   // Ultra-common: short replies that are almost always follow-ups. Skip the classifier for these,
   // and let the chat model interpret the reply with conversation context.
+  const hasLikelyLessonKeyword = /\b(?:lesson(?:s)?|lesson plan|unit plan|teach(?:ing)? plan|lessong|leson|lessn)\b/i.test(trimmed);
   const wc = wordCount(trimmed);
   const isBrief = wc <= 4 && trimmed.length <= 40;
   const isShortFollowUp = wc <= 4 && trimmed.length <= 20;
   if (isShortFollowUp) {
     // But don't skip if it's an obvious request keyword.
-    if (!/\b(?:quiz|test|assessment|flashcard|lesson|iep|sub(?:stitute)?|weekly prep|export|download|pdf|pptx|powerpoint|slides)\b/i.test(trimmed)) {
+    if (!/\b(?:quiz|test|assessment|flashcard|iep|sub(?:stitute)?|weekly prep|export|download|pdf|pptx|powerpoint|slides)\b/i.test(trimmed) && !hasLikelyLessonKeyword) {
       return {
         type: 'chat',
         confidence: 0.35,
@@ -579,6 +588,25 @@ function ruleBasedIntent(
   }
   if (/\b(?:weekly prep|plan (?:my|the) week|plan for next week|next week|this week)\b/i.test(trimmed)) {
     return { type: 'weekly_prep', confidence: 0.72, extractedParams: {}, reasoning: 'Matched weekly planning heuristic' };
+  }
+  {
+    const normalized = trimmed.toLowerCase();
+    const hasGenerationCue = /\b(?:create|make|generate|build|draft|need|want|give me|help me|simple|quick)\b/i.test(normalized);
+    const startsWithQuestionWord = /^(?:what|why|how|when|where|who|can|could|would|should|is|are|am|do|does|did)\b/i.test(normalized);
+    const looksInformationalQuestion = startsWithQuestionWord || normalized.endsWith('?');
+    const likelyLessonRequest =
+      hasLikelyLessonKeyword &&
+      !/\blesson planner\b/i.test(normalized) &&
+      (!looksInformationalQuestion || hasGenerationCue) &&
+      (hasGenerationCue || wc <= 12);
+    if (likelyLessonRequest) {
+      return {
+        type: 'generate_lesson',
+        confidence: 0.78,
+        extractedParams: extractBasicParams(trimmed),
+        reasoning: 'Matched lesson request heuristic',
+      };
+    }
   }
   if (isBrief && /\b(?:quiz|test|assessment|exit ticket|exam)\b/i.test(trimmed)) {
     return { type: 'generate_quiz', confidence: 0.72, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief quiz keyword heuristic' };
@@ -614,7 +642,7 @@ function ruleBasedIntent(
   if (isBrief && /\b(?:pacing|standards|covered|taught today|curriculum)\b/i.test(trimmed)) {
     return { type: 'update_curriculum', confidence: 0.62, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief curriculum update keyword heuristic' };
   }
-  if (isBrief && /\b(?:lesson plan|lesson|unit plan|teach(?:ing)? plan)\b/i.test(trimmed)) {
+  if (isBrief && hasLikelyLessonKeyword) {
     return { type: 'generate_lesson', confidence: 0.62, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief lesson keyword heuristic' };
   }
 

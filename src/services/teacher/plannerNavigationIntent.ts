@@ -17,7 +17,6 @@ const MODE_LABEL_RE = /\b(?:coach|planner|autopilot)\s+mode\b/;
 const NON_NAV_PLANNER_RE = /\blesson planner\b/;
 const NON_NAV_CONTEXT_RE = /\b(?:example|examples|idea|ideas|template|templates|tips?|guide|guides)\b/;
 const NAV_SURFACE_RE = /\b(?:page|tab|screen|view|hub)\b/;
-const LESSON_DESTINATION_RE = /\b(?:my|the|this|that|new)\s+lesson\b/;
 const DEFERRED_NAV_RE =
   /\b(?:when|once|after|as soon as)\b[\s\S]{0,50}\b(?:done|ready|finish(?:ed)?|complete(?:d)?)\b/;
 const FRESH_HINT_RE = /\b(?:new|fresh|another|next|upcoming)\b/;
@@ -59,8 +58,7 @@ function isNavigationRequest(normalized: string): boolean {
     return false;
   }
 
-  const hasTarget = TARGET_RE.test(normalized) || LESSON_DESTINATION_RE.test(normalized);
-  if (!hasTarget) return false;
+  if (!TARGET_RE.test(normalized)) return false;
 
   const hasAction = DIRECT_NAV_RE.test(normalized) || SEE_RE.test(normalized);
   const hasPlacementAction = PLACE_RE.test(normalized);
