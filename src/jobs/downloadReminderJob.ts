@@ -464,23 +464,144 @@ export function scheduleDownloadReminders(): void {
 }
 
 // ============================================================================
+// BACKFILL — Retroactive Stage 2 emails for existing teachers
+// ============================================================================
+
+/**
+ * One-time backfill: find teachers with un-downloaded content (any age)
+ * and send them the Stage 2 preview email. Skips anyone who already
+ * received any download reminder trigger.
+ *
+ * Usage: npx tsx src/jobs/downloadReminderJob.ts --backfill 20
+ */
+export async function backfillDownloadReminders(limit: number): Promise<number> {
+  logger.info('Starting download reminder backfill...', { limit });
+  let sent = 0;
+
+  try {
+    const teachers = await prisma.teacher.findMany({
+      where: {
+        subscriptionTier: 'FREE',
+        emailVerified: true,
+        notifyUsageAlerts: true,
+        // Has content with zero exports
+        content: {
+          some: {
+            exports: { none: {} },
+          },
+        },
+        // Never received any download reminder
+        triggerLogs: {
+          none: {
+            triggerName: { in: ['download_reminder_24h', 'download_reminder_72h', 'auto_gift_pdf'] },
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        content: {
+          where: { exports: { none: {} } },
+          select: {
+            id: true,
+            title: true,
+            contentType: true,
+            subject: true,
+            gradeLevel: true,
+            lessonContent: true,
+            quizContent: true,
+            flashcardContent: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    for (const teacher of teachers) {
+      if (teacher.content.length === 0) continue;
+
+      const downloadsRemaining = await getFreeDownloadsRemaining(teacher.id);
+      const contentItems = teacher.content.map((c) => ({
+        title: c.title,
+        type: contentTypeLabel(c.contentType),
+      }));
+
+      const previews = teacher.content.map((c) => {
+        const preview = extractContentPreview(c as any);
+        return {
+          title: preview.title,
+          type: contentTypeLabel(preview.type),
+          sections: preview.sections,
+          questionCount: preview.questionCount,
+          vocabularyTerms: preview.vocabularyTerms,
+          cardCount: preview.cardCount,
+        };
+      });
+
+      const success = await emailService.sendDownloadReminder72hEmail(
+        teacher.email,
+        teacher.firstName || 'there',
+        contentItems,
+        previews,
+        downloadsRemaining
+      );
+
+      if (success) {
+        // Record as 72h trigger so future cron runs skip them
+        await recordTrigger(teacher.id, 'download_reminder_72h', {
+          contentIds: teacher.content.map((c) => c.id),
+          source: 'backfill',
+        });
+        sent++;
+        logger.info(`Backfill email sent to ${teacher.email}`, { teacherId: teacher.id });
+      }
+    }
+
+    logger.info('Download reminder backfill complete', { eligible: teachers.length, sent });
+  } catch (error) {
+    logger.error('Download reminder backfill failed', { error });
+  }
+
+  return sent;
+}
+
+// ============================================================================
 // CLI RUNNER
 // ============================================================================
 
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMainModule) {
-  runDownloadReminders()
-    .then((results) => {
-      console.log('Download reminders complete:', results);
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('Error running download reminders:', error);
-      process.exit(1);
-    });
+  const backfillIdx = process.argv.indexOf('--backfill');
+  if (backfillIdx !== -1) {
+    const limit = parseInt(process.argv[backfillIdx + 1], 10) || 20;
+    backfillDownloadReminders(limit)
+      .then((sent) => {
+        console.log(`Backfill complete: ${sent} emails sent`);
+        process.exit(0);
+      })
+      .catch((error) => {
+        console.error('Error running backfill:', error);
+        process.exit(1);
+      });
+  } else {
+    runDownloadReminders()
+      .then((results) => {
+        console.log('Download reminders complete:', results);
+        process.exit(0);
+      })
+      .catch((error) => {
+        console.error('Error running download reminders:', error);
+        process.exit(1);
+      });
+  }
 }
 
 export default {
   runDownloadReminders,
   scheduleDownloadReminders,
+  backfillDownloadReminders,
 };
