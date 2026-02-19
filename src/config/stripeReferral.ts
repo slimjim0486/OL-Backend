@@ -82,12 +82,12 @@ export const REFERRER_COUPONS = {
     stripeCouponId: env.STRIPE_COUPON_REFERRER_FAMILY_PLUS || '',
   },
 
-  // Free month for Teacher Seat tier referrer ($14.99)
+  // Free month for Teacher Unlimited tier referrer ($9.99)
   FREE_MONTH_TEACHER_BASIC: {
     id: 'REF_REWARD_TEACHER_BASIC',
-    name: 'Referral Reward: Free Month (Teacher Seat)',
+    name: 'Referral Reward: Free Month (Teacher Unlimited)',
     type: 'amount_off' as const,
-    value: 1499, // $14.99 in cents
+    value: 999, // $9.99 in cents
     duration: 'once' as const,
     currency: 'usd',
     stripeCouponId: env.STRIPE_COUPON_REFERRER_TEACHER_BASIC || '',

@@ -3,11 +3,10 @@
  *
  * Pricing Model (Teacher Portal):
  * - Free to generate + preview unlimited content
- * - Pay-per-download:
- *   - Lesson PDF: $1.99
- *   - Full bundle: $2.99
+ * - Free exports:
+ *   - 3 downloads/exports per month
  * - Subscriptions:
- *   - Teacher Seat (BASIC): $14.99/month or $119.88/year
+ *   - Teacher Unlimited (BASIC): $9.99/month or $95.99/year
  *   - Teacher Pro Seat (PROFESSIONAL): $29.99/month or $239.88/year
  */
 
@@ -33,22 +32,18 @@ export interface SubscriptionProduct {
   features: string[];
 }
 
-// Teacher plan (BASIC). Falls back to legacy "UNLIMITED" price IDs if present.
+// Teacher plan (BASIC/Teacher Unlimited) - sourced from UNLIMITED price IDs.
 const teacherMonthlyPriceId =
-  env.STRIPE_PRICE_TEACHER_BASIC_MONTHLY ||
-  env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY ||
-  '';
+  env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY || '';
 
 const teacherAnnualPriceId =
-  env.STRIPE_PRICE_TEACHER_BASIC_ANNUAL ||
-  env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL ||
-  '';
+  env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL || '';
 
 const TEACHER_PRODUCT: SubscriptionProduct = {
-  name: 'Teacher',
+  name: 'Teacher Unlimited',
   tier: 'BASIC',
-  priceMonthly: 14.99,
-  priceAnnual: 119.88,
+  priceMonthly: 9.99,
+  priceAnnual: 95.99,
   priceIdMonthly: teacherMonthlyPriceId,
   priceIdAnnual: teacherAnnualPriceId,
   features: [
@@ -93,6 +88,7 @@ export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, Subscription
       'Generate unlimited lessons, quizzes, and flashcards',
       'Full-quality in-app previews',
       'Save everything to your library',
+      '3 free downloads/exports each month',
     ],
   },
   BASIC: TEACHER_PRODUCT,
@@ -147,7 +143,7 @@ export function getProductByTier(tier: TeacherSubscriptionTier): SubscriptionPro
 }
 
 /**
- * Get subscription product by price ID (maps legacy prices to Unlimited)
+ * Get subscription product by price ID
  */
 export function getProductByPriceId(priceId: string): SubscriptionProduct | null {
   if (!priceId) return null;
@@ -158,16 +154,6 @@ export function getProductByPriceId(priceId: string): SubscriptionProduct | null
   }
   if (priceId === teacherProMonthlyPriceId || priceId === teacherProAnnualPriceId) {
     return TEACHER_PRO_PRODUCT;
-  }
-
-  // Legacy mapping: old "UNLIMITED" price IDs count as the Teacher plan (BASIC)
-  const legacyTeacherPriceIds = new Set([
-    env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY,
-    env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL,
-  ].filter(Boolean));
-
-  if (legacyTeacherPriceIds.has(priceId)) {
-    return TEACHER_PRODUCT;
   }
 
   return null;
@@ -192,8 +178,7 @@ export function getDownloadProductByPriceId(priceId: string): DownloadProduct | 
  */
 export function isAnnualSubscription(priceId: string): boolean {
   return priceId === teacherAnnualPriceId ||
-    priceId === teacherProAnnualPriceId ||
-    priceId === env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL;
+    priceId === teacherProAnnualPriceId;
 }
 
 /**
@@ -215,23 +200,16 @@ export function validateStripeConfig(): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
 
   if (!teacherMonthlyPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_BASIC_MONTHLY');
+    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY');
   }
   if (!teacherAnnualPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_BASIC_ANNUAL');
+    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL');
   }
   if (!teacherProMonthlyPriceId) {
     missing.push('STRIPE_PRICE_TEACHER_PRO_MONTHLY');
   }
   if (!teacherProAnnualPriceId) {
     missing.push('STRIPE_PRICE_TEACHER_PRO_ANNUAL');
-  }
-
-  if (!DOWNLOAD_PRODUCTS.PDF.priceId) {
-    missing.push('STRIPE_PRICE_TEACHER_PDF');
-  }
-  if (!DOWNLOAD_PRODUCTS.BUNDLE.priceId) {
-    missing.push('STRIPE_PRICE_TEACHER_BUNDLE');
   }
 
   return {

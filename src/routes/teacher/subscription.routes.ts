@@ -34,7 +34,7 @@ router.get('/plans', async (req: Request, res: Response, next: NextFunction) => 
       data: {
         plans,
         currency: 'USD',
-        billingModel: 'SEAT_PLUS_DOWNLOAD',
+        billingModel: 'FREE_CAP_PLUS_UNLIMITED',
       },
     });
   } catch (error) {
@@ -122,8 +122,8 @@ router.get(
         data: {
           subscription: subscriptionInfo,
           currentTier: subscriptionInfo?.tier || 'FREE',
-          pricingModel: 'DOWNLOADS',
-          billingModel: 'SEAT_PLUS_DOWNLOAD',
+          pricingModel: 'FREE_CAP_PLUS_UNLIMITED',
+          billingModel: 'FREE_CAP_PLUS_UNLIMITED',
         },
       });
     } catch (error) {

@@ -988,6 +988,7 @@ model Teacher {
 
   // Download Purchases (per-lesson)
   downloadPurchases TeacherDownloadPurchase[]
+  downloadUsage     TeacherDownloadUsage[]
 
   // Onboarding
   tutorialCompletedAt DateTime? // When dashboard tutorial was completed (null = not completed)
@@ -1046,6 +1047,20 @@ model TeacherDownloadPurchase {
   @@index([teacherId, contentId])
   @@index([contentId])
   @@index([teacherId, createdAt])
+}
+
+model TeacherDownloadUsage {
+  id        String   @id @default(uuid())
+  teacherId String
+  month     DateTime @db.Date // First day of month (UTC)
+  usedCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, month])
+  @@index([teacherId, month])
 }
 
 // ============================================

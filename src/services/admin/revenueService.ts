@@ -357,7 +357,7 @@ export const revenueService = {
     // Teacher seat pricing (from stripeProducts.ts)
     const teacherPricing: Record<string, number> = {
       FREE: 0,
-      BASIC: 14.99,
+      BASIC: 9.99,
       PROFESSIONAL: 29.99,
     };
 

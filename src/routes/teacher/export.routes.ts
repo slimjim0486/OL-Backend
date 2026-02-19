@@ -11,8 +11,8 @@ import { exportContent, exportMultipleContent, ExportOptions } from '../../servi
 import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
 import * as googleDriveService from '../../services/teacher/googleDriveService.js';
 import { uploadFile } from '../../services/storage/storageService.js';
-import { DOWNLOAD_PRODUCTS, SUBSCRIPTION_PRODUCTS } from '../../config/stripeProducts.js';
-import { checkDownloadAccess, getDownloadAccess } from '../../services/teacher/downloadAccessService.js';
+import { SUBSCRIPTION_PRODUCTS } from '../../config/stripeProducts.js';
+import { checkDownloadAccess, consumeFreeDownloadAllowance, getDownloadAccess } from '../../services/teacher/downloadAccessService.js';
 
 const router = Router();
 
@@ -53,6 +53,52 @@ const batchExportSchema = z.object({
   options: exportOptionsSchema.optional(),
 });
 
+function getDownloadBlockedPayload(access: {
+  requiredProduct: string;
+  priceCents: number;
+  freeMonthlyLimit: number;
+  freeDownloadsUsed: number;
+  freeDownloadsRemaining: number;
+  freeDownloadsResetAt: Date;
+}) {
+  return {
+    success: false,
+    error: 'Free monthly download limit reached. Start Teacher Unlimited to continue exporting.',
+    requiredProduct: access.requiredProduct,
+    price: access.priceCents,
+    freeMonthlyLimit: access.freeMonthlyLimit,
+    freeDownloadsUsed: access.freeDownloadsUsed,
+    freeDownloadsRemaining: access.freeDownloadsRemaining,
+    freeDownloadsResetAt: access.freeDownloadsResetAt,
+  };
+}
+
+async function consumeDownloadAllowanceOrRespond(
+  res: Response,
+  teacherId: string,
+  contentId: string
+): Promise<boolean> {
+  try {
+    await consumeFreeDownloadAllowance(teacherId);
+    return true;
+  } catch (error: any) {
+    if (error?.name === 'ForbiddenError') {
+      const latestAccess = await getDownloadAccess(teacherId, contentId);
+      res.status(403).json(getDownloadBlockedPayload({
+        requiredProduct: 'SUBSCRIPTION',
+        priceCents: Math.round(SUBSCRIPTION_PRODUCTS.BASIC.priceMonthly * 100),
+        freeMonthlyLimit: latestAccess.freeMonthlyLimit,
+        freeDownloadsUsed: latestAccess.freeDownloadsUsed,
+        freeDownloadsRemaining: latestAccess.freeDownloadsRemaining,
+        freeDownloadsResetAt: latestAccess.freeDownloadsResetAt,
+      }));
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 // ============================================
 // DOWNLOADS ROUTES (must come before /:contentId)
 // ============================================
@@ -90,12 +136,10 @@ router.get('/access/:contentId', async (req: Request, res: Response) => {
       data: {
         ...access,
         prices: {
-          pdf: Math.round(DOWNLOAD_PRODUCTS.PDF.price * 100),
-          bundle: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
-          // Legacy keys (used by existing paywall UI): Teacher plan pricing
+          // Subscription pricing for upgrade/paywall UI.
           subscription_monthly: Math.round(teacherPlan.priceMonthly * 100),
           subscription_annual: Math.round(teacherPlan.priceAnnual * 100),
-          // New keys: Teacher Pro pricing
+          // Teacher Pro pricing (existing feature paywalls still consume these keys).
           pro_subscription_monthly: Math.round(proPlan.priceMonthly * 100),
           pro_subscription_annual: Math.round(proPlan.priceAnnual * 100),
         },
@@ -354,12 +398,11 @@ router.get('/:contentId', async (req: Request, res: Response) => {
     );
 
     if (!access.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Purchase required',
-        requiredProduct: access.requiredProduct,
-        price: access.priceCents,
-      });
+      return res.status(403).json(getDownloadBlockedPayload(access));
+    }
+
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contentId))) {
+      return;
     }
 
     // Generate export
@@ -458,12 +501,11 @@ router.get('/:contentId/pptx', async (req: Request, res: Response) => {
     );
 
     if (!access.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Purchase required',
-        requiredProduct: access.requiredProduct,
-        price: access.priceCents,
-      });
+      return res.status(403).json(getDownloadBlockedPayload(access));
+    }
+
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contentId))) {
+      return;
     }
 
     // Generate PPTX using Presenton API (different function for flashcards)
@@ -578,39 +620,20 @@ router.post('/batch', async (req: Request, res: Response) => {
       });
     }
 
-    const teacher = await prisma.teacher.findUnique({
-      where: { id: teacherId },
-      select: {
-        subscriptionTier: true,
-        subscriptionStatus: true,
-        subscriptionExpiresAt: true,
-        organization: {
-          select: {
-            subscriptionStatus: true,
-            subscriptionExpiresAt: true,
-          },
-        },
-      },
-    });
+    const access = await getDownloadAccess(teacherId, contents[0].id);
+    if (!access.canDownload) {
+      return res.status(403).json(getDownloadBlockedPayload({
+        requiredProduct: 'SUBSCRIPTION',
+        priceCents: Math.round(SUBSCRIPTION_PRODUCTS.BASIC.priceMonthly * 100),
+        freeMonthlyLimit: access.freeMonthlyLimit,
+        freeDownloadsUsed: access.freeDownloadsUsed,
+        freeDownloadsRemaining: access.freeDownloadsRemaining,
+        freeDownloadsResetAt: access.freeDownloadsResetAt,
+      }));
+    }
 
-    const hasIndividualSubscription = Boolean(
-      teacher?.subscriptionTier !== 'FREE' &&
-      teacher?.subscriptionStatus === 'ACTIVE' &&
-      (!teacher.subscriptionExpiresAt || teacher.subscriptionExpiresAt > new Date())
-    );
-    const hasOrganizationSeat = Boolean(
-      teacher?.organization?.subscriptionStatus === 'ACTIVE' &&
-      (!teacher.organization.subscriptionExpiresAt || teacher.organization.subscriptionExpiresAt > new Date())
-    );
-    const isSubscriber = hasIndividualSubscription || hasOrganizationSeat;
-
-    if (!isSubscriber) {
-      return res.status(403).json({
-        success: false,
-        error: 'Batch exports require an active seat subscription. Export items individually or start a seat plan.',
-        requiredProduct: 'BUNDLE',
-        price: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
-      });
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contents[0].id))) {
+      return;
     }
 
     // Generate combined export
@@ -790,12 +813,11 @@ router.post('/:contentId/drive', async (req: Request, res: Response) => {
     );
 
     if (!access.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Purchase required',
-        requiredProduct: access.requiredProduct,
-        price: access.priceCents,
-      });
+      return res.status(403).json(getDownloadBlockedPayload(access));
+    }
+
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contentId))) {
+      return;
     }
 
     // Generate PDF
@@ -857,39 +879,20 @@ router.post('/batch/drive', async (req: Request, res: Response) => {
       });
     }
 
-    const teacher = await prisma.teacher.findUnique({
-      where: { id: teacherId },
-      select: {
-        subscriptionTier: true,
-        subscriptionStatus: true,
-        subscriptionExpiresAt: true,
-        organization: {
-          select: {
-            subscriptionStatus: true,
-            subscriptionExpiresAt: true,
-          },
-        },
-      },
-    });
+    const access = await getDownloadAccess(teacherId, contents[0].id);
+    if (!access.canDownload) {
+      return res.status(403).json(getDownloadBlockedPayload({
+        requiredProduct: 'SUBSCRIPTION',
+        priceCents: Math.round(SUBSCRIPTION_PRODUCTS.BASIC.priceMonthly * 100),
+        freeMonthlyLimit: access.freeMonthlyLimit,
+        freeDownloadsUsed: access.freeDownloadsUsed,
+        freeDownloadsRemaining: access.freeDownloadsRemaining,
+        freeDownloadsResetAt: access.freeDownloadsResetAt,
+      }));
+    }
 
-    const hasIndividualSubscription = Boolean(
-      teacher?.subscriptionTier !== 'FREE' &&
-      teacher?.subscriptionStatus === 'ACTIVE' &&
-      (!teacher.subscriptionExpiresAt || teacher.subscriptionExpiresAt > new Date())
-    );
-    const hasOrganizationSeat = Boolean(
-      teacher?.organization?.subscriptionStatus === 'ACTIVE' &&
-      (!teacher.organization.subscriptionExpiresAt || teacher.organization.subscriptionExpiresAt > new Date())
-    );
-    const isSubscriber = hasIndividualSubscription || hasOrganizationSeat;
-
-    if (!isSubscriber) {
-      return res.status(403).json({
-        success: false,
-        error: 'Batch exports require an active seat subscription. Export items individually or start a seat plan.',
-        requiredProduct: 'BUNDLE',
-        price: Math.round(DOWNLOAD_PRODUCTS.BUNDLE.price * 100),
-      });
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contents[0].id))) {
+      return;
     }
 
     // Generate combined PDF
@@ -1064,12 +1067,7 @@ router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
     );
 
     if (!access.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Purchase required',
-        requiredProduct: access.requiredProduct,
-        price: access.priceCents,
-      });
+      return res.status(403).json(getDownloadBlockedPayload(access));
     }
 
     // Check for existing in-progress export
@@ -1091,6 +1089,10 @@ router.post('/:contentId/pptx-async', async (req: Request, res: Response) => {
           status: existingExport.status,
         },
       });
+    }
+
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacher.id, contentId))) {
+      return;
     }
 
     // Get teacher's full name for email
@@ -1188,12 +1190,7 @@ router.post('/:contentId/pdf-async', async (req: Request, res: Response) => {
     );
 
     if (!access.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Purchase required',
-        requiredProduct: access.requiredProduct,
-        price: access.priceCents,
-      });
+      return res.status(403).json(getDownloadBlockedPayload(access));
     }
 
     // Check for existing in-progress export
@@ -1215,6 +1212,10 @@ router.post('/:contentId/pdf-async', async (req: Request, res: Response) => {
           status: existingExport.status,
         },
       });
+    }
+
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacher.id, contentId))) {
+      return;
     }
 
     // Get teacher's full name for email

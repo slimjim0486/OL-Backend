@@ -4,7 +4,7 @@
  * Handles Stripe subscription operations for teacher subscriptions:
  * - Creating checkout sessions for unlimited downloads
  * - Managing subscription lifecycle (cancellations, renewals)
- * - Processing per-lesson download purchases
+ * - Legacy webhook handling for retired one-time download purchases
  * - Customer portal access
  */
 
@@ -19,7 +19,6 @@ import {
   isAnnualSubscription,
   getTierFromPriceId,
   SUBSCRIPTION_PRODUCTS,
-  getDownloadProduct,
 } from '../../config/stripeProducts.js';
 import { referralService } from '../sharing/index.js';
 import { emailService } from '../email/emailService.js';
@@ -101,11 +100,11 @@ function determineTierFromSubscription(subscription: Stripe.Subscription): Teach
     const interval = price.recurring?.interval;
 
     if (interval === 'month') {
-      // Teacher: ~$14.99/mo, Teacher Pro: ~$29.99/mo
+      // Teacher Unlimited: ~$9.99/mo, Teacher Pro: ~$29.99/mo
       if (amount >= 2500) return 'PROFESSIONAL';
-      if (amount >= 1000) return 'BASIC';
+      if (amount >= 800) return 'BASIC';
     } else if (interval === 'year') {
-      // Teacher: ~$119.88/yr (legacy: $99/yr), Teacher Pro: ~$239.88/yr
+      // Teacher Unlimited: ~$95.99/yr, Teacher Pro: ~$239.88/yr
       if (amount >= 20000) return 'PROFESSIONAL';
       if (amount >= 8000) return 'BASIC';
     }
@@ -427,47 +426,15 @@ export const subscriptionService = {
     successUrl: string,
     cancelUrl: string
   ): Promise<CheckoutSessionResult> {
-    if (!stripe) {
-      throw new Error('Stripe is not configured');
-    }
-
-    const product = getDownloadProduct(productType);
-    if (!product?.priceId) {
-      throw new Error(`Price ID not configured for download product: ${productType}`);
-    }
-
-    const customerId = await this.getOrCreateCustomer(teacherId);
-
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: 'payment',
-      line_items: [
-        {
-          price: product.priceId,
-          quantity: 1,
-        },
-      ],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: {
-        teacherId,
-        contentId,
-        productType,
-        type: 'download_purchase',
-      },
-    });
-
-    logger.info('Created download purchase checkout session', {
+    logger.warn('Deprecated one-time download checkout requested', {
       teacherId,
       contentId,
       productType,
-      sessionId: session.id,
+      successUrl,
+      cancelUrl,
     });
 
-    return {
-      sessionId: session.id,
-      url: session.url!,
-    };
+    throw new ValidationError('One-time download purchases are no longer available.');
   },
 
   /**
