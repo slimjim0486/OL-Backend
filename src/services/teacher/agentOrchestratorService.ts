@@ -15,7 +15,8 @@ import { config } from '../../config/index.js';
 import { agentMemoryService } from './agentMemoryService.js';
 import { contextAssemblerService } from './contextAssemblerService.js';
 import { taskRouterService, IntentType } from './taskRouterService.js';
-import { agentContentBridge, BridgeResult } from './agentContentBridge.js';
+// agentContentBridge is no longer called from the orchestrator;
+// all singular content intents now redirect to standalone pages with prefilled params.
 import { agentFlowPolicy } from './agentFlowPolicy.js';
 import type { AgentFlowType } from './agentFlowPolicy.js';
 import { weeklyPrepService } from './weeklyPrepService.js';
@@ -55,10 +56,26 @@ const PLANNER_WEEKLY_PREP_PROMPT_TYPE = 'planner_weekly_prep_prompt';
 const COACH_WEEKLY_PREP_PROMPT_TYPE = 'coach_weekly_prep_prompt';
 const IEP_GOALS_QUICK_REPLY = 'Generate IEP goals';
 const LESSON_FOLLOWUP_PROMPT_TYPE = 'lesson_followup_prompt';
+const QUIZ_FOLLOWUP_PROMPT_TYPE = 'quiz_followup_prompt';
+const FLASHCARDS_FOLLOWUP_PROMPT_TYPE = 'flashcards_followup_prompt';
+const SUB_PLAN_FOLLOWUP_PROMPT_TYPE = 'sub_plan_followup_prompt';
+const IEP_FOLLOWUP_PROMPT_TYPE = 'iep_followup_prompt';
+
+// Map follow-up prompt types to their generation intent for rerouting
+const CONTENT_FOLLOWUP_REROUTE: Record<string, IntentType> = {
+  [QUIZ_FOLLOWUP_PROMPT_TYPE]: 'generate_quiz',
+  [FLASHCARDS_FOLLOWUP_PROMPT_TYPE]: 'generate_flashcards',
+  [SUB_PLAN_FOLLOWUP_PROMPT_TYPE]: 'generate_sub_plan',
+  [IEP_FOLLOWUP_PROMPT_TYPE]: 'generate_iep',
+};
 
 type PlannerWeeklyPrepChoice = 'tell_more' | 'generate_now' | null;
 type CoachWeeklyPrepChoice = 'outline' | 'generate_weekly_prep' | 'one_subject' | null;
 type LessonMissingField = 'topic' | 'subject' | 'gradeLevel';
+type QuizMissingField = 'topic' | 'gradeLevel';
+type FlashcardsMissingField = 'topic' | 'gradeLevel';
+type SubPlanMissingField = 'subject' | 'gradeLevel';
+type IepMissingField = 'disabilityCategory' | 'subjectArea' | 'gradeLevel';
 
 interface LessonPrefill {
   title?: string;
@@ -68,6 +85,44 @@ interface LessonPrefill {
   lessonType?: 'guide' | 'full';
   objectives?: string[];
   summary?: string;
+}
+
+interface QuizPrefill {
+  topic?: string;
+  subject?: string;
+  gradeLevel?: string;
+  questionCount?: number;
+  difficulty?: string;
+  questionTypes?: string[];
+}
+
+interface FlashcardsPrefill {
+  topic?: string;
+  subject?: string;
+  gradeLevel?: string;
+  cardCount?: number;
+  includeHints?: boolean;
+}
+
+interface SubPlanPrefill {
+  title?: string;
+  subject?: string;
+  gradeLevel?: string;
+  date?: string;
+  timePeriod?: string;
+  classroomNotes?: string;
+  emergencyProcedures?: string;
+  helpfulStudents?: string;
+  additionalNotes?: string;
+}
+
+interface IepPrefill {
+  disabilityCategory?: string;
+  subjectArea?: string;
+  gradeLevel?: string;
+  presentLevels?: string;
+  studentName?: string;
+  additionalContext?: string;
 }
 
 function toSessionTitleFromFirstPrompt(prompt: string): string {
@@ -662,6 +717,433 @@ function buildLessonRedirectActionResult(
   };
 }
 
+// ============================================
+// QUIZ PREFILL & REDIRECT HELPERS
+// ============================================
+
+function normalizeQuizTopic(value: unknown): string {
+  let topic = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!topic) return '';
+  topic = topic
+    .replace(/^(?:please\s+)?(?:can|could|would)\s+you\s+/i, '')
+    .replace(/^(?:help\s+me(?:\s+to)?|i\s+need\s+to|i\s+want\s+to)\s+/i, '')
+    .replace(/^(?:create|make|generate|build|draft)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?/i, '')
+    .replace(/\b(?:quiz|test|assessment|exit ticket|exam)\b/gi, ' ')
+    .replace(/^(?:on|about|for)\s+/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return truncate(topic, 140);
+}
+
+function isMeaningfulTopic(value: unknown): boolean {
+  const topic = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!topic || topic.length < 3) return false;
+  const normalized = normalizePromptChoiceText(topic);
+  if (!normalized) return false;
+  if (/^(?:general|new|topic|anything|something|whatever|class|classwork|work)$/i.test(normalized)) return false;
+  if (/^(?:i|we)\s+(?:need|want|would|will)\b/.test(normalized)) return false;
+  return true;
+}
+
+function buildQuizPrefillFromIntent(message: string, extractedParams: Record<string, any>): QuizPrefill {
+  const topicFromIntent = normalizeQuizTopic(extractedParams.topic || extractedParams.title);
+  const topicFromMessage = normalizeQuizTopic(message);
+  const topic = isMeaningfulTopic(topicFromIntent)
+    ? topicFromIntent
+    : isMeaningfulTopic(topicFromMessage)
+      ? topicFromMessage
+      : '';
+
+  return {
+    topic: topic || undefined,
+    subject: normalizeLessonSubject(extractedParams.subject),
+    gradeLevel: normalizeLessonGradeLevel(extractedParams.gradeLevel),
+    questionCount: extractedParams.count ? Number(extractedParams.count) : undefined,
+    difficulty: extractedParams.difficulty || undefined,
+    questionTypes: Array.isArray(extractedParams.questionTypes) ? extractedParams.questionTypes : undefined,
+  };
+}
+
+function extractQuizPrefillFromActionResult(actionResult: Prisma.JsonValue | null | undefined): QuizPrefill {
+  if (!actionResult || typeof actionResult !== 'object' || Array.isArray(actionResult)) return {};
+  const resultObj = actionResult as Record<string, any>;
+  const content = resultObj?.content && typeof resultObj.content === 'object' ? resultObj.content : {};
+  const prefill = content?.prefill && typeof content.prefill === 'object' ? content.prefill : {};
+  return {
+    topic: normalizeQuizTopic(prefill.topic || content.topic) || undefined,
+    subject: normalizeLessonSubject(prefill.subject || content.subject),
+    gradeLevel: normalizeLessonGradeLevel(prefill.gradeLevel || content.gradeLevel),
+    questionCount: prefill.questionCount || content.questionCount || undefined,
+    difficulty: prefill.difficulty || content.difficulty || undefined,
+    questionTypes: prefill.questionTypes || content.questionTypes || undefined,
+  };
+}
+
+function mergeQuizPrefill(previous: QuizPrefill, current: QuizPrefill): QuizPrefill {
+  return {
+    topic: (isMeaningfulTopic(current.topic) ? current.topic : previous.topic) || undefined,
+    subject: current.subject || previous.subject,
+    gradeLevel: current.gradeLevel || previous.gradeLevel,
+    questionCount: current.questionCount || previous.questionCount,
+    difficulty: current.difficulty || previous.difficulty,
+    questionTypes: current.questionTypes || previous.questionTypes,
+  };
+}
+
+function getMissingQuizFields(prefill: QuizPrefill): QuizMissingField[] {
+  const missing: QuizMissingField[] = [];
+  if (!isMeaningfulTopic(prefill.topic)) missing.push('topic');
+  if (!prefill.gradeLevel) missing.push('gradeLevel');
+  return missing;
+}
+
+function buildQuizFollowUpQuestion(missing: QuizMissingField[]): string {
+  const missingSet = new Set(missing);
+  if (missingSet.has('topic') && missingSet.has('gradeLevel')) {
+    return `Before I open the Quiz Generator, what topic and grade level should this quiz cover?`;
+  }
+  if (missingSet.has('topic')) return `What topic should this quiz cover?`;
+  return `What grade level is this quiz for?`;
+}
+
+function buildQuizFollowUpActionResult(
+  prefill: QuizPrefill,
+  missing: QuizMissingField[],
+  question: string
+): NonNullable<AgentResponse['actionResult']> {
+  return {
+    type: QUIZ_FOLLOWUP_PROMPT_TYPE,
+    content: { prefill, missingFields: missing },
+    preview: question,
+  };
+}
+
+function buildQuizRedirectActionResult(prefill: QuizPrefill): NonNullable<AgentResponse['actionResult']> {
+  const topic = isMeaningfulTopic(prefill.topic) ? normalizeQuizTopic(prefill.topic) : '';
+  const parts: string[] = [];
+  if (topic) parts.push(`on **${topic}**`);
+  if (prefill.gradeLevel) parts.push(`for grade ${prefill.gradeLevel}`);
+  if (prefill.subject) parts.push(`(${prefill.subject})`);
+  const detail = parts.length > 0 ? ` ${parts.join(' ')}` : '';
+  const preview = `Opening the Quiz Generator${detail} now.`;
+
+  return {
+    type: 'quiz',
+    content: {
+      topic: topic || undefined,
+      subject: prefill.subject,
+      gradeLevel: prefill.gradeLevel,
+      questionCount: prefill.questionCount,
+      difficulty: prefill.difficulty,
+      questionTypes: prefill.questionTypes,
+      prefillingSource: 'agent_chat',
+    },
+    preview,
+  };
+}
+
+// ============================================
+// FLASHCARDS PREFILL & REDIRECT HELPERS
+// ============================================
+
+function buildFlashcardsPrefillFromIntent(message: string, extractedParams: Record<string, any>): FlashcardsPrefill {
+  const topicRaw = normalizeQuizTopic(extractedParams.topic || extractedParams.title);
+  const topicFromMsg = normalizeQuizTopic(message);
+  const topic = isMeaningfulTopic(topicRaw) ? topicRaw : isMeaningfulTopic(topicFromMsg) ? topicFromMsg : '';
+
+  return {
+    topic: topic || undefined,
+    subject: normalizeLessonSubject(extractedParams.subject),
+    gradeLevel: normalizeLessonGradeLevel(extractedParams.gradeLevel),
+    cardCount: extractedParams.count ? Number(extractedParams.count) : undefined,
+    includeHints: extractedParams.includeHints ?? undefined,
+  };
+}
+
+function extractFlashcardsPrefillFromActionResult(actionResult: Prisma.JsonValue | null | undefined): FlashcardsPrefill {
+  if (!actionResult || typeof actionResult !== 'object' || Array.isArray(actionResult)) return {};
+  const resultObj = actionResult as Record<string, any>;
+  const content = resultObj?.content && typeof resultObj.content === 'object' ? resultObj.content : {};
+  const prefill = content?.prefill && typeof content.prefill === 'object' ? content.prefill : {};
+  return {
+    topic: normalizeQuizTopic(prefill.topic || content.topic) || undefined,
+    subject: normalizeLessonSubject(prefill.subject || content.subject),
+    gradeLevel: normalizeLessonGradeLevel(prefill.gradeLevel || content.gradeLevel),
+    cardCount: prefill.cardCount || content.cardCount || undefined,
+    includeHints: prefill.includeHints ?? content.includeHints ?? undefined,
+  };
+}
+
+function mergeFlashcardsPrefill(previous: FlashcardsPrefill, current: FlashcardsPrefill): FlashcardsPrefill {
+  return {
+    topic: (isMeaningfulTopic(current.topic) ? current.topic : previous.topic) || undefined,
+    subject: current.subject || previous.subject,
+    gradeLevel: current.gradeLevel || previous.gradeLevel,
+    cardCount: current.cardCount || previous.cardCount,
+    includeHints: current.includeHints ?? previous.includeHints,
+  };
+}
+
+function getMissingFlashcardsFields(prefill: FlashcardsPrefill): FlashcardsMissingField[] {
+  const missing: FlashcardsMissingField[] = [];
+  if (!isMeaningfulTopic(prefill.topic)) missing.push('topic');
+  if (!prefill.gradeLevel) missing.push('gradeLevel');
+  return missing;
+}
+
+function buildFlashcardsFollowUpQuestion(missing: FlashcardsMissingField[]): string {
+  const missingSet = new Set(missing);
+  if (missingSet.has('topic') && missingSet.has('gradeLevel')) {
+    return `Before I open the Flashcard Generator, what topic and grade level should these flashcards cover?`;
+  }
+  if (missingSet.has('topic')) return `What topic should these flashcards cover?`;
+  return `What grade level are these flashcards for?`;
+}
+
+function buildFlashcardsFollowUpActionResult(
+  prefill: FlashcardsPrefill,
+  missing: FlashcardsMissingField[],
+  question: string
+): NonNullable<AgentResponse['actionResult']> {
+  return {
+    type: FLASHCARDS_FOLLOWUP_PROMPT_TYPE,
+    content: { prefill, missingFields: missing },
+    preview: question,
+  };
+}
+
+function buildFlashcardsRedirectActionResult(prefill: FlashcardsPrefill): NonNullable<AgentResponse['actionResult']> {
+  const topic = isMeaningfulTopic(prefill.topic) ? normalizeQuizTopic(prefill.topic) : '';
+  const parts: string[] = [];
+  if (topic) parts.push(`on **${topic}**`);
+  if (prefill.gradeLevel) parts.push(`for grade ${prefill.gradeLevel}`);
+  if (prefill.subject) parts.push(`(${prefill.subject})`);
+  const detail = parts.length > 0 ? ` ${parts.join(' ')}` : '';
+  const preview = `Opening the Flashcard Generator${detail} now.`;
+
+  return {
+    type: 'flashcards',
+    content: {
+      topic: topic || undefined,
+      subject: prefill.subject,
+      gradeLevel: prefill.gradeLevel,
+      cardCount: prefill.cardCount,
+      includeHints: prefill.includeHints,
+      prefillingSource: 'agent_chat',
+    },
+    preview,
+  };
+}
+
+// ============================================
+// SUB PLAN PREFILL & REDIRECT HELPERS
+// ============================================
+
+function buildSubPlanPrefillFromIntent(message: string, extractedParams: Record<string, any>): SubPlanPrefill {
+  return {
+    title: String(extractedParams.title || '').trim() || undefined,
+    subject: normalizeLessonSubject(extractedParams.subject),
+    gradeLevel: normalizeLessonGradeLevel(extractedParams.gradeLevel),
+    date: String(extractedParams.date || '').trim().slice(0, 10) || undefined,
+    timePeriod: String(extractedParams.timePeriod || '').trim() || undefined,
+    classroomNotes: String(extractedParams.classroomNotes || '').trim() || undefined,
+    emergencyProcedures: String(extractedParams.emergencyProcedures || '').trim() || undefined,
+    helpfulStudents: String(extractedParams.helpfulStudents || '').trim() || undefined,
+    additionalNotes: String(extractedParams.additionalContext || extractedParams.notes || message || '').trim() || undefined,
+  };
+}
+
+function extractSubPlanPrefillFromActionResult(actionResult: Prisma.JsonValue | null | undefined): SubPlanPrefill {
+  if (!actionResult || typeof actionResult !== 'object' || Array.isArray(actionResult)) return {};
+  const resultObj = actionResult as Record<string, any>;
+  const content = resultObj?.content && typeof resultObj.content === 'object' ? resultObj.content : {};
+  const prefill = content?.prefill && typeof content.prefill === 'object' ? content.prefill : {};
+  return {
+    title: String(prefill.title || content.title || '').trim() || undefined,
+    subject: normalizeLessonSubject(prefill.subject || content.subject),
+    gradeLevel: normalizeLessonGradeLevel(prefill.gradeLevel || content.gradeLevel),
+    date: String(prefill.date || content.date || '').trim().slice(0, 10) || undefined,
+    timePeriod: String(prefill.timePeriod || content.timePeriod || '').trim() || undefined,
+    classroomNotes: String(prefill.classroomNotes || content.classroomNotes || '').trim() || undefined,
+    emergencyProcedures: String(prefill.emergencyProcedures || content.emergencyProcedures || '').trim() || undefined,
+    helpfulStudents: String(prefill.helpfulStudents || content.helpfulStudents || '').trim() || undefined,
+    additionalNotes: String(prefill.additionalNotes || content.additionalNotes || '').trim() || undefined,
+  };
+}
+
+function mergeSubPlanPrefill(previous: SubPlanPrefill, current: SubPlanPrefill): SubPlanPrefill {
+  return {
+    title: current.title || previous.title,
+    subject: current.subject || previous.subject,
+    gradeLevel: current.gradeLevel || previous.gradeLevel,
+    date: current.date || previous.date,
+    timePeriod: current.timePeriod || previous.timePeriod,
+    classroomNotes: current.classroomNotes || previous.classroomNotes,
+    emergencyProcedures: current.emergencyProcedures || previous.emergencyProcedures,
+    helpfulStudents: current.helpfulStudents || previous.helpfulStudents,
+    additionalNotes: mergePrefillSummary(previous.additionalNotes, current.additionalNotes),
+  };
+}
+
+function getMissingSubPlanFields(prefill: SubPlanPrefill): SubPlanMissingField[] {
+  const missing: SubPlanMissingField[] = [];
+  if (!prefill.subject) missing.push('subject');
+  if (!prefill.gradeLevel) missing.push('gradeLevel');
+  return missing;
+}
+
+function buildSubPlanFollowUpQuestion(missing: SubPlanMissingField[]): string {
+  const missingSet = new Set(missing);
+  if (missingSet.has('subject') && missingSet.has('gradeLevel')) {
+    return `Before I open Sub Plans, what subject and grade level do you need covered?`;
+  }
+  if (missingSet.has('subject')) return `What subject does this sub plan need to cover?`;
+  return `What grade level is this sub plan for?`;
+}
+
+function buildSubPlanFollowUpActionResult(
+  prefill: SubPlanPrefill,
+  missing: SubPlanMissingField[],
+  question: string
+): NonNullable<AgentResponse['actionResult']> {
+  return {
+    type: SUB_PLAN_FOLLOWUP_PROMPT_TYPE,
+    content: { prefill, missingFields: missing },
+    preview: question,
+  };
+}
+
+function buildSubPlanRedirectActionResult(prefill: SubPlanPrefill): NonNullable<AgentResponse['actionResult']> {
+  const parts: string[] = [];
+  if (prefill.subject) parts.push(`for **${prefill.subject}**`);
+  if (prefill.gradeLevel) parts.push(`grade ${prefill.gradeLevel}`);
+  if (prefill.date) parts.push(`on ${prefill.date}`);
+  const detail = parts.length > 0 ? ` ${parts.join(' ')}` : '';
+  const preview = `Opening Sub Plans${detail} now.`;
+
+  return {
+    type: 'sub_plan',
+    content: {
+      title: prefill.title,
+      subject: prefill.subject,
+      gradeLevel: prefill.gradeLevel,
+      date: prefill.date,
+      timePeriod: prefill.timePeriod || 'full_day',
+      classroomNotes: prefill.classroomNotes,
+      emergencyProcedures: prefill.emergencyProcedures,
+      helpfulStudents: prefill.helpfulStudents,
+      additionalNotes: prefill.additionalNotes,
+      prefillingSource: 'agent_chat',
+    },
+    preview,
+  };
+}
+
+// ============================================
+// IEP PREFILL & REDIRECT HELPERS
+// ============================================
+
+function buildIepPrefillFromIntent(message: string, extractedParams: Record<string, any>): IepPrefill {
+  return {
+    disabilityCategory: String(extractedParams.disabilityCategory || '').trim() || undefined,
+    subjectArea: String(extractedParams.subjectArea || '').trim() || undefined,
+    gradeLevel: normalizeLessonGradeLevel(extractedParams.gradeLevel),
+    presentLevels: String(extractedParams.presentLevels || '').trim() || undefined,
+    studentName: String(extractedParams.studentName || extractedParams.studentIdentifier || '').trim() || undefined,
+    additionalContext: String(extractedParams.additionalContext || message || '').trim() || undefined,
+  };
+}
+
+function extractIepPrefillFromActionResult(actionResult: Prisma.JsonValue | null | undefined): IepPrefill {
+  if (!actionResult || typeof actionResult !== 'object' || Array.isArray(actionResult)) return {};
+  const resultObj = actionResult as Record<string, any>;
+  const content = resultObj?.content && typeof resultObj.content === 'object' ? resultObj.content : {};
+  const prefill = content?.prefill && typeof content.prefill === 'object' ? content.prefill : {};
+  return {
+    disabilityCategory: String(prefill.disabilityCategory || content.disabilityCategory || '').trim() || undefined,
+    subjectArea: String(prefill.subjectArea || content.subjectArea || '').trim() || undefined,
+    gradeLevel: normalizeLessonGradeLevel(prefill.gradeLevel || content.gradeLevel),
+    presentLevels: String(prefill.presentLevels || content.presentLevels || '').trim() || undefined,
+    studentName: String(prefill.studentName || content.studentName || '').trim() || undefined,
+    additionalContext: String(prefill.additionalContext || content.additionalContext || '').trim() || undefined,
+  };
+}
+
+function mergeIepPrefill(previous: IepPrefill, current: IepPrefill): IepPrefill {
+  return {
+    disabilityCategory: current.disabilityCategory || previous.disabilityCategory,
+    subjectArea: current.subjectArea || previous.subjectArea,
+    gradeLevel: current.gradeLevel || previous.gradeLevel,
+    presentLevels: current.presentLevels || previous.presentLevels,
+    studentName: current.studentName || previous.studentName,
+    additionalContext: mergePrefillSummary(previous.additionalContext, current.additionalContext),
+  };
+}
+
+function getMissingIepFields(prefill: IepPrefill): IepMissingField[] {
+  const missing: IepMissingField[] = [];
+  if (!prefill.disabilityCategory) missing.push('disabilityCategory');
+  if (!prefill.subjectArea) missing.push('subjectArea');
+  if (!prefill.gradeLevel) missing.push('gradeLevel');
+  return missing;
+}
+
+function buildIepFollowUpQuestion(missing: IepMissingField[]): string {
+  const missingSet = new Set(missing);
+  if (missingSet.size === 3) {
+    return `Before I open IEP Goals, I need a few details: What is the student's disability category, the focus area (e.g., reading, math, social skills), and grade level?`;
+  }
+  if (missingSet.has('disabilityCategory') && missingSet.has('subjectArea')) {
+    return `What is the student's disability category and the focus area for these IEP goals?`;
+  }
+  if (missingSet.has('disabilityCategory') && missingSet.has('gradeLevel')) {
+    return `What is the student's disability category and grade level?`;
+  }
+  if (missingSet.has('subjectArea') && missingSet.has('gradeLevel')) {
+    return `What focus area and grade level should these IEP goals target?`;
+  }
+  if (missingSet.has('disabilityCategory')) return `What is the student's disability category?`;
+  if (missingSet.has('subjectArea')) return `What focus area should these IEP goals target (e.g., reading, math, social skills)?`;
+  return `What grade level is the student in?`;
+}
+
+function buildIepFollowUpActionResult(
+  prefill: IepPrefill,
+  missing: IepMissingField[],
+  question: string
+): NonNullable<AgentResponse['actionResult']> {
+  return {
+    type: IEP_FOLLOWUP_PROMPT_TYPE,
+    content: { prefill, missingFields: missing },
+    preview: question,
+  };
+}
+
+function buildIepRedirectActionResult(prefill: IepPrefill): NonNullable<AgentResponse['actionResult']> {
+  const parts: string[] = [];
+  if (prefill.subjectArea) parts.push(`for **${prefill.subjectArea}**`);
+  if (prefill.gradeLevel) parts.push(`grade ${prefill.gradeLevel}`);
+  if (prefill.studentName) parts.push(`(${prefill.studentName})`);
+  const detail = parts.length > 0 ? ` ${parts.join(' ')}` : '';
+  const preview = `Opening IEP Goals${detail} now.`;
+
+  return {
+    type: 'iep',
+    content: {
+      disabilityCategory: prefill.disabilityCategory,
+      subjectArea: prefill.subjectArea,
+      gradeLevel: prefill.gradeLevel,
+      presentLevels: prefill.presentLevels,
+      studentName: prefill.studentName,
+      additionalContext: prefill.additionalContext,
+      prefillingSource: 'agent_chat',
+    },
+    preview,
+  };
+}
+
 async function maybeHandleSlashCommand(
   teacherId: string,
   agent: { preferredPlanningDay?: string | null; preferredDeliveryTime?: string | null; timezone?: string | null },
@@ -738,8 +1220,14 @@ function computeSuggestedReplies(
     actionResult?.type === 'flashcards' ||
     actionResult?.type === 'lesson' ||
     actionResult?.type === LESSON_FOLLOWUP_PROMPT_TYPE ||
+    actionResult?.type === QUIZ_FOLLOWUP_PROMPT_TYPE ||
+    actionResult?.type === FLASHCARDS_FOLLOWUP_PROMPT_TYPE ||
+    actionResult?.type === SUB_PLAN_FOLLOWUP_PROMPT_TYPE ||
+    actionResult?.type === IEP_FOLLOWUP_PROMPT_TYPE ||
     actionResult?.type === 'sub_plan' ||
     actionResult?.type === 'iep' ||
+    actionResult?.type === 'audio' ||
+    actionResult?.type === 'communications' ||
     actionResult?.type === 'weekly_prep' ||
     actionResult?.type === 'coach_weekly_prep_prompt' ||
     actionResult?.type === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
@@ -967,6 +1455,15 @@ async function processMessage(
 
     logger.info('Intent classified', { teacherId, sessionId, intent: intent.type, confidence: intent.confidence });
 
+    // Re-route follow-up answers to content setup prompts.
+    // When a teacher replies to a follow-up prompt (e.g., "5th grade" after "What grade level?"),
+    // the task router may classify it as 'chat'. Override with the correct generation intent.
+    const followUpTarget = CONTENT_FOLLOWUP_REROUTE[recentActionType];
+    if (followUpTarget && intent.type === 'chat' && !switchingAwayFromActiveFlow) {
+      intent = { type: followUpTarget, confidence: 0.8, extractedParams: intent.extractedParams };
+      logger.info('Rerouted follow-up answer to content intent', { teacherId, from: 'chat', to: followUpTarget });
+    }
+
     const flowLock = shouldEnforceFlowLock(activeFlow, recentActionType)
       ? agentFlowPolicy.applyFlowLock({
           activeFlow,
@@ -996,6 +1493,8 @@ async function processMessage(
       actionResult = buildFlowContinuationActionResult(activeFlow, planningMode);
       totalTokens = 0;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── LESSON ──
     } else if (intent.type === 'generate_lesson' && intent.confidence >= 0.6) {
       const priorLessonPrefill =
         recentActionType === LESSON_FOLLOWUP_PROMPT_TYPE
@@ -1021,8 +1520,105 @@ async function processMessage(
         assistantContent = actionResult.preview;
       }
       totalTokens = 0;
-      // This path prepares handoff to Lesson Generator; no backend content generation yet.
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── QUIZ ──
+    } else if (intent.type === 'generate_quiz' && intent.confidence >= 0.6) {
+      const priorQuizPrefill =
+        recentActionType === QUIZ_FOLLOWUP_PROMPT_TYPE
+          ? extractQuizPrefillFromActionResult(
+              (recentAssistant as any)?.actionResult as Prisma.JsonValue | null | undefined
+            )
+          : {};
+      const currentQuizPrefill = buildQuizPrefillFromIntent(message, intent.extractedParams);
+      const mergedQuizPrefill = mergeQuizPrefill(priorQuizPrefill, currentQuizPrefill);
+      const missingQuizFields = getMissingQuizFields(mergedQuizPrefill);
+      const quizFollowUpAsked = recentActionType === QUIZ_FOLLOWUP_PROMPT_TYPE;
+
+      if (!quizFollowUpAsked && missingQuizFields.length > 0) {
+        const followUpQuestion = buildQuizFollowUpQuestion(missingQuizFields);
+        assistantContent = followUpQuestion;
+        actionResult = buildQuizFollowUpActionResult(mergedQuizPrefill, missingQuizFields, followUpQuestion);
+      } else {
+        actionResult = buildQuizRedirectActionResult(mergedQuizPrefill);
+        assistantContent = actionResult.preview;
+      }
+      totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── FLASHCARDS ──
+    } else if (intent.type === 'generate_flashcards' && intent.confidence >= 0.6) {
+      const priorFlashcardsPrefill =
+        recentActionType === FLASHCARDS_FOLLOWUP_PROMPT_TYPE
+          ? extractFlashcardsPrefillFromActionResult(
+              (recentAssistant as any)?.actionResult as Prisma.JsonValue | null | undefined
+            )
+          : {};
+      const currentFlashcardsPrefill = buildFlashcardsPrefillFromIntent(message, intent.extractedParams);
+      const mergedFlashcardsPrefill = mergeFlashcardsPrefill(priorFlashcardsPrefill, currentFlashcardsPrefill);
+      const missingFlashcardsFields = getMissingFlashcardsFields(mergedFlashcardsPrefill);
+      const flashcardsFollowUpAsked = recentActionType === FLASHCARDS_FOLLOWUP_PROMPT_TYPE;
+
+      if (!flashcardsFollowUpAsked && missingFlashcardsFields.length > 0) {
+        const followUpQuestion = buildFlashcardsFollowUpQuestion(missingFlashcardsFields);
+        assistantContent = followUpQuestion;
+        actionResult = buildFlashcardsFollowUpActionResult(mergedFlashcardsPrefill, missingFlashcardsFields, followUpQuestion);
+      } else {
+        actionResult = buildFlashcardsRedirectActionResult(mergedFlashcardsPrefill);
+        assistantContent = actionResult.preview;
+      }
+      totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── SUB PLAN ──
+    } else if (intent.type === 'generate_sub_plan' && intent.confidence >= 0.6) {
+      const priorSubPlanPrefill =
+        recentActionType === SUB_PLAN_FOLLOWUP_PROMPT_TYPE
+          ? extractSubPlanPrefillFromActionResult(
+              (recentAssistant as any)?.actionResult as Prisma.JsonValue | null | undefined
+            )
+          : {};
+      const currentSubPlanPrefill = buildSubPlanPrefillFromIntent(message, intent.extractedParams);
+      const mergedSubPlanPrefill = mergeSubPlanPrefill(priorSubPlanPrefill, currentSubPlanPrefill);
+      const missingSubPlanFields = getMissingSubPlanFields(mergedSubPlanPrefill);
+      const subPlanFollowUpAsked = recentActionType === SUB_PLAN_FOLLOWUP_PROMPT_TYPE;
+
+      if (!subPlanFollowUpAsked && missingSubPlanFields.length > 0) {
+        const followUpQuestion = buildSubPlanFollowUpQuestion(missingSubPlanFields);
+        assistantContent = followUpQuestion;
+        actionResult = buildSubPlanFollowUpActionResult(mergedSubPlanPrefill, missingSubPlanFields, followUpQuestion);
+      } else {
+        actionResult = buildSubPlanRedirectActionResult(mergedSubPlanPrefill);
+        assistantContent = actionResult.preview;
+      }
+      totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── IEP ──
+    } else if (intent.type === 'generate_iep' && intent.confidence >= 0.6) {
+      const priorIepPrefill =
+        recentActionType === IEP_FOLLOWUP_PROMPT_TYPE
+          ? extractIepPrefillFromActionResult(
+              (recentAssistant as any)?.actionResult as Prisma.JsonValue | null | undefined
+            )
+          : {};
+      const currentIepPrefill = buildIepPrefillFromIntent(message, intent.extractedParams);
+      const mergedIepPrefill = mergeIepPrefill(priorIepPrefill, currentIepPrefill);
+      const missingIepFields = getMissingIepFields(mergedIepPrefill);
+      const iepFollowUpAsked = recentActionType === IEP_FOLLOWUP_PROMPT_TYPE;
+
+      if (!iepFollowUpAsked && missingIepFields.length > 0) {
+        const followUpQuestion = buildIepFollowUpQuestion(missingIepFields);
+        assistantContent = followUpQuestion;
+        actionResult = buildIepFollowUpActionResult(mergedIepPrefill, missingIepFields, followUpQuestion);
+      } else {
+        actionResult = buildIepRedirectActionResult(mergedIepPrefill);
+        assistantContent = actionResult.preview;
+      }
+      totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── CALENDAR / WEEKLY PREP ──
     } else if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
       if (isPlannerOrAutopilot) {
         assistantContent =
@@ -1054,7 +1650,6 @@ async function processMessage(
       intent.confidence >= 0.6 &&
       isCoach
     ) {
-      // Coach mode should suggest options before taking planning actions.
       assistantContent =
         `In **Coach** mode, I'll suggest options and you choose what to generate.\n\n` +
         `Pick one:\n` +
@@ -1066,29 +1661,33 @@ async function processMessage(
       actionResult = {
         ...buildCoachWeeklyPrepPromptActionResult('initial'),
       };
-      // Treat this as chat so analytics/feedback don't mark it as content generation.
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
-    } else if (intent.type !== 'chat' && intent.type !== 'export' && intent.type !== 'unknown' && intent.confidence >= 0.6) {
-      // Content generation intent
-      try {
-        const bridgeResult = await routeToContentBridge(teacherId, intent);
-        actionResult = {
-          type: bridgeResult.contentType,
-          content: bridgeResult.content,
-          preview: bridgeResult.preview,
-          contentId: bridgeResult.contentId,
-        };
-        assistantContent =
-          bridgeResult.contentType === 'weekly_prep'
-            ? bridgeResult.preview
-            : `${bridgeResult.preview}\n\nWould you like me to modify anything, or is this good to go?`;
-        totalTokens = bridgeResult.tokensUsed;
-      } catch (error: any) {
-        logger.error('Content generation failed in orchestrator', { error, intent: intent.type });
-        assistantContent = `I tried to create that for you, but ran into an issue: ${error.message || 'Unknown error'}. Could you try rephrasing your request?`;
-      }
+
+    // ── AUDIO / PARENT EMAIL / REPORT COMMENTS → simple redirect ──
+    } else if (intent.type === 'generate_audio' && intent.confidence >= 0.6) {
+      assistantContent = `Opening Audio Updates for you now.`;
+      actionResult = {
+        type: 'audio',
+        content: { prefillingSource: 'agent_chat' },
+        preview: assistantContent,
+      };
+      totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    } else if (
+      (intent.type === 'generate_parent_email' || intent.type === 'generate_report_comments') &&
+      intent.confidence >= 0.6
+    ) {
+      assistantContent = `Opening Communications for you now.`;
+      actionResult = {
+        type: 'communications',
+        content: { tab: intent.type === 'generate_parent_email' ? 'email' : 'report', prefillingSource: 'agent_chat' },
+        preview: assistantContent,
+      };
+      totalTokens = 0;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── CONVERSATIONAL CHAT (fallback) ──
     } else {
-      // Conversational chat
       const chatResult = await generateChatResponse(
         context.systemPrompt,
         message,
@@ -1206,44 +1805,6 @@ async function generateChatResponse(
   const tokensUsed = result.response.usageMetadata?.totalTokenCount || 500;
 
   return { response: responseText, tokensUsed };
-}
-
-// ============================================
-// CONTENT ROUTING
-// ============================================
-
-async function routeToContentBridge(
-  teacherId: string,
-  intent: { type: IntentType; extractedParams: Record<string, any> }
-): Promise<BridgeResult> {
-  switch (intent.type) {
-    case 'generate_lesson':
-      return agentContentBridge.generateLessonWithContext(teacherId, intent as any);
-    case 'generate_quiz':
-      return agentContentBridge.generateQuizWithContext(teacherId, intent as any);
-    case 'generate_flashcards':
-      return agentContentBridge.generateFlashcardsWithContext(teacherId, intent as any);
-    case 'generate_sub_plan':
-      return agentContentBridge.generateSubPlanWithContext(teacherId, intent as any);
-    case 'generate_iep':
-      return agentContentBridge.generateIEPWithContext(teacherId, intent as any);
-    case 'generate_parent_email':
-      return agentContentBridge.generateParentEmailWithContext(teacherId, intent as any);
-    case 'generate_report_comments':
-      return agentContentBridge.generateReportCommentsWithContext(teacherId, intent as any);
-    case 'weekly_prep': {
-      const actionResult = await buildWeeklyPrepGenerationActionResult(teacherId);
-      return {
-        content: actionResult.content,
-        preview: actionResult.preview,
-        tokensUsed: 0,
-        contentType: 'weekly_prep',
-        contentId: actionResult.contentId,
-      };
-    }
-    default:
-      throw new Error(`Unsupported content type: ${intent.type}`);
-  }
 }
 
 // ============================================

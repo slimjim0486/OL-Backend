@@ -29,10 +29,15 @@ const FLOW_FROM_ACTION_TYPE: Record<string, Exclude<AgentFlowType, null>> = {
   coach_weekly_prep_prompt: 'weekly_prep',
   planner_weekly_prep_prompt: 'weekly_prep',
   lesson: 'lesson',
+  lesson_followup_prompt: 'lesson',
   quiz: 'quiz',
+  quiz_followup_prompt: 'quiz',
   flashcards: 'flashcards',
+  flashcards_followup_prompt: 'flashcards',
   iep: 'iep',
+  iep_followup_prompt: 'iep',
   sub_plan: 'sub_plan',
+  sub_plan_followup_prompt: 'sub_plan',
 };
 
 const FLOW_FROM_INTENT: Partial<Record<IntentType, Exclude<AgentFlowType, null>>> = {
