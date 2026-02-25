@@ -94,6 +94,7 @@ interface QuizPrefill {
   questionCount?: number;
   difficulty?: string;
   questionTypes?: string[];
+  isWorksheet?: boolean;
 }
 
 interface FlashcardsPrefill {
@@ -730,7 +731,7 @@ function normalizeQuizTopic(value: unknown): string {
     .replace(/^(?:please\s+)?(?:can|could|would)\s+you\s+/i, '')
     .replace(/^(?:help\s+me(?:\s+to)?|i\s+need\s+to|i\s+want\s+to)\s+/i, '')
     .replace(/^(?:create|make|generate|build|draft)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?/i, '')
-    .replace(/\b(?:quiz|test|assessment|exit ticket|exam)\b/gi, ' ')
+    .replace(/\b(?:quiz|test|assessment|exit ticket|exam|worksheet|work sheet|practice sheet|practice problems)\b/gi, ' ')
     .replace(/^(?:on|about|for)\s+/i, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -747,6 +748,8 @@ function isMeaningfulTopic(value: unknown): boolean {
   return true;
 }
 
+const WORKSHEET_KEYWORD_RE = /\b(?:worksheet|work sheet|practice sheet|practice problems)\b/i;
+
 function buildQuizPrefillFromIntent(message: string, extractedParams: Record<string, any>): QuizPrefill {
   const topicFromIntent = normalizeQuizTopic(extractedParams.topic || extractedParams.title);
   const topicFromMessage = normalizeQuizTopic(message);
@@ -756,6 +759,8 @@ function buildQuizPrefillFromIntent(message: string, extractedParams: Record<str
       ? topicFromMessage
       : '';
 
+  const isWorksheet = WORKSHEET_KEYWORD_RE.test(message);
+
   return {
     topic: topic || undefined,
     subject: normalizeLessonSubject(extractedParams.subject),
@@ -763,6 +768,7 @@ function buildQuizPrefillFromIntent(message: string, extractedParams: Record<str
     questionCount: extractedParams.count ? Number(extractedParams.count) : undefined,
     difficulty: extractedParams.difficulty || undefined,
     questionTypes: Array.isArray(extractedParams.questionTypes) ? extractedParams.questionTypes : undefined,
+    isWorksheet,
   };
 }
 
@@ -778,6 +784,7 @@ function extractQuizPrefillFromActionResult(actionResult: Prisma.JsonValue | nul
     questionCount: prefill.questionCount || content.questionCount || undefined,
     difficulty: prefill.difficulty || content.difficulty || undefined,
     questionTypes: prefill.questionTypes || content.questionTypes || undefined,
+    isWorksheet: prefill.isWorksheet || content.isWorksheet || undefined,
   };
 }
 
@@ -789,6 +796,7 @@ function mergeQuizPrefill(previous: QuizPrefill, current: QuizPrefill): QuizPref
     questionCount: current.questionCount || previous.questionCount,
     difficulty: current.difficulty || previous.difficulty,
     questionTypes: current.questionTypes || previous.questionTypes,
+    isWorksheet: current.isWorksheet || previous.isWorksheet,
   };
 }
 
@@ -799,13 +807,15 @@ function getMissingQuizFields(prefill: QuizPrefill): QuizMissingField[] {
   return missing;
 }
 
-function buildQuizFollowUpQuestion(missing: QuizMissingField[]): string {
+function buildQuizFollowUpQuestion(missing: QuizMissingField[], isWorksheet?: boolean): string {
+  const label = isWorksheet ? 'worksheet' : 'quiz';
+  const generator = isWorksheet ? 'Worksheet Generator' : 'Quiz Generator';
   const missingSet = new Set(missing);
   if (missingSet.has('topic') && missingSet.has('gradeLevel')) {
-    return `Before I open the Quiz Generator, what topic and grade level should this quiz cover?`;
+    return `Before I open the ${generator}, what topic and grade level should this ${label} cover?`;
   }
-  if (missingSet.has('topic')) return `What topic should this quiz cover?`;
-  return `What grade level is this quiz for?`;
+  if (missingSet.has('topic')) return `What topic should this ${label} cover?`;
+  return `What grade level is this ${label} for?`;
 }
 
 function buildQuizFollowUpActionResult(
@@ -822,12 +832,14 @@ function buildQuizFollowUpActionResult(
 
 function buildQuizRedirectActionResult(prefill: QuizPrefill): NonNullable<AgentResponse['actionResult']> {
   const topic = isMeaningfulTopic(prefill.topic) ? normalizeQuizTopic(prefill.topic) : '';
+  const generator = prefill.isWorksheet ? 'Worksheet Generator' : 'Quiz Generator';
   const parts: string[] = [];
   if (topic) parts.push(`on **${topic}**`);
   if (prefill.gradeLevel) parts.push(`for grade ${prefill.gradeLevel}`);
   if (prefill.subject) parts.push(`(${prefill.subject})`);
+  if (prefill.questionCount) parts.push(`with ${prefill.questionCount} questions`);
   const detail = parts.length > 0 ? ` ${parts.join(' ')}` : '';
-  const preview = `Opening the Quiz Generator${detail} now.`;
+  const preview = `Opening the ${generator}${detail} now.`;
 
   return {
     type: 'quiz',
@@ -838,6 +850,7 @@ function buildQuizRedirectActionResult(prefill: QuizPrefill): NonNullable<AgentR
       questionCount: prefill.questionCount,
       difficulty: prefill.difficulty,
       questionTypes: prefill.questionTypes,
+      isWorksheet: prefill.isWorksheet || undefined,
       prefillingSource: 'agent_chat',
     },
     preview,
@@ -1536,7 +1549,7 @@ async function processMessage(
       const quizFollowUpAsked = recentActionType === QUIZ_FOLLOWUP_PROMPT_TYPE;
 
       if (!quizFollowUpAsked && missingQuizFields.length > 0) {
-        const followUpQuestion = buildQuizFollowUpQuestion(missingQuizFields);
+        const followUpQuestion = buildQuizFollowUpQuestion(missingQuizFields, mergedQuizPrefill.isWorksheet);
         assistantContent = followUpQuestion;
         actionResult = buildQuizFollowUpActionResult(mergedQuizPrefill, missingQuizFields, followUpQuestion);
       } else {

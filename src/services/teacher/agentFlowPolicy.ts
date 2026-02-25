@@ -53,7 +53,7 @@ const FLOW_FROM_INTENT: Partial<Record<IntentType, Exclude<AgentFlowType, null>>
 const FLOW_TARGET_PATTERNS: Record<Exclude<AgentFlowType, null>, RegExp> = {
   weekly_prep: /\b(?:weekly prep|weekly plan|plan my week|plan this week|planner|calendar|schedule|week view)\b/i,
   lesson: /\b(?:lesson(?:\s+plan)?|content editor)\b/i,
-  quiz: /\b(?:quiz(?:zes)?|test|assessment|exit ticket)\b/i,
+  quiz: /\b(?:quiz(?:zes)?|test|assessment|exit ticket|worksheet|work sheet|practice sheet|practice problems)\b/i,
   flashcards: /\b(?:flashcards?|flash cards?|study cards?|review cards?)\b/i,
   iep: /\b(?:iep(?:\s+goals?)?|special(?:\s+education|\s+ed)?\s+goals?)\b/i,
   sub_plan: /\b(?:sub(?:stitute)?\s+plans?|coverage\s+plans?|absence\s+plans?)\b/i,
@@ -68,7 +68,7 @@ const GRADE_CUE_RE =
 const BARE_TARGET_ONLY_RE: Record<Exclude<AgentFlowType, null>, RegExp> = {
   weekly_prep: /^(?:weekly prep|weekly plan|planner|calendar|schedule)$/i,
   lesson: /^(?:lesson|lesson plan|content editor)$/i,
-  quiz: /^(?:quiz|test|assessment|exit ticket)$/i,
+  quiz: /^(?:quiz|test|assessment|exit ticket|worksheet|work sheet|practice sheet)$/i,
   flashcards: /^(?:flashcards?|flash cards?|study cards?|review cards?)$/i,
   iep: /^(?:iep(?: goals?)?|special(?: education| ed)? goals?)$/i,
   sub_plan: /^(?:sub(?:stitute)? plans?|coverage plans?|absence plans?)$/i,
