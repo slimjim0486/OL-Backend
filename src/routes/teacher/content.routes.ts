@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { prisma } from '../../config/database.js';
 import { queueDocumentAnalysisJob } from '../../jobs/index.js';
+import { DISABILITY_LABELS, SUBJECT_AREA_LABELS } from '../../services/teacher/iepGoalService.js';
 
 const router = Router();
 
@@ -55,17 +56,98 @@ const updateContentSchema = z.object({
   status: z.nativeEnum(ContentStatus).optional(),
 });
 
+// Virtual content types that map to separate tables (not in TeacherContentType enum)
+const VIRTUAL_CONTENT_TYPES = ['IEP_GOALS', 'SUB_PLAN'] as const;
+type VirtualContentType = (typeof VIRTUAL_CONTENT_TYPES)[number];
+
 const listContentQuerySchema = z.object({
   page: z.string().transform(Number).default('1'),
   limit: z.string().transform(Number).default('20'),
   sortBy: z.enum(['createdAt', 'updatedAt', 'title']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
-  contentType: z.nativeEnum(TeacherContentType).optional(),
+  contentType: z.union([z.nativeEnum(TeacherContentType), z.enum(VIRTUAL_CONTENT_TYPES)]).optional(),
   subject: z.nativeEnum(Subject).optional(),
   gradeLevel: z.string().optional(),
   status: z.nativeEnum(ContentStatus).optional(),
   search: z.string().optional(),
 });
+
+// ---- Normalize helpers to unify IEP / Sub Plan into content-list shape ----
+
+interface NormalizedContentItem {
+  id: string;
+  teacherId: string;
+  title: string;
+  description: string | null;
+  subject: string | null;
+  gradeLevel: string | null;
+  contentType: string; // TeacherContentType | VirtualContentType
+  sourceType: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isPublic: boolean;
+  _virtualSource?: 'iep' | 'sub_plan';
+  [key: string]: unknown;
+}
+
+function normalizeIepSession(iep: {
+  id: string;
+  teacherId: string;
+  studentIdentifier?: string | null;
+  gradeLevel: string;
+  disabilityCategory: string;
+  subjectArea: string;
+  selectedGoals?: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}): NormalizedContentItem {
+  const subjectLabel = SUBJECT_AREA_LABELS[iep.subjectArea as keyof typeof SUBJECT_AREA_LABELS] || iep.subjectArea;
+  const disabilityLabel = DISABILITY_LABELS[iep.disabilityCategory as keyof typeof DISABILITY_LABELS] || iep.disabilityCategory;
+  const studentPart = iep.studentIdentifier ? ` - ${iep.studentIdentifier}` : '';
+
+  return {
+    id: iep.id,
+    teacherId: iep.teacherId,
+    title: `IEP Goals: ${subjectLabel}${studentPart}`,
+    description: `${disabilityLabel} | Grade ${iep.gradeLevel}`,
+    subject: null,
+    gradeLevel: iep.gradeLevel,
+    contentType: 'IEP_GOALS',
+    sourceType: null,
+    status: iep.selectedGoals ? 'PUBLISHED' : 'DRAFT',
+    createdAt: iep.createdAt,
+    updatedAt: iep.updatedAt,
+    isPublic: false,
+    _virtualSource: 'iep',
+  };
+}
+
+function normalizeSubPlan(sub: {
+  id: string;
+  teacherId: string;
+  title: string;
+  gradeLevel?: string | null;
+  date: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}): NormalizedContentItem {
+  return {
+    id: sub.id,
+    teacherId: sub.teacherId,
+    title: sub.title,
+    description: sub.gradeLevel ? `Grade ${sub.gradeLevel} | ${sub.date.toISOString().slice(0, 10)}` : sub.date.toISOString().slice(0, 10),
+    subject: null,
+    gradeLevel: sub.gradeLevel || null,
+    contentType: 'SUB_PLAN',
+    sourceType: null,
+    status: 'PUBLISHED',
+    createdAt: sub.createdAt,
+    updatedAt: sub.updatedAt,
+    isPublic: false,
+    _virtualSource: 'sub_plan',
+  };
+}
 
 const updateStatusSchema = z.object({
   status: z.nativeEnum(ContentStatus),
@@ -98,6 +180,7 @@ function getIsoWeekNumber(date: Date): number {
 /**
  * GET /api/teacher/content
  * List all content for the authenticated teacher
+ * Includes IEP goal sessions and substitute plans alongside standard TeacherContent.
  */
 router.get(
   '/',
@@ -105,24 +188,64 @@ router.get(
   requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Parse query params
       const query = listContentQuerySchema.parse(req.query);
+      const teacherId = req.teacher!.id;
+      const limit = Math.min(query.limit, 100);
+      const page = query.page;
+      const skip = (page - 1) * limit;
+      const sortOrder = query.sortOrder;
+      const isVirtual = VIRTUAL_CONTENT_TYPES.includes(query.contentType as VirtualContentType);
 
+      // ---- Virtual-type-only queries (IEP_GOALS or SUB_PLAN filter) ----
+      if (query.contentType === 'IEP_GOALS') {
+        const where: Record<string, unknown> = { teacherId };
+        if (query.gradeLevel) where.gradeLevel = query.gradeLevel;
+        if (query.search) {
+          where.OR = [
+            { studentIdentifier: { contains: query.search, mode: 'insensitive' } },
+          ];
+        }
+        const [rows, total] = await Promise.all([
+          prisma.iEPGoalSession.findMany({ where, orderBy: { createdAt: sortOrder }, take: limit, skip }),
+          prisma.iEPGoalSession.count({ where }),
+        ]);
+        const totalPages = Math.ceil(total / limit);
+        return res.json({
+          success: true,
+          data: rows.map(normalizeIepSession),
+          pagination: { total, page, limit, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+        });
+      }
+
+      if (query.contentType === 'SUB_PLAN') {
+        const where: Record<string, unknown> = { teacherId };
+        if (query.gradeLevel) where.gradeLevel = query.gradeLevel;
+        if (query.search) {
+          where.title = { contains: query.search, mode: 'insensitive' };
+        }
+        const [rows, total] = await Promise.all([
+          prisma.substitutePlan.findMany({ where, orderBy: { createdAt: sortOrder }, take: limit, skip }),
+          prisma.substitutePlan.count({ where }),
+        ]);
+        const totalPages = Math.ceil(total / limit);
+        return res.json({
+          success: true,
+          data: rows.map(normalizeSubPlan),
+          pagination: { total, page, limit, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+        });
+      }
+
+      // ---- Standard TeacherContent query (with optional type filter) ----
       const result = await contentService.listContent(
-        req.teacher!.id,
+        teacherId,
         {
-          contentType: query.contentType,
+          contentType: query.contentType as TeacherContentType | undefined,
           subject: query.subject,
           gradeLevel: query.gradeLevel,
           status: query.status,
           search: query.search,
         },
-        {
-          page: query.page,
-          limit: Math.min(query.limit, 100), // Max 100 per page
-          sortBy: query.sortBy,
-          sortOrder: query.sortOrder,
-        }
+        { page, limit, sortBy: query.sortBy, sortOrder }
       );
 
       // Enrich lesson cards generated from weekly prep with week/day tags.
@@ -143,29 +266,21 @@ router.get(
 
       if (weeklyPrepMaterialIds.length > 0) {
         const materials = await prisma.agentMaterial.findMany({
-          where: {
-            id: { in: weeklyPrepMaterialIds },
-          },
+          where: { id: { in: weeklyPrepMaterialIds } },
           select: {
             id: true,
             dayOfWeek: true,
-            weeklyPrep: {
-              select: {
-                weekLabel: true,
-                weekStartDate: true,
-              },
-            },
+            weeklyPrep: { select: { weekLabel: true, weekStartDate: true } },
           },
         });
-
         weeklyPrepByMaterialId = new Map(
-          materials.map((material) => [
-            material.id,
+          materials.map((m) => [
+            m.id,
             {
-              weekLabel: material.weeklyPrep.weekLabel,
-              weekNumber: getIsoWeekNumber(material.weeklyPrep.weekStartDate),
-              dayOfWeek: material.dayOfWeek,
-              dayLabel: WEEKDAY_LABELS[material.dayOfWeek] || `Day ${material.dayOfWeek + 1}`,
+              weekLabel: m.weeklyPrep.weekLabel,
+              weekNumber: getIsoWeekNumber(m.weeklyPrep.weekStartDate),
+              dayOfWeek: m.dayOfWeek,
+              dayLabel: WEEKDAY_LABELS[m.dayOfWeek] || `Day ${m.dayOfWeek + 1}`,
             },
           ])
         );
@@ -176,17 +291,61 @@ router.get(
         if (!materialId) return item;
         const weeklyPrep = weeklyPrepByMaterialId.get(materialId);
         if (!weeklyPrep) return item;
-
-        return {
-          ...item,
-          weeklyPrep,
-        };
+        return { ...item, weeklyPrep };
       });
+
+      // ---- If a specific TeacherContentType filter is set, return as-is ----
+      if (query.contentType) {
+        return res.json({
+          success: true,
+          data: enrichedData,
+          pagination: result.pagination,
+        });
+      }
+
+      // ---- No filter: merge IEP sessions and sub plans into the unified list ----
+      const fetchCap = skip + limit; // enough items from each source
+      const iepWhere: Record<string, unknown> = { teacherId };
+      const subWhere: Record<string, unknown> = { teacherId };
+      if (query.search) {
+        iepWhere.OR = [{ studentIdentifier: { contains: query.search, mode: 'insensitive' } }];
+        subWhere.title = { contains: query.search, mode: 'insensitive' };
+      }
+      if (query.gradeLevel) {
+        iepWhere.gradeLevel = query.gradeLevel;
+        subWhere.gradeLevel = query.gradeLevel;
+      }
+
+      const [iepRows, subRows, iepCount, subCount] = await Promise.all([
+        prisma.iEPGoalSession.findMany({ where: iepWhere, orderBy: { createdAt: sortOrder }, take: fetchCap }),
+        prisma.substitutePlan.findMany({ where: subWhere, orderBy: { createdAt: sortOrder }, take: fetchCap }),
+        prisma.iEPGoalSession.count({ where: iepWhere }),
+        prisma.substitutePlan.count({ where: subWhere }),
+      ]);
+
+      // Merge all sources
+      const merged: Array<Record<string, unknown>> = [
+        ...(enrichedData as Array<Record<string, unknown>>).filter(Boolean),
+        ...iepRows.map(normalizeIepSession),
+        ...subRows.map(normalizeSubPlan),
+      ];
+
+      // Sort merged list by createdAt
+      merged.sort((a, b) => {
+        const da = new Date(a.createdAt as string | Date).getTime();
+        const db = new Date(b.createdAt as string | Date).getTime();
+        return sortOrder === 'desc' ? db - da : da - db;
+      });
+
+      // Re-paginate the merged list
+      const totalAll = result.pagination.total + iepCount + subCount;
+      const totalPages = Math.ceil(totalAll / limit);
+      const paged = merged.slice(skip, skip + limit);
 
       res.json({
         success: true,
-        data: enrichedData,
-        pagination: result.pagination,
+        data: paged,
+        pagination: { total: totalAll, page, limit, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
       });
     } catch (error) {
       next(error);
@@ -196,7 +355,7 @@ router.get(
 
 /**
  * GET /api/teacher/content/stats
- * Get content statistics for the teacher
+ * Get content statistics for the teacher (includes IEP goals & sub plans)
  */
 router.get(
   '/stats',
@@ -204,7 +363,16 @@ router.get(
   requireTeacher,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const stats = await contentService.getContentStats(req.teacher!.id);
+      const teacherId = req.teacher!.id;
+      const [stats, iepCount, subPlanCount] = await Promise.all([
+        contentService.getContentStats(teacherId),
+        prisma.iEPGoalSession.count({ where: { teacherId } }),
+        prisma.substitutePlan.count({ where: { teacherId } }),
+      ]);
+
+      // Inject virtual type counts so the frontend stat cards work
+      if (iepCount > 0) (stats.byType as Record<string, number>)['IEP_GOALS'] = iepCount;
+      if (subPlanCount > 0) (stats.byType as Record<string, number>)['SUB_PLAN'] = subPlanCount;
 
       res.json({
         success: true,
