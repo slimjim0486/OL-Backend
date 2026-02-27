@@ -134,7 +134,7 @@ export const sttService = {
       // Call OpenAI transcription API with logprobs for confidence scores
       const response = await client.audio.transcriptions.create({
         file: audioFile,
-        model: 'gpt-4o-mini-transcribe',
+        model: 'gpt-4o-transcribe',
         response_format: 'json',
         include: ['logprobs'],
         language: options.language || undefined,
@@ -168,7 +168,7 @@ export const sttService = {
           childId: options.childId,
           audioLengthMs: durationMs || estimatedDurationMs,
           transcriptionMs,
-          modelUsed: 'gpt-4o-mini-transcribe',
+          modelUsed: 'gpt-4o-transcribe',
           contextType: options.contextType,
           contextId: options.contextId,
           confidenceScore: confidence,
