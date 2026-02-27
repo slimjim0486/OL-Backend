@@ -65,8 +65,8 @@ export const config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY!,
     models: {
-      // Gemini 3 models (December 2025) - Latest generation
-      pro: 'gemini-3-pro-preview',         // Most advanced reasoning with thinking
+      // Gemini 3.1 models (March 2026) - Latest generation
+      pro: 'gemini-3.1-pro-preview',       // Most advanced reasoning with thinking
       flash: 'gemini-3-flash-preview',     // Best speed + intelligence, superior search/grounding
       // Gemini 2.5 models for cost-efficient use cases
       flashLite: 'gemini-3-flash-preview',  // Using Flash for cost-efficient tasks (2.5-flash-lite deprecated)
@@ -101,6 +101,8 @@ export const config = {
     openaiApiKey: process.env.OPENAI_API_KEY,
     enabled: process.env.ENABLE_VOICE_INPUT === 'true',
     maxDurationMs: parseInt(process.env.VOICE_MAX_DURATION_MS || '30000'), // 30 seconds default
+    teacherMaxDurationMs: parseInt(process.env.TEACHER_VOICE_MAX_DURATION_MS || '120000'), // 2 minutes for teachers
+    realtimeModel: process.env.VOICE_REALTIME_MODEL || 'gpt-4o-transcribe',
     consentExpiryDays: parseInt(process.env.VOICE_CONSENT_EXPIRY_DAYS || '365'), // 1 year
     supportedLanguages: ['en', 'ar'], // English and Arabic for Gulf region
   },

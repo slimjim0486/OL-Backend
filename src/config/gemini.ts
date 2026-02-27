@@ -82,7 +82,7 @@ export const GEMINI_3_PRO_ANALYSIS_CONFIG = {
   responseMimeType: 'application/json',
 };
 
-// Gemini 3 Pro config for chat (Ollie) - balanced for conversational use
+// Gemini 3.1 Pro config for chat (Ollie) - balanced for conversational use
 export const GEMINI_3_PRO_CHAT_CONFIG = {
   temperature: 1.0,
   topP: 0.95,
@@ -101,8 +101,8 @@ export const getProModel = () => genAI.getGenerativeModel({
   safetySettings: CHILD_SAFETY_SETTINGS,
 });
 
-// Gemini 3 Pro model for advanced reasoning tasks
+// Gemini 3.1 Pro model for advanced reasoning tasks
 export const getGemini3ProModel = () => genAI.getGenerativeModel({
-  model: config.gemini.models.pro, // gemini-3-pro-preview
+  model: config.gemini.models.pro, // gemini-3.1-pro-preview
   safetySettings: CHILD_SAFETY_SETTINGS,
 });

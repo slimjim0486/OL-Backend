@@ -23,9 +23,12 @@ const TOKEN_COSTS = {
   // Gemini 2.5 Flash-Lite: $0.10/1M input, $0.40/1M output → ~$0.325/1M blended
   'gemini-2.5-flash-lite': 0.000325,
 
-  // Gemini 3 Pro Preview: $2.00/1M input, $12.00/1M output → ~$9.50/1M blended
+  // Gemini 3 Pro Preview (legacy): $2.00/1M input, $12.00/1M output → ~$9.50/1M blended
   'gemini-3-pro': 0.0095,
   'gemini-3-pro-preview': 0.0095,
+
+  // Gemini 3.1 Pro Preview: $2.00/1M input, $12.00/1M output → ~$9.50/1M blended
+  'gemini-3.1-pro-preview': 0.0095,
 
   // Gemini 3 Pro Image: $120/1M output tokens (images only, ~$0.134 per 1K/2K image)
   'gemini-3-pro-image-preview': 0.12,
