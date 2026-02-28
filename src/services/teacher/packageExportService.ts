@@ -2,9 +2,14 @@
  * Package Export Service — Handles ZIP export of purchased packages
  */
 
+import { createRequire } from 'node:module';
 import { prisma } from '../../config/database.js';
 import JSZip from 'jszip';
-import PptxGenJS from 'pptxgenjs';
+
+// pptxgenjs exports field points to an ESM .js file without "type":"module",
+// which crashes Node 18. Force CJS resolution via createRequire.
+const _require = createRequire(import.meta.url);
+const PptxGenJS = _require('pptxgenjs');
 import {
   Subject,
   TeacherContentType,
