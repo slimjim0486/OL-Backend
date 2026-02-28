@@ -1014,6 +1014,9 @@ model Teacher {
   // Review summaries (monthly/yearly)
   reviewSummaries TeacherReviewSummary[]
 
+  // DTC Package Purchases
+  packagePurchases PackagePurchase[]
+
   @@index([email])
   @@index([organizationId])
   @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
@@ -3342,4 +3345,191 @@ enum ReviewStatus {
   DRAFT
   REVIEWED
   SHARED
+}
+
+// ============================================
+// DTC PRODUCT PACKAGE ENUMS
+// ============================================
+
+enum PackageCategory {
+  CORE          // Starter Kit, Semester Saver, Year-Round, Founding Teacher
+  WEEKLY_BOX    // Weekly Classroom Box (recurring)
+  SEASONAL      // Back-to-School, Test Prep, End-of-Year
+  SPECIALTY     // Sub Plans, IEP Goals, Assessment, Communication
+}
+
+enum PackageTier {
+  STARTER            // $29
+  SEMESTER           // $89
+  YEAR_ROUND         // $199
+  FOUNDING_TEACHER   // $299
+  WEEKLY_BOX         // $29/mo
+  BACK_TO_SCHOOL     // $49
+  TEST_PREP          // $69
+  END_OF_YEAR        // $39
+  SUB_PLAN_VAULT     // $39
+  IEP_GOAL_BANK      // $49
+  ASSESSMENT_ARSENAL // $49
+  PARENT_COMM_KIT    // $39
+}
+
+enum PackagePurchaseStatus {
+  PENDING        // Payment processing
+  PAID           // Payment confirmed
+  GENERATING     // Content being generated
+  PARTIAL        // Some weeks delivered (progressive)
+  READY          // All instant content ready for review
+  COMPLETED      // All materials generated and delivered
+  FAILED         // Generation failed
+  REFUNDED       // Refunded
+  CANCELLED      // Recurring cancelled
+}
+
+enum DeliveryType {
+  INSTANT       // All at once (Starter Kit, Specialty)
+  PROGRESSIVE   // Initial batch + weekly drops (Semester, Year-Round)
+  RECURRING     // Weekly drops forever (Weekly Box)
+}
+
+enum PackageMaterialStatus {
+  PKG_PENDING
+  PKG_GENERATING
+  PKG_GENERATED
+  PKG_APPROVED
+  PKG_EDITED
+  PKG_REGENERATING
+  PKG_FAILED
+}
+
+// ============================================
+// DTC PRODUCT PACKAGE MODELS
+// ============================================
+
+model PackagePurchase {
+  id        String @id @default(uuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Product info (denormalized from catalog for historical record)
+  packageTier     PackageTier
+  packageCategory PackageCategory
+  packageName     String
+  priceCents      Int
+
+  // Stripe
+  stripeSessionId       String?  @unique
+  stripePaymentIntentId String?
+  stripeSubscriptionId  String?  // Only for Weekly Box recurring
+
+  // Configuration (teacher selections at checkout)
+  config Json   // { gradeLevel, subjects, topic, curriculum, schoolYear, weekStartDate, ... }
+
+  // Delivery
+  deliveryType     DeliveryType
+  totalWeeks       Int       @default(0)   // Total weeks in package
+  weeksDelivered   Int       @default(0)   // Weeks generated so far
+  nextDeliveryDate DateTime?               // Next progressive drop date
+
+  // Generation tracking
+  status          PackagePurchaseStatus @default(PENDING)
+  totalMaterials  Int @default(0)
+  generatedCount  Int @default(0)
+  approvedCount   Int @default(0)
+  failedCount     Int @default(0)
+
+  // Token & cost tracking
+  totalTokensUsed    Int @default(0)
+  estimatedTokenCost Int @default(0)  // Estimated total tokens
+
+  // Founding Teacher extras
+  isPriorityQueue  Boolean @default(false)
+  sharingLicense   Int     @default(0)  // 0 = no sharing, 2 = share with 2 colleagues
+  lifetimeUpdates  Boolean @default(false)
+
+  // Relations
+  weeks     PackageWeek[]
+  materials PackageMaterial[]
+
+  // Timestamps
+  purchasedAt  DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([teacherId, createdAt])
+  @@index([status])
+  @@index([nextDeliveryDate])  // For progressive delivery cron
+}
+
+model PackageWeek {
+  id         String          @id @default(uuid())
+  purchaseId String
+  purchase   PackagePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  // Week info
+  weekNumber   Int       // 1-based week number within the package
+  weekLabel    String    // "Week 1 - Fractions" or "Week of Feb 10"
+  weekDate     DateTime  // Target date for this week's content
+  subject      String?   // Subject for this week (null = multi-subject)
+
+  // Plan from Gemini (same structure as AgentWeeklyPrep.plan)
+  plan Json?
+
+  // Generation status
+  isDelivered  Boolean  @default(false)  // Has this week's content been generated?
+  isLocked     Boolean  @default(true)   // Locked until delivery date (for progressive)
+  generatedAt  DateTime?
+
+  // Relations
+  materials PackageMaterial[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purchaseId, weekNumber])
+  @@unique([purchaseId, weekNumber])
+}
+
+model PackageMaterial {
+  id         String          @id @default(uuid())
+  purchaseId String
+  purchase   PackagePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  weekId     String?
+  week       PackageWeek?    @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  // Material info (mirrors AgentMaterial structure)
+  materialType  MaterialType       // Reuse existing enum
+  title         String
+  description   String?            @db.Text
+  subject       String?
+  dayOfWeek     Int?               // 0-4 for week-based materials
+  sortOrder     Int        @default(0)
+
+  // Context from planning
+  planContext Json?
+
+  // Generated content
+  content               Json?
+  differentiatedContent  Json?
+  editedContent         Json?
+
+  // Status
+  status       PackageMaterialStatus @default(PKG_PENDING)
+  teacherNotes String?               @db.Text
+
+  // AI metadata
+  tokensUsed  Int      @default(0)
+  modelUsed   String?
+  generatedAt DateTime?
+  approvedAt  DateTime?
+
+  // Specialty material type (for Category D packs)
+  specialtyType String?  // "sub_plan" | "iep_goal" | "assessment" | "newsletter" | "report_comment"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purchaseId, status])
+  @@index([weekId, sortOrder])
 }

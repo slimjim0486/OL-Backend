@@ -2317,6 +2317,169 @@ Want unlimited downloads? Upgrade at ${config.frontendUrl}/teacher/billing
 — The Orbit Learn Team
     `,
   }),
+
+  /**
+   * Package generating notification email (teacher branded)
+   */
+  packageGenerating: (teacherName: string, packageName: string, resourceEstimate: string, totalWeeks: number, dashboardUrl: string) => ({
+    subject: `Your ${packageName} is generating!`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your package is generating!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 36px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your Package is Generating!</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 15px;">Ollie is hard at work creating your materials</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 20px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          Thank you for your purchase! Ollie is now creating your <strong>${packageName}</strong>. Here's what's being generated:
+        </p>
+
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #D4A853;">
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width: 100%;">
+            <tr>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Materials:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 700; text-align: right;">${resourceEstimate}</td>
+            </tr>
+            ${totalWeeks > 0 ? `<tr>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Coverage:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 700; text-align: right;">${totalWeeks} ${totalWeeks === 1 ? 'week' : 'weeks'}</td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Estimated time:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 700; text-align: right;">5-10 minutes</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          We'll send you another email as soon as everything is ready. You can also track progress in your dashboard.
+        </p>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${dashboardUrl}" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 36px; border-radius: 16px; font-weight: bold; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Track Progress
+          </a>
+        </div>
+
+        <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
+          Questions? Reply to this email — we're here to help.<br>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `Your ${packageName} is generating!
+
+Hi ${teacherName},
+
+Thank you for your purchase! Ollie is now creating your ${packageName}.
+
+Materials: ${resourceEstimate}${totalWeeks > 0 ? `\nCoverage: ${totalWeeks} ${totalWeeks === 1 ? 'week' : 'weeks'}` : ''}
+Estimated time: 5-10 minutes
+
+We'll send you another email as soon as everything is ready. You can also track progress in your dashboard:
+${dashboardUrl}
+
+— The Orbit Learn Team
+    `,
+  }),
+
+  /**
+   * Package ready notification email (teacher branded)
+   */
+  packageReady: (teacherName: string, packageName: string, totalMaterials: number, totalWeeks: number, packageUrl: string) => ({
+    subject: `Your ${packageName} is ready!`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your package is ready!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 36px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your Package is Ready!</h1>
+        <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 15px;">Ollie finished creating your materials</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 20px; font-family: 'Fraunces', Georgia, serif;">Great news, ${teacherName}!</h2>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          Ollie finished generating your <strong>${packageName}</strong>. Everything is ready for you to review.
+        </p>
+
+        <div style="background: #ECFDF5; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #7BAE7F;">
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width: 100%;">
+            <tr>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Materials generated:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 700; text-align: right;">${totalMaterials} pieces</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #3D4F66; font-size: 14px;">Coverage:</td>
+              <td style="padding: 6px 0; color: #1E2A3A; font-size: 14px; font-weight: 700; text-align: right;">${totalWeeks} ${totalWeeks === 1 ? 'week' : 'weeks'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 15px;">
+          You can now review, approve, and download your materials. If anything needs tweaking, you can regenerate individual materials with a single click.
+        </p>
+
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${packageUrl}" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 36px; border-radius: 16px; font-weight: bold; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            View Your Package
+          </a>
+        </div>
+
+        <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
+          Questions? Reply to this email — we're here to help.<br>
+          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `Your ${packageName} is ready!
+
+Great news, ${teacherName}!
+
+Ollie finished generating your ${packageName}. Everything is ready for you to review.
+
+Materials generated: ${totalMaterials} pieces
+Coverage: ${totalWeeks} ${totalWeeks === 1 ? 'week' : 'weeks'}
+
+You can now review, approve, and download your materials. If anything needs tweaking, you can regenerate individual materials with a single click.
+
+View your package: ${packageUrl}
+
+— The Orbit Learn Team
+    `,
+  }),
 };
 
 export const emailService = {
@@ -3408,6 +3571,86 @@ Details:
       return true;
     } catch (error) {
       logger.error('Error sending auto gift PDF email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send package generating notification email
+   */
+  async sendPackageGeneratingEmail(
+    email: string,
+    teacherName: string,
+    packageName: string,
+    resourceEstimate: string,
+    totalWeeks: number,
+    dashboardUrl: string
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped package generating email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.packageGenerating(teacherName, packageName, resourceEstimate, totalWeeks, dashboardUrl);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send package generating email', { error, email });
+        return false;
+      }
+
+      logger.info(`Package generating email sent to ${email}`, { packageName });
+      return true;
+    } catch (error) {
+      logger.error('Error sending package generating email', { error, email });
+      return false;
+    }
+  },
+
+  /**
+   * Send package ready notification email
+   */
+  async sendPackageReadyEmail(
+    email: string,
+    teacherName: string,
+    packageName: string,
+    totalMaterials: number,
+    totalWeeks: number,
+    packageUrl: string
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped package ready email to ${email}`);
+      return true;
+    }
+
+    try {
+      const template = templates.packageReady(teacherName, packageName, totalMaterials, totalWeeks, packageUrl);
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send package ready email', { error, email });
+        return false;
+      }
+
+      logger.info(`Package ready email sent to ${email}`, { packageName });
+      return true;
+    } catch (error) {
+      logger.error('Error sending package ready email', { error, email });
       return false;
     }
   },

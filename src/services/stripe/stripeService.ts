@@ -141,7 +141,7 @@ export const stripeService = {
   constructWebhookEvent(
     payload: string | Buffer,
     signature: string,
-    webhookType: 'default' | 'consent' | 'teacher' | 'family' = 'default'
+    webhookType: 'default' | 'consent' | 'teacher' | 'family' | 'dtc' = 'default'
   ): Stripe.Event {
     if (!stripe) {
       throw new Error('Stripe is not configured');
@@ -157,6 +157,9 @@ export const stripeService = {
         break;
       case 'family':
         secret = config.stripe.webhookSecretFamily;
+        break;
+      case 'dtc':
+        secret = config.stripe.webhookSecretDTC;
         break;
       default:
         secret = config.stripe.webhookSecret;
