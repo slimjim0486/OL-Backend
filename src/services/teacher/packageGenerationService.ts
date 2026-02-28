@@ -90,7 +90,35 @@ function extractJSON(text: string): string {
 }
 
 function repairJSON(jsonLike: string): string {
-  return jsonLike.replace(/,\s*([}\]])/g, '$1');
+  let repaired = jsonLike.replace(/,\s*([}\]])/g, '$1');
+
+  // Attempt to close truncated JSON by balancing brackets/braces
+  let opens = 0;
+  let openBrackets = 0;
+  let inString = false;
+  let escape = false;
+  for (const ch of repaired) {
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') opens++;
+    else if (ch === '}') opens--;
+    else if (ch === '[') openBrackets++;
+    else if (ch === ']') openBrackets--;
+  }
+
+  // If we're inside a string, close it
+  if (inString) repaired += '"';
+
+  // Remove any trailing comma before we close
+  repaired = repaired.replace(/,\s*$/, '');
+
+  // Close unclosed brackets and braces
+  for (let i = 0; i < openBrackets; i++) repaired += ']';
+  for (let i = 0; i < opens; i++) repaired += '}';
+
+  return repaired;
 }
 
 function mapToMaterialType(type: string): MaterialType {
@@ -506,27 +534,71 @@ async function callGeminiForPlan(
   const tokensPerWeek = previewMode ? 1200 : 3500;
   const minTokens = previewMode ? 4000 : 8000;
   const maxTokensCap = previewMode ? 16000 : 65000;
-  const maxOutputTokens = Math.min(Math.max(weekCount * tokensPerWeek, minTokens), maxTokensCap);
+  const baseMaxTokens = Math.min(Math.max(weekCount * tokensPerWeek, minTokens), maxTokensCap);
 
-  const model = genAI.getGenerativeModel({
-    model: config.gemini.models.flash,
-    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens,
-      responseMimeType: 'application/json',
-    },
-  });
+  // Allow one retry with a larger token budget if the response is truncated.
+  const attempts = [baseMaxTokens, Math.min(Math.round(baseMaxTokens * 1.5), maxTokensCap)];
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  for (let i = 0; i < attempts.length; i++) {
+    const maxOutputTokens = attempts[i];
+    const model = genAI.getGenerativeModel({
+      model: config.gemini.models.flash,
+      safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens,
+        responseMimeType: 'application/json',
+      },
+    });
 
-  const raw = extractJSON(text);
-  const parsed = JSON.parse(repairJSON(raw));
-  if (!parsed.weeks || !Array.isArray(parsed.weeks)) {
-    throw new Error('Plan missing weeks array');
+    const result = await model.generateContent(prompt);
+    const candidate = result.response.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    const text = result.response.text().trim();
+
+    if (!text) {
+      logger.warn('Gemini returned empty response for package plan', { weekCount, previewMode, finishReason, attempt: i + 1 });
+      if (i < attempts.length - 1) continue;
+      throw new Error('Gemini returned an empty response for package plan');
+    }
+
+    // If truncated due to token limit, retry with more tokens before attempting repair
+    if (finishReason === 'MAX_TOKENS' && i < attempts.length - 1) {
+      logger.warn('Gemini plan response truncated, retrying with higher token budget', {
+        weekCount, previewMode, attempt: i + 1, maxOutputTokens, nextBudget: attempts[i + 1],
+      });
+      continue;
+    }
+
+    const raw = extractJSON(text);
+    if (!raw) {
+      logger.warn('Could not extract JSON from Gemini plan response', { weekCount, previewMode, textLength: text.length });
+      if (i < attempts.length - 1) continue;
+      throw new Error('Could not extract JSON from Gemini plan response');
+    }
+
+    try {
+      const parsed = JSON.parse(repairJSON(raw));
+      if (!parsed.weeks || !Array.isArray(parsed.weeks)) {
+        throw new Error('Plan missing weeks array');
+      }
+      if (finishReason === 'MAX_TOKENS') {
+        logger.warn('Gemini plan was truncated but repaired successfully', {
+          weekCount, previewMode, weeksReturned: parsed.weeks.length,
+        });
+      }
+      return parsed as PackagePlan;
+    } catch (parseErr: any) {
+      logger.warn('Failed to parse Gemini plan JSON', {
+        weekCount, previewMode, attempt: i + 1, error: parseErr.message, rawLength: raw.length,
+      });
+      if (i < attempts.length - 1) continue;
+      throw new Error(`Failed to parse package plan JSON: ${parseErr.message}`);
+    }
   }
-  return parsed as PackagePlan;
+
+  // Should never reach here, but satisfy TypeScript
+  throw new Error('Failed to generate package plan after all attempts');
 }
 
 // =============================================================================
