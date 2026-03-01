@@ -1,6 +1,6 @@
 // Admin Analytics routes for VC Dashboard
 import { Router, Request, Response, NextFunction } from 'express';
-import { analyticsService, cohortService, revenueService } from '../../services/admin/index.js';
+import { analyticsService, cohortService, revenueService, dtcRevenueService } from '../../services/admin/index.js';
 import { curriculumService } from '../../services/curriculum/index.js';
 import { authenticateAdmin, requireAdmin } from '../../middleware/adminAuth.js';
 import { validateInput } from '../../middleware/validateInput.js';
@@ -326,6 +326,55 @@ router.get(
       res.json({
         success: true,
         data: teacherRevenue,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
+// DTC STORE REVENUE ROUTES
+// ============================================
+
+/**
+ * GET /api/admin/analytics/revenue/dtc
+ * Get DTC store revenue overview + tier breakdown
+ */
+router.get(
+  '/revenue/dtc',
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const [overview, byTier] = await Promise.all([
+        dtcRevenueService.getOverview(),
+        dtcRevenueService.getRevenueByTier(),
+      ]);
+
+      res.json({
+        success: true,
+        data: { overview, byTier },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/admin/analytics/revenue/dtc/monthly
+ * Get DTC monthly revenue time series
+ */
+router.get(
+  '/revenue/dtc/monthly',
+  validateInput(monthsSchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const months = parseInt(req.query.months as string) || 12;
+      const series = await dtcRevenueService.getMonthlySeries(months);
+
+      res.json({
+        success: true,
+        data: series,
       });
     } catch (error) {
       next(error);
@@ -861,6 +910,7 @@ router.post(
         analyticsService.invalidateCache(),
         cohortService.invalidateCache(),
         revenueService.invalidateCache(),
+        dtcRevenueService.invalidateCache(),
       ]);
 
       res.json({
