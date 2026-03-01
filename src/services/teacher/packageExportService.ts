@@ -18,6 +18,7 @@ import {
   type TeacherContent,
 } from '@prisma/client';
 import { exportContent, exportMultipleContent } from './exportService.js';
+import { packageGenerationService } from './packageGenerationService.js';
 import { uploadFile } from '../storage/storageService.js';
 import { logger } from '../../utils/logger.js';
 import { AppError } from '../../middleware/errorHandler.js';
@@ -774,7 +775,7 @@ async function exportMaterial(
   materialId: string,
   teacherId: string
 ): Promise<ExportResult> {
-  const material = await prisma.packageMaterial.findFirst({
+  let material = await prisma.packageMaterial.findFirst({
     where: { id: materialId, purchase: { teacherId } },
     include: {
       purchase: true,
@@ -782,6 +783,19 @@ async function exportMaterial(
   }) as MaterialWithPurchase | null;
 
   if (!material) throw new AppError('Material not found', 404);
+
+  // On-demand generation: if material has no content, generate it now
+  if (!material.content && ['PKG_PENDING', 'PKG_FAILED'].includes(material.status)) {
+    await packageGenerationService.generateMaterialOnDemand(material.id, teacherId);
+    // Reload with fresh content
+    material = await prisma.packageMaterial.findFirst({
+      where: { id: materialId, purchase: { teacherId } },
+      include: { purchase: true },
+    }) as MaterialWithPurchase;
+    if (!material?.content) {
+      throw new AppError('Material generation failed. Please try again.', 500);
+    }
+  }
 
   let pdfBuffer: Buffer | null = null;
   let pptxBuffer: Buffer | null = null;

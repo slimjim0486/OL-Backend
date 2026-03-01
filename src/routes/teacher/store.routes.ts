@@ -324,6 +324,25 @@ router.post('/my-packages/:id/approve-all', authenticateTeacher, requireTeacher,
 });
 
 // =============================================================================
+// ON-DEMAND GENERATION
+// =============================================================================
+
+/**
+ * POST /api/teacher/store/my-packages/:id/materials/:mid/generate
+ * Generate a single material on-demand (preview content without downloading)
+ */
+router.post('/my-packages/:id/materials/:mid/generate', authenticateTeacher, requireTeacher, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await packageGenerationService.generateMaterialOnDemand(
+      req.params.mid, (req as any).teacher.id
+    );
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============================================================================
 // EXPORT
 // =============================================================================
 

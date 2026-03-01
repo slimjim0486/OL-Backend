@@ -185,23 +185,8 @@ async function handlePaymentCompleted(session: Stripe.Checkout.Session): Promise
     tier,
   });
 
-  // Send "generating" notification email (non-blocking)
-  const teacherForEmail = await prisma.teacher.findUnique({
-    where: { id: teacherId },
-    select: { email: true, firstName: true, lastName: true },
-  });
-  if (teacherForEmail) {
-    const displayName = [teacherForEmail.firstName, teacherForEmail.lastName].filter(Boolean).join(' ') || 'Teacher';
-    const dashboardUrl = `${config.frontendUrl}/teacher/my-packages/${purchase.id}`;
-    emailService.sendPackageGeneratingEmail(
-      teacherForEmail.email,
-      displayName,
-      product.name,
-      product.resourceEstimate,
-      product.totalWeeks,
-      dashboardUrl
-    ).catch(err => logger.error('Failed to send package generating email', { error: err, purchaseId: purchase.id }));
-  }
+  // Note: "plan ready" email is sent from packageGenerationService after planning completes.
+  // Planning is fast (seconds), so the email arrives almost immediately.
 }
 
 async function handleRecurringPayment(invoice: Stripe.Invoice): Promise<void> {

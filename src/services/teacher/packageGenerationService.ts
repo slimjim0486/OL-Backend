@@ -22,6 +22,7 @@ import { config } from '../../config/index.js';
 import { getDTCProduct } from '../../config/stripeProductsDTC.js';
 import { contextAssemblerService } from './contextAssemblerService.js';
 import { agentMemoryService } from './agentMemoryService.js';
+import { contentGenerationService } from './contentGenerationService.js';
 import { emailService } from '../email/emailService.js';
 import { logger } from '../../utils/logger.js';
 import { z } from 'zod';
@@ -196,53 +197,32 @@ async function generatePackage(purchaseId: string): Promise<void> {
     // Step 1: Plan the package
     const plan = await planPackage(purchaseId);
 
-    // Step 2: Create week and material records
+    // Step 2: Create week and material records (plan data only — no content generation)
     await createWeekRecords(purchaseId, plan, purchaseConfig);
 
-    // Step 3: Determine which weeks to generate now
-    const initialBatchSize = INITIAL_BATCH_SIZE[purchase.packageTier] || purchase.totalWeeks;
-    const weeksToGenerate = Math.min(initialBatchSize, plan.weeks.length);
-
-    // Step 4: Generate initial batch
-    for (let i = 0; i < weeksToGenerate; i++) {
-      const week = await prisma.packageWeek.findFirst({
-        where: { purchaseId, weekNumber: i + 1 },
-      });
-      if (week) {
-        await generateWeekMaterials(week.id, purchase.teacherId);
-        await prisma.packageWeek.update({
-          where: { id: week.id },
-          data: { isDelivered: true, isLocked: false, generatedAt: new Date() },
-        });
-      }
-    }
-
-    // Step 5: Update purchase status
-    const isProgressive = purchase.deliveryType === 'PROGRESSIVE' && weeksToGenerate < plan.weeks.length;
-
-    const nextDelivery = isProgressive
-      ? addWeeks(new Date(purchaseConfig.weekStartDate || new Date()), weeksToGenerate)
-      : null;
+    // Step 3: Unlock all weeks immediately (on-demand generation — no bulk content gen)
+    await prisma.packageWeek.updateMany({
+      where: { purchaseId },
+      data: { isDelivered: true, isLocked: false },
+    });
 
     await prisma.packagePurchase.update({
       where: { id: purchaseId },
       data: {
-        status: isProgressive ? 'PARTIAL' : 'READY',
-        weeksDelivered: weeksToGenerate,
-        nextDeliveryDate: nextDelivery,
+        status: 'READY',
+        weeksDelivered: plan.weeks.length,
       },
     });
 
-    logger.info('Package generation complete (initial batch)', {
+    logger.info('Package plan created (on-demand generation mode)', {
       purchaseId,
-      weeksGenerated: weeksToGenerate,
       totalWeeks: plan.weeks.length,
-      isProgressive,
+      totalMaterials: plan.totalMaterialCount,
     });
 
-    // Send "ready" notification email (non-blocking)
-    sendPackageReadyNotification(purchase.teacherId, purchaseId, purchase.packageName || 'Content Package', plan.totalMaterialCount || 0, plan.weeks.length)
-      .catch(err => logger.error('Failed to send package ready email', { error: err, purchaseId }));
+    // Send "plan ready" notification email (non-blocking)
+    sendPackagePlanReadyNotification(purchase.teacherId, purchaseId, purchase.packageName || 'Content Package', plan.totalMaterialCount || 0, plan.weeks.length)
+      .catch(err => logger.error('Failed to send package plan ready email', { error: err, purchaseId }));
   } catch (error) {
     logger.error('Package generation failed', {
       purchaseId,
@@ -361,8 +341,7 @@ async function generateWeeklyBoxPackage(purchase: any, purchaseConfig: any): Pro
     }
   }
 
-  await generateWeekMaterials(week.id, purchase.teacherId);
-
+  // Unlock week — materials generated on-demand when teacher downloads
   await prisma.packageWeek.update({
     where: { id: week.id },
     data: {
@@ -371,7 +350,6 @@ async function generateWeeklyBoxPackage(purchase: any, purchaseConfig: any): Pro
       plan: weekPlan as any,
       isDelivered: true,
       isLocked: false,
-      generatedAt: new Date(),
     },
   });
 
@@ -385,7 +363,7 @@ async function generateWeeklyBoxPackage(purchase: any, purchaseConfig: any): Pro
     },
   });
 
-  logger.info('Weekly Box week generated', {
+  logger.info('Weekly Box week planned (on-demand generation)', {
     purchaseId: purchase.id,
     weekNumber: nextWeekNumber,
   });
@@ -928,12 +906,10 @@ async function generateSpecialtyPack(purchaseId: string): Promise<void> {
     data: { totalMaterials: materialRecords.length, totalWeeks: 1 },
   });
 
-  // Generate all specialty materials
-  await generateWeekMaterials(week.id, purchase.teacherId);
-
+  // Unlock — materials generated on-demand when teacher downloads
   await prisma.packageWeek.update({
     where: { id: week.id },
-    data: { isDelivered: true, generatedAt: new Date() },
+    data: { isDelivered: true, isLocked: false },
   });
 
   await prisma.packagePurchase.update({
@@ -941,11 +917,11 @@ async function generateSpecialtyPack(purchaseId: string): Promise<void> {
     data: { status: 'READY', weeksDelivered: 1 },
   });
 
-  logger.info('Specialty pack generation complete', { purchaseId, items: plan.items.length });
+  logger.info('Specialty pack planned (on-demand generation)', { purchaseId, items: plan.items.length });
 
-  // Send "ready" notification email (non-blocking)
-  sendPackageReadyNotification(purchase.teacherId, purchaseId, purchase.packageName || 'Specialty Pack', plan.items.length, 1)
-    .catch(err => logger.error('Failed to send package ready email', { error: err, purchaseId }));
+  // Send "plan ready" notification email (non-blocking)
+  sendPackagePlanReadyNotification(purchase.teacherId, purchaseId, purchase.packageName || 'Specialty Pack', plan.items.length, 1)
+    .catch(err => logger.error('Failed to send package plan ready email', { error: err, purchaseId }));
 }
 
 function mapSpecialtyToMaterialType(specialtyType: string): MaterialType {
@@ -1016,37 +992,17 @@ Return JSON:
 // =============================================================================
 
 async function regenerateSingleMaterial(materialId: string, teacherId: string): Promise<void> {
-  const material = await prisma.packageMaterial.findUniqueOrThrow({
+  // Reset to pending so generateMaterialOnDemand can pick it up
+  await prisma.packageMaterial.update({
     where: { id: materialId },
+    data: {
+      status: 'PKG_PENDING',
+      content: Prisma.DbNull,
+      editedContent: Prisma.DbNull,
+    },
   });
 
-  try {
-    const result = await generateSingleMaterial(material, teacherId);
-
-    await prisma.packageMaterial.update({
-      where: { id: materialId },
-      data: {
-        content: result.content as any,
-        status: 'PKG_GENERATED',
-        tokensUsed: result.tokensUsed,
-        modelUsed: result.modelUsed,
-        generatedAt: new Date(),
-        editedContent: Prisma.DbNull,
-        teacherNotes: null,
-      },
-    });
-
-    await prisma.packagePurchase.update({
-      where: { id: material.purchaseId },
-      data: { totalTokensUsed: { increment: result.tokensUsed } },
-    });
-  } catch (error) {
-    logger.error('Material regeneration failed', { materialId, error });
-    await prisma.packageMaterial.update({
-      where: { id: materialId },
-      data: { status: 'PKG_FAILED' },
-    });
-  }
+  await generateMaterialOnDemand(materialId, teacherId);
 }
 
 // =============================================================================
@@ -1072,11 +1028,10 @@ async function deliverNextWeek(purchaseId: string): Promise<void> {
     return;
   }
 
-  await generateWeekMaterials(nextWeek.id, purchase.teacherId);
-
+  // Unlock week — materials generated on-demand
   await prisma.packageWeek.update({
     where: { id: nextWeek.id },
-    data: { isDelivered: true, isLocked: false, generatedAt: new Date() },
+    data: { isDelivered: true, isLocked: false },
   });
 
   const newWeeksDelivered = nextWeekNumber;
@@ -1100,8 +1055,394 @@ async function deliverNextWeek(purchaseId: string): Promise<void> {
 }
 
 // =============================================================================
-// EMAIL NOTIFICATION HELPER
+// ON-DEMAND MATERIAL GENERATION
 // =============================================================================
+
+/**
+ * Generate a single material on-demand using the appropriate high-quality engine.
+ * Routes LESSON/QUIZ/FLASHCARDS to standalone engines (with quality validation,
+ * Flash-to-Pro fallback). Other types use enhanced Gemini prompts.
+ *
+ * Uses atomic status guard to prevent concurrent generation of the same material.
+ */
+async function generateMaterialOnDemand(
+  materialId: string,
+  teacherId: string
+): Promise<{ materialId: string; status: string }> {
+  // 1. Atomic status guard — only generate if PKG_PENDING or PKG_FAILED
+  const updated = await prisma.$executeRaw`
+    UPDATE "PackageMaterial"
+    SET status = 'PKG_GENERATING'::"PackageMaterialStatus", "updatedAt" = NOW()
+    WHERE id = ${materialId}
+      AND status IN ('PKG_PENDING'::"PackageMaterialStatus", 'PKG_FAILED'::"PackageMaterialStatus")
+  `;
+
+  if (updated === 0) {
+    // Already generating or already generated
+    const current = await prisma.packageMaterial.findUnique({
+      where: { id: materialId },
+      select: { status: true },
+    });
+    return { materialId, status: current?.status || 'UNKNOWN' };
+  }
+
+  // 2. Load material with purchase context
+  const material = await prisma.packageMaterial.findUniqueOrThrow({
+    where: { id: materialId },
+    include: { purchase: true },
+  });
+
+  const purchaseConfig = (material.purchase.config as any) || {};
+  const planCtx = (material.planContext as any) || {};
+
+  try {
+    // 3. Load teacher context
+    const snapshot = await agentMemoryService.getFullMemorySnapshot(teacherId);
+    const studentGroups = extractStudentGroups(snapshot?.classrooms || []);
+
+    // 4. Route to appropriate engine
+    let content: any;
+    let tokensUsed = 0;
+    let modelUsed: string = config.gemini.models.flash;
+
+    const topic = planCtx.topic || material.title;
+    const standards = planCtx.standards || [];
+    const gradeLevel = purchaseConfig.gradeLevel || '';
+    const curriculum = purchaseConfig.curriculum || 'AMERICAN';
+    const additionalCtx = [
+      material.title ? `Title: ${material.title}` : '',
+      material.description ? `Description: ${material.description}` : '',
+      standards.length > 0 ? `Standards: ${standards.join(', ')}` : '',
+      material.teacherNotes ? `Teacher notes: ${material.teacherNotes}` : '',
+    ].filter(Boolean).join('\n');
+
+    switch (material.materialType) {
+      case 'LESSON': {
+        const lesson = await contentGenerationService.generateLesson(teacherId, {
+          topic,
+          subject: material.subject as any,
+          gradeLevel,
+          curriculum,
+          lessonType: 'full',
+          includeActivities: true,
+          includeAssessment: true,
+          additionalContext: additionalCtx,
+        });
+        content = lesson;
+        tokensUsed = lesson.tokensUsed || 0;
+        modelUsed = lesson.modelUsed === 'pro' ? config.gemini.models.pro : config.gemini.models.flash;
+        break;
+      }
+
+      case 'QUIZ': {
+        const quizContent = `Topic: ${topic}. ${material.description || ''}. Standards: ${standards.join(', ')}`;
+        const quiz = await contentGenerationService.generateQuiz(teacherId, `pkg-${materialId}`, {
+          content: quizContent,
+          title: material.title,
+          questionCount: 10,
+          questionTypes: ['multiple_choice', 'true_false', 'short_answer'],
+          difficulty: 'mixed',
+          gradeLevel,
+        });
+        content = quiz;
+        tokensUsed = quiz.tokensUsed || 0;
+        break;
+      }
+
+      case 'FLASHCARDS': {
+        const fcContent = `Topic: ${topic}. ${material.description || ''}. Standards: ${standards.join(', ')}`;
+        const flashcards = await contentGenerationService.generateFlashcards(teacherId, `pkg-${materialId}`, {
+          content: fcContent,
+          title: material.title,
+          cardCount: 15,
+          includeHints: true,
+          gradeLevel,
+        });
+        content = flashcards;
+        tokensUsed = flashcards.tokensUsed || 0;
+        break;
+      }
+
+      // For types without standalone engines, use enhanced Gemini prompts
+      default: {
+        const result = await generateEnhancedMaterial(material, planCtx, teacherId, purchaseConfig);
+        content = result.content;
+        tokensUsed = result.tokensUsed;
+        modelUsed = result.modelUsed;
+        break;
+      }
+    }
+
+    // 5. Differentiation (non-fatal)
+    let differentiated: any = null;
+    if (studentGroups.length > 0 && content) {
+      try {
+        differentiated = await generateDifferentiatedVersions(
+          content,
+          material.materialType,
+          studentGroups
+        );
+      } catch (err) {
+        logger.warn('On-demand differentiation failed', {
+          materialId,
+          error: (err as Error).message,
+        });
+      }
+    }
+
+    // 6. Store result
+    await prisma.packageMaterial.update({
+      where: { id: materialId },
+      data: {
+        content: content as any,
+        differentiatedContent: differentiated as any,
+        status: 'PKG_GENERATED',
+        tokensUsed,
+        modelUsed,
+        generatedAt: new Date(),
+      },
+    });
+
+    // Update purchase counters
+    await prisma.packagePurchase.update({
+      where: { id: material.purchaseId },
+      data: {
+        generatedCount: { increment: 1 },
+        totalTokensUsed: { increment: tokensUsed },
+      },
+    });
+
+    logger.info('Material generated on-demand', {
+      materialId,
+      materialType: material.materialType,
+      tokensUsed,
+      modelUsed,
+    });
+
+    return { materialId, status: 'PKG_GENERATED' };
+  } catch (error) {
+    logger.error('On-demand material generation failed', {
+      materialId,
+      materialType: material.materialType,
+      error: error instanceof Error ? error.message : error,
+    });
+
+    await prisma.packageMaterial.update({
+      where: { id: materialId },
+      data: { status: 'PKG_FAILED' },
+    });
+
+    throw error;
+  }
+}
+
+/**
+ * Enhanced Gemini generation for material types without standalone engines
+ * (WORKSHEET, WARM_UP, EXIT_TICKET, ACTIVITY, HOMEWORK).
+ * Uses type-specific prompts with higher token budgets than the old generic prompt.
+ */
+async function generateEnhancedMaterial(
+  material: any,
+  planCtx: any,
+  teacherId: string,
+  purchaseConfig: any
+): Promise<{ content: any; tokensUsed: number; modelUsed: string }> {
+  const context = await contextAssemblerService.assembleContext(teacherId, 'CONTENT_GENERATION');
+  const additionalContext = contextAssemblerService.buildAdditionalContextString(context);
+
+  const topic = planCtx.topic || material.title;
+  const subject = material.subject || 'General';
+  const gradeLevel = purchaseConfig.gradeLevel || '';
+  const standards = (planCtx.standards || []).join(', ') || 'None specified';
+
+  // Type-specific prompt and token budget
+  const typePrompts: Record<string, { instruction: string; maxTokens: number; temp: number }> = {
+    WORKSHEET: {
+      instruction: `Create a comprehensive classroom worksheet with:
+- Clear title and student name/date fields
+- 8-12 practice problems progressing from basic recall to application
+- A mix of problem types (fill-in, short answer, multiple choice, word problems)
+- Clearly numbered questions with adequate space descriptions
+- An answer key section at the end with complete solutions and explanations
+- Bonus/challenge question for early finishers`,
+      maxTokens: 6000,
+      temp: 0.65,
+    },
+    WARM_UP: {
+      instruction: `Create a 5-minute warm-up activity with:
+- 3-5 quick review questions covering prerequisite skills
+- A brief "think about it" discussion prompt related to today's topic
+- Mix of question types (1 multiple choice, 1 true/false, 1-2 short answer)
+- Answer key with brief explanations`,
+      maxTokens: 3000,
+      temp: 0.6,
+    },
+    EXIT_TICKET: {
+      instruction: `Create a 3-question exit ticket assessment with:
+- Question 1: Basic recall/understanding (easier)
+- Question 2: Application of the concept (medium)
+- Question 3: Analysis or extension (harder)
+- Student self-assessment: "Rate your understanding: 1-2-3-4"
+- Answer key with scoring guide (what constitutes proficient vs. needs review)`,
+      maxTokens: 3000,
+      temp: 0.6,
+    },
+    ACTIVITY: {
+      instruction: `Create a hands-on classroom activity with:
+- Activity title and estimated duration (15-25 minutes)
+- Learning objectives (2-3 specific objectives)
+- Materials needed (be specific and realistic for a classroom)
+- Setup instructions for the teacher
+- Step-by-step student directions (numbered, clear for the grade level)
+- Discussion questions (3-4 questions to debrief the activity)
+- Assessment: How to evaluate student understanding from this activity
+- Differentiation tips for struggling and advanced learners`,
+      maxTokens: 5000,
+      temp: 0.7,
+    },
+    HOMEWORK: {
+      instruction: `Create a homework assignment with:
+- Clear title with estimated completion time (15-30 minutes)
+- Brief parent/guardian note explaining what was learned in class
+- 6-10 practice problems reinforcing today's lesson
+- 1-2 real-world application problems connecting to daily life
+- A reflection question: "What was the most challenging part?"
+- Complete answer key with worked solutions
+- Optional extension activity for students who want extra practice`,
+      maxTokens: 5000,
+      temp: 0.65,
+    },
+  };
+
+  const typeConfig = typePrompts[material.materialType] || typePrompts.WORKSHEET;
+
+  const prompt = `You are an expert K-8 teacher creating high-quality classroom materials.
+
+Subject: ${subject}
+Grade Level: ${gradeLevel}
+Topic: ${topic}
+Standards: ${standards}
+Material Type: ${material.materialType.replace(/_/g, ' ')}
+Title: ${material.title}
+Description: ${material.description || planCtx.notes || ''}
+${material.teacherNotes ? `Teacher Notes: ${material.teacherNotes}` : ''}
+
+${additionalContext}
+
+${typeConfig.instruction}
+
+IMPORTANT: Create complete, print-ready content. Every section should have full text, not placeholders.
+
+Return JSON:
+{
+  "title": "${material.title}",
+  "subject": "${subject}",
+  "topic": "${topic}",
+  "gradeLevel": "${gradeLevel}",
+  "standards": [${(planCtx.standards || []).map((s: string) => `"${s}"`).join(', ')}],
+  "objectives": ["objective 1", "objective 2"],
+  "duration": "estimated minutes",
+  "sections": [
+    {
+      "title": "Section Title",
+      "content": "Full section content with all problems, questions, or instructions"
+    }
+  ],
+  "answerKey": [
+    { "question": "Q1", "answer": "Full answer with explanation" }
+  ],
+  "teacherNotes": "Implementation tips"
+}`;
+
+  const modelName = config.gemini.models.flash;
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+    generationConfig: {
+      temperature: typeConfig.temp,
+      maxOutputTokens: typeConfig.maxTokens,
+      responseMimeType: 'application/json',
+    },
+  });
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text().trim();
+  const tokensUsed = result.response.usageMetadata?.totalTokenCount || 1000;
+
+  let content: any;
+  try {
+    const raw = extractJSON(text);
+    content = JSON.parse(repairJSON(raw));
+  } catch {
+    content = { rawText: text };
+  }
+
+  return { content, tokensUsed, modelUsed: modelName };
+}
+
+/**
+ * Generate all pending materials for a package sequentially.
+ * Used by the "Generate All" button via BullMQ.
+ */
+async function generateAllPendingMaterials(
+  purchaseId: string,
+  teacherId: string,
+  onProgress?: (generated: number, total: number) => void
+): Promise<{ generated: number; failed: number; total: number }> {
+  const pending = await prisma.packageMaterial.findMany({
+    where: { purchaseId, status: 'PKG_PENDING' },
+    orderBy: [{ dayOfWeek: 'asc' }, { sortOrder: 'asc' }],
+  });
+
+  let generated = 0;
+  let failed = 0;
+
+  for (const mat of pending) {
+    try {
+      await generateMaterialOnDemand(mat.id, teacherId);
+      generated++;
+      onProgress?.(generated, pending.length);
+    } catch (err) {
+      logger.error('Bulk material generation failed', {
+        materialId: mat.id,
+        error: (err as Error).message,
+      });
+      failed++;
+    }
+  }
+
+  return { generated, failed, total: pending.length };
+}
+
+// =============================================================================
+// EMAIL NOTIFICATION HELPERS
+// =============================================================================
+
+async function sendPackagePlanReadyNotification(
+  teacherId: string,
+  purchaseId: string,
+  packageName: string,
+  totalMaterials: number,
+  totalWeeks: number
+): Promise<void> {
+  const teacher = await prisma.teacher.findUnique({
+    where: { id: teacherId },
+    select: { email: true, firstName: true, lastName: true },
+  });
+  if (!teacher) return;
+
+  const teacherName = [teacher.firstName, teacher.lastName].filter(Boolean).join(' ') || 'Teacher';
+  const packageUrl = `${config.frontendUrl}/teacher/store/my-packages/${purchaseId}`;
+
+  await emailService.sendPackageReadyEmail(
+    teacher.email,
+    teacherName,
+    packageName,
+    totalMaterials,
+    totalWeeks,
+    packageUrl
+  );
+}
 
 async function sendPackageReadyNotification(
   teacherId: string,
@@ -1117,7 +1458,7 @@ async function sendPackageReadyNotification(
   if (!teacher) return;
 
   const teacherName = [teacher.firstName, teacher.lastName].filter(Boolean).join(' ') || 'Teacher';
-  const packageUrl = `${config.frontendUrl}/teacher/my-packages/${purchaseId}`;
+  const packageUrl = `${config.frontendUrl}/teacher/store/my-packages/${purchaseId}`;
 
   await emailService.sendPackageReadyEmail(
     teacher.email,
@@ -1227,4 +1568,5 @@ export const packageGenerationService = {
   regenerateSingleMaterial,
   deliverNextWeek,
   previewPackagePlan,
+  generateMaterialOnDemand,
 };

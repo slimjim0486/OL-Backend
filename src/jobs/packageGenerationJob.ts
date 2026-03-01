@@ -120,7 +120,7 @@ async function processPackageGenerationJob(
       return { success: true, purchaseId, materialsGenerated: 1 };
     }
 
-    // Full package generation
+    // Full package planning (creates records, skips bulk generation)
     await job.updateProgress(5);
     await packageGenerationService.generatePackage(purchaseId);
     await job.updateProgress(100);
