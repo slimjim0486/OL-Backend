@@ -165,6 +165,63 @@ function countPlanMaterials(plan: PackagePlan): number {
 }
 
 // =============================================================================
+// CONFIG RESOLUTION — Resolve package config from agent onboarding data
+// =============================================================================
+
+interface ResolvedPackageConfig {
+  gradeLevel: string;
+  curriculum: string;
+  subjects: string[];
+  topic: string;
+  teacherRequest: string;
+  weekStartDate?: string;
+  [key: string]: unknown;
+}
+
+async function resolvePackageConfig(
+  teacherId: string,
+  explicitConfig: Record<string, any>,
+  tier: PackageTier
+): Promise<ResolvedPackageConfig> {
+  const agent = await agentMemoryService.getAgent(teacherId);
+
+  // Grade: selectedGrade (new) > gradeLevel (old) > agent first grade > ''
+  const gradeLevel =
+    explicitConfig.selectedGrade ||
+    explicitConfig.gradeLevel ||
+    (agent?.gradesTaught as string[] || [])[0] ||
+    '';
+
+  // Curriculum: explicit (old) > agent curriculum > 'AMERICAN'
+  const curriculum =
+    explicitConfig.curriculum ||
+    agent?.curriculumType ||
+    'AMERICAN';
+
+  // Subjects: selectedSubjects (new) > subjects (old) > agent subjects > []
+  const subjects: string[] =
+    (Array.isArray(explicitConfig.selectedSubjects) && explicitConfig.selectedSubjects.length > 0
+      ? explicitConfig.selectedSubjects
+      : Array.isArray(explicitConfig.subjects) && explicitConfig.subjects.length > 0
+        ? explicitConfig.subjects
+        : (agent?.subjectsTaught as string[]) || []
+    ).filter((s: unknown) => typeof s === 'string' && (s as string).trim());
+
+  // Topic: teacherRequest (new) > topic (old) > ''
+  const teacherRequest = (explicitConfig.teacherRequest || explicitConfig.topic || '').trim();
+
+  return {
+    ...explicitConfig,
+    gradeLevel,
+    curriculum,
+    subjects,
+    topic: teacherRequest, // backward compat: downstream code reads `topic`
+    teacherRequest,
+    weekStartDate: explicitConfig.weekStartDate,
+  };
+}
+
+// =============================================================================
 // MAIN ENTRY POINT
 // =============================================================================
 
@@ -378,7 +435,12 @@ async function planPackage(purchaseId: string): Promise<PackagePlan> {
     where: { id: purchaseId },
   });
 
-  const purchaseConfig = (purchase.config as any) || {};
+  // Config should already be resolved at checkout time, but resolve again as safety net
+  const rawConfig = (purchase.config as any) || {};
+  const purchaseConfig = rawConfig.gradeLevel
+    ? rawConfig
+    : await resolvePackageConfig(purchase.teacherId, rawConfig, purchase.packageTier);
+
   const context = await contextAssemblerService.assembleContext(purchase.teacherId, 'WEEKLY_PREP');
   const additionalContext = contextAssemblerService.buildAdditionalContextString(context);
 
@@ -435,9 +497,18 @@ function buildPlanningPrompt(
   let subjectConstraint = '';
   if (purchaseConfig.subjects?.length) {
     subjectConstraint = `Subjects: ${purchaseConfig.subjects.join(', ')}`;
-  } else if (purchaseConfig.topic) {
-    subjectConstraint = `Topic focus: ${purchaseConfig.topic}`;
   }
+
+  // teacherRequest (new) and topic (old, or mapped from teacherRequest) —
+  // avoid duplicating both in the prompt since resolvePackageConfig sets topic = teacherRequest.
+  const teacherRequest = purchaseConfig.teacherRequest || '';
+  const topicOnly = !teacherRequest && purchaseConfig.topic ? purchaseConfig.topic : '';
+  if (topicOnly && !subjectConstraint) {
+    subjectConstraint = `Topic focus: ${topicOnly}`;
+  }
+  const teacherRequestLine = teacherRequest
+    ? `\nTeacher's request: "${teacherRequest}"`
+    : '';
 
   const startWeekNum = weekNumberOffset;
   const endWeekNum = weekNumberOffset + totalWeeks - 1;
@@ -459,7 +530,7 @@ ${subjectConstraint ? subjectConstraint : 'Cover all subjects the teacher teache
 Plan weeks ${startWeekNum} through ${endWeekNum} (${totalWeeks} weeks total for this batch).
 Week start dates: ${weekDates.join(', ')}
 ${purchaseConfig.gradeLevel ? `Grade level: ${purchaseConfig.gradeLevel}` : ''}
-${purchaseConfig.curriculum ? `Curriculum: ${purchaseConfig.curriculum}` : ''}
+${purchaseConfig.curriculum ? `Curriculum: ${purchaseConfig.curriculum}` : ''}${teacherRequestLine}
 
 ${additionalContext}
 
@@ -1107,8 +1178,9 @@ async function generateMaterialOnDemand(
 
     const topic = planCtx.topic || material.title;
     const standards = planCtx.standards || [];
-    const gradeLevel = purchaseConfig.gradeLevel || '';
-    const curriculum = purchaseConfig.curriculum || 'AMERICAN';
+    // Use resolved config values; fall back to agent data if purchase config is old-format
+    const gradeLevel = purchaseConfig.gradeLevel || snapshot?.agent?.gradesTaught?.[0] || '';
+    const curriculum = purchaseConfig.curriculum || snapshot?.agent?.curriculumType || 'AMERICAN';
     const additionalCtx = [
       material.title ? `Title: ${material.title}` : '',
       material.description ? `Description: ${material.description}` : '',
@@ -1477,13 +1549,7 @@ async function sendPackageReadyNotification(
 async function previewPackagePlan(
   teacherId: string,
   tier: PackageTier,
-  previewConfig: {
-    subjects?: string[];
-    topic?: string;
-    gradeLevel: string;
-    curriculum: string;
-    weekStartDate: string;
-  }
+  previewConfig: Record<string, any>
 ): Promise<{
   plan: PackagePlan | SpecialtyPlan;
   tier: PackageTier;
@@ -1491,8 +1557,13 @@ async function previewPackagePlan(
   totalWeeks: number;
   previewWeeks?: number;
   isTruncatedPreview?: boolean;
+  resolvedConfig?: ResolvedPackageConfig;
 }> {
   const product = getDTCProduct(tier);
+
+  // Resolve config from agent data (fills in gradeLevel, curriculum, subjects)
+  const resolved = await resolvePackageConfig(teacherId, previewConfig || {}, tier);
+
   const context = await contextAssemblerService.assembleContext(teacherId, 'WEEKLY_PREP');
   const additionalContext = contextAssemblerService.buildAdditionalContextString(context);
 
@@ -1508,18 +1579,19 @@ async function previewPackagePlan(
       tier,
       totalMaterials: plan.items.length,
       totalWeeks: 1,
+      resolvedConfig: resolved,
     };
   }
 
   // Standard packages return week-by-week plan
-  const weekStartDate = previewConfig.weekStartDate
-    ? new Date(previewConfig.weekStartDate)
+  const weekStartDate = resolved.weekStartDate
+    ? new Date(resolved.weekStartDate)
     : getNextMonday();
 
   const mockPurchase = {
     packageTier: tier,
     packageName: product.name,
-    config: previewConfig,
+    config: resolved,
   };
 
   // Preview is intentionally capped so checkout remains responsive.
@@ -1532,7 +1604,7 @@ async function previewPackagePlan(
   const prompt = buildPlanningPrompt(
     mockPurchase,
     previewProduct,
-    previewConfig,
+    resolved,
     additionalContext,
     weekStartDate,
     1,
@@ -1558,6 +1630,7 @@ async function previewPackagePlan(
     totalWeeks,
     previewWeeks: plan.weeks.length,
     isTruncatedPreview,
+    resolvedConfig: resolved,
   };
 }
 
@@ -1569,4 +1642,5 @@ export const packageGenerationService = {
   deliverNextWeek,
   previewPackagePlan,
   generateMaterialOnDemand,
+  resolvePackageConfig,
 };

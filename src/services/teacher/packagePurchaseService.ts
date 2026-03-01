@@ -12,6 +12,7 @@ import {
 import { prisma } from '../../config/database.js';
 import { config } from '../../config/index.js';
 import { getDTCProduct, getDTCProductByPriceId } from '../../config/stripeProductsDTC.js';
+import { packageGenerationService } from './packageGenerationService.js';
 import { stripeService } from '../stripe/index.js';
 import { emailService } from '../email/emailService.js';
 import { logger } from '../../utils/logger.js';
@@ -27,6 +28,10 @@ export interface CheckoutConfig {
   curriculum?: string;
   schoolYear?: string;
   weekStartDate?: string;
+  // New format fields
+  selectedGrade?: string;
+  selectedSubjects?: string[];
+  teacherRequest?: string;
   [key: string]: unknown;
 }
 
@@ -57,6 +62,26 @@ async function createCheckout(params: CreateCheckoutParams): Promise<{ checkoutU
 
   const stripe = stripeService.getStripe();
   if (!stripe) throw new Error('Stripe is not configured');
+
+  // Resolve config from agent onboarding data — stores resolved values so
+  // downstream generation doesn't need to re-query agent data.
+  const resolvedConfig = await packageGenerationService.resolvePackageConfig(
+    teacherId,
+    purchaseConfig,
+    tier
+  );
+
+  // Stripe metadata values are limited to 500 chars. Store only essential fields
+  // to avoid truncation. The full resolved config goes into PackagePurchase.config
+  // via the webhook handler.
+  const metadataConfig = {
+    gradeLevel: resolvedConfig.gradeLevel,
+    curriculum: resolvedConfig.curriculum,
+    subjects: resolvedConfig.subjects,
+    topic: (resolvedConfig.topic || '').substring(0, 200),
+    teacherRequest: (resolvedConfig.teacherRequest || '').substring(0, 200),
+    weekStartDate: resolvedConfig.weekStartDate,
+  };
 
   // Ensure teacher has a Stripe customer ID
   const teacher = await prisma.teacher.findUniqueOrThrow({
@@ -92,7 +117,7 @@ async function createCheckout(params: CreateCheckoutParams): Promise<{ checkoutU
       packageCategory: product.category,
       deliveryType: product.deliveryType,
       source: 'dtc_store',
-      config: JSON.stringify(purchaseConfig),
+      config: JSON.stringify(metadataConfig),
     },
     ...(mode === 'subscription' ? {
       subscription_data: {

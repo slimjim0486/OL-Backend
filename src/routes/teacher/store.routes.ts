@@ -35,29 +35,29 @@ function validatePackageConfig(
     return { valid: false, error: 'Invalid package tier.' };
   }
 
-  if (!packageConfig?.gradeLevel || !packageConfig?.curriculum) {
-    return {
-      valid: false,
-      error: 'Missing required fields: config.gradeLevel and config.curriculum.',
-    };
-  }
+  // gradeLevel and curriculum are no longer required — they're resolved from
+  // agent onboarding data in resolvePackageConfig(). Accept both old format
+  // (explicit gradeLevel/curriculum) and new format (selectedGrade/teacherRequest).
 
-  const subjects = Array.isArray(packageConfig?.subjects)
-    ? packageConfig.subjects.filter((s: unknown) => typeof s === 'string' && s.trim())
-    : [];
+  // Subject validation: accept selectedSubjects (new) or subjects (old)
+  const subjects = [
+    ...(Array.isArray(packageConfig?.selectedSubjects) ? packageConfig.selectedSubjects : []),
+    ...(Array.isArray(packageConfig?.subjects) ? packageConfig.subjects : []),
+  ].filter((s: unknown) => typeof s === 'string' && (s as string).trim());
 
   if (product.requiresSubject && subjects.length === 0) {
     return {
       valid: false,
-      error: 'This package requires at least one subject in config.subjects.',
+      error: 'This package requires at least one subject.',
     };
   }
 
-  const topic = typeof packageConfig?.topic === 'string' ? packageConfig.topic.trim() : '';
+  // Topic validation: accept teacherRequest (new) or topic (old)
+  const topic = (packageConfig?.teacherRequest || packageConfig?.topic || '').trim();
   if (product.requiresTopic && !topic) {
     return {
       valid: false,
-      error: 'This package requires a topic in config.topic.',
+      error: 'This package requires a topic or description of what you need.',
     };
   }
 
