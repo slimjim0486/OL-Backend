@@ -18,6 +18,7 @@ import {
   type TeacherContent,
 } from '@prisma/client';
 import { exportContent, exportMultipleContent } from './exportService.js';
+import { generateLessonPPTX } from './presentonService.js';
 import { packageGenerationService } from './packageGenerationService.js';
 import { uploadFile } from '../storage/storageService.js';
 import { logger } from '../../utils/logger.js';
@@ -691,28 +692,18 @@ async function exportPackageZip(
     throw new AppError('No generated materials available to export yet', 400);
   }
 
-  let pdfBuffer: Buffer | null = null;
-  let pptxBuffer: Buffer | null = null;
   const generationWarnings: string[] = [];
-  const [pdfResult, pptxResult] = await Promise.allSettled([
-    generatePackagePdf(purchase, options),
-    buildPackagePptx(purchase),
-  ]);
 
-  if (pdfResult.status === 'fulfilled') {
-    pdfBuffer = pdfResult.value;
-  } else {
-    generationWarnings.push(`PDF generation failed: ${errorToMessage(pdfResult.reason)}`);
+  // Generate combined PDF for all materials
+  let pdfBuffer: Buffer | null = null;
+  try {
+    pdfBuffer = await generatePackagePdf(purchase, options);
+  } catch (error) {
+    generationWarnings.push(`PDF generation failed: ${errorToMessage(error)}`);
   }
 
-  if (pptxResult.status === 'fulfilled') {
-    pptxBuffer = pptxResult.value;
-  } else {
-    generationWarnings.push(`PPTX generation failed: ${errorToMessage(pptxResult.reason)}`);
-  }
-
-  if (!pdfBuffer && !pptxBuffer) {
-    logger.error('Package export generation failed (all formats)', {
+  if (!pdfBuffer) {
+    logger.error('Package export generation failed', {
       purchaseId,
       warnings: generationWarnings,
     });
@@ -722,12 +713,35 @@ async function exportPackageZip(
   const zip = new JSZip();
   const baseName = slugify(purchase.packageName);
   const packageTitle = safeFilename(purchase.packageName, 'Package');
-  if (pdfBuffer) {
-    zip.file(`${baseName}/${packageTitle} - Full Package.pdf`, pdfBuffer);
+  zip.file(`${baseName}/${packageTitle} - Full Package.pdf`, pdfBuffer);
+
+  // Generate individual Presenton PPTX for each LESSON material
+  const lessonMaterials = materials.filter((m) => m.materialType === 'LESSON');
+  let pptxCount = 0;
+  for (const lessonMat of lessonMaterials) {
+    try {
+      const teacherContent = buildTeacherContentLike(lessonMat, purchase);
+      const pptxResult = await generateLessonPPTX(teacherContent, {
+        theme: 'professional-blue',
+        slideStyle: 'focused',
+        includeAnswers: true,
+        includeTeacherNotes: true,
+        includeInfographic: false,
+        language: 'English',
+      });
+      const lessonTitle = safeFilename(lessonMat.title, 'Lesson');
+      zip.file(`${baseName}/presentations/${lessonTitle}.pptx`, pptxResult.data);
+      pptxCount++;
+    } catch (error) {
+      logger.warn('Presenton PPTX failed for lesson in package ZIP; skipping', {
+        materialId: lessonMat.id,
+        purchaseId,
+        error: errorToMessage(error),
+      });
+      generationWarnings.push(`PPTX for "${lessonMat.title}" skipped: ${errorToMessage(error)}`);
+    }
   }
-  if (pptxBuffer) {
-    zip.file(`${baseName}/${packageTitle} - Full Package.pptx`, pptxBuffer);
-  }
+
   zip.file(
     `${baseName}/README.txt`,
     [
@@ -736,9 +750,9 @@ async function exportPackageZip(
       `Materials included: ${materials.length}`,
       `Generated at: ${new Date().toISOString()}`,
       '',
-      'This download contains generated package assets.',
-      ...(pdfBuffer ? ['- Included: Full Package PDF'] : ['- PDF was not included due to a generation issue.']),
-      ...(pptxBuffer ? ['- Included: Full Package PPTX'] : ['- PPTX was not included due to a generation issue.']),
+      'This download contains:',
+      '- Full Package PDF (all materials)',
+      ...(pptxCount > 0 ? [`- ${pptxCount} lesson presentation(s) in /presentations/ (Presenton PPTX)`] : []),
       ...(generationWarnings.length > 0 ? ['', 'Generation notes:', ...generationWarnings] : []),
     ].join('\n')
   );
@@ -797,24 +811,38 @@ async function exportMaterial(
     }
   }
 
-  let pdfBuffer: Buffer | null = null;
-  let pptxBuffer: Buffer | null = null;
   const generationWarnings: string[] = [];
-  const [pdfResult, pptxResult] = await Promise.allSettled([
-    generateMaterialPdf(material, material.purchase),
-    buildSingleMaterialPptx(material, material.purchase),
-  ]);
+  const isLesson = material.materialType === 'LESSON';
 
-  if (pdfResult.status === 'fulfilled') {
-    pdfBuffer = pdfResult.value;
-  } else {
-    generationWarnings.push(`PDF generation failed: ${errorToMessage(pdfResult.reason)}`);
+  // Generate PDF for all material types
+  let pdfBuffer: Buffer | null = null;
+  try {
+    pdfBuffer = await generateMaterialPdf(material, material.purchase);
+  } catch (error) {
+    generationWarnings.push(`PDF generation failed: ${errorToMessage(error)}`);
   }
 
-  if (pptxResult.status === 'fulfilled') {
-    pptxBuffer = pptxResult.value;
-  } else {
-    generationWarnings.push(`PPTX generation failed: ${errorToMessage(pptxResult.reason)}`);
+  // Generate PPTX only for LESSON materials, using Presenton
+  let pptxBuffer: Buffer | null = null;
+  if (isLesson) {
+    try {
+      const teacherContent = buildTeacherContentLike(material, material.purchase);
+      const pptxResult = await generateLessonPPTX(teacherContent, {
+        theme: 'professional-blue',
+        slideStyle: 'focused',
+        includeAnswers: true,
+        includeTeacherNotes: true,
+        includeInfographic: false,
+        language: 'English',
+      });
+      pptxBuffer = pptxResult.data;
+    } catch (error) {
+      logger.warn('Presenton PPTX generation failed for lesson; skipping PPTX', {
+        materialId,
+        error: errorToMessage(error),
+      });
+      generationWarnings.push(`PPTX generation failed: ${errorToMessage(error)}`);
+    }
   }
 
   if (!pdfBuffer && !pptxBuffer) {
@@ -835,17 +863,17 @@ async function exportMaterial(
   if (pptxBuffer) {
     zip.file(`${materialSlug}/${materialTitle}.pptx`, pptxBuffer);
   }
-  zip.file(
-    `${materialSlug}/README.txt`,
-    [
-      `Material: ${material.title}`,
-      `Generated at: ${new Date().toISOString()}`,
-      '',
-      ...(pdfBuffer ? ['- Included: PDF'] : ['- PDF was not included due to a generation issue.']),
-      ...(pptxBuffer ? ['- Included: PPTX'] : ['- PPTX was not included due to a generation issue.']),
-      ...(generationWarnings.length > 0 ? ['', 'Generation notes:', ...generationWarnings] : []),
-    ].join('\n')
-  );
+  const readmeLines = [
+    `Material: ${material.title}`,
+    `Generated at: ${new Date().toISOString()}`,
+    '',
+    ...(pdfBuffer ? ['- Included: PDF'] : ['- PDF was not included due to a generation issue.']),
+    ...(isLesson && pptxBuffer ? ['- Included: PPTX (Presenton presentation)'] : []),
+    ...(isLesson && !pptxBuffer ? ['- PPTX was not included due to a generation issue.'] : []),
+    ...(!isLesson ? ['- PPTX: Not applicable for this material type (PDF only).'] : []),
+    ...(generationWarnings.length > 0 ? ['', 'Generation notes:', ...generationWarnings] : []),
+  ];
+  zip.file(`${materialSlug}/README.txt`, readmeLines.join('\n'));
 
   const zipBuffer = await zip.generateAsync({
     type: 'nodebuffer',
