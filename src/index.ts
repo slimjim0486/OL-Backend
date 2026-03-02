@@ -45,8 +45,6 @@ import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
 import { scheduleWeeklyPrepDelivery } from './jobs/scheduledWeeklyPrepJob.js';
 import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/monthlyReviewJob.js';
 import { scheduleDownloadReminders } from './jobs/downloadReminderJob.js';
-import { initializePackageDeliveryCron } from './jobs/packageDeliveryCronJob.js';
-import { initializeWeeklyBoxJob } from './jobs/weeklyBoxJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -336,22 +334,6 @@ async function startServer(): Promise<void> {
       logger.info('Batch grading job initialized');
     } catch (error) {
       logger.warn('Batch grading job initialization skipped');
-    }
-
-    // Initialize DTC progressive delivery cron
-    try {
-      await initializePackageDeliveryCron();
-      logger.info('Package delivery cron initialized');
-    } catch (error) {
-      logger.warn('Package delivery cron initialization skipped');
-    }
-
-    // Initialize DTC Weekly Box recurring generation cron
-    try {
-      await initializeWeeklyBoxJob();
-      logger.info('Weekly Box cron initialized');
-    } catch (error) {
-      logger.warn('Weekly Box cron initialization skipped');
     }
 
     // Start server

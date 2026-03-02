@@ -15,8 +15,7 @@ import { config } from '../../config/index.js';
 import { agentMemoryService } from './agentMemoryService.js';
 import { contextAssemblerService } from './contextAssemblerService.js';
 import { taskRouterService, IntentType } from './taskRouterService.js';
-// agentContentBridge is no longer called from the orchestrator;
-// all singular content intents now redirect to standalone pages with prefilled params.
+import { agentContentBridge } from './agentContentBridge.js';
 import { agentFlowPolicy } from './agentFlowPolicy.js';
 import type { AgentFlowType } from './agentFlowPolicy.js';
 import { weeklyPrepService } from './weeklyPrepService.js';
@@ -1335,6 +1334,7 @@ async function processMessage(
   let assistantContent: string;
   let actionResult: AgentResponse['actionResult'] | undefined;
   let totalTokens = 0;
+  let bridgeHandledInteraction = false;
   let intent: { type: IntentType; confidence: number; extractedParams: Record<string, any> } = {
     type: 'chat',
     confidence: 1,
@@ -1529,10 +1529,21 @@ async function processMessage(
           followUpQuestion
         );
       } else {
-        actionResult = buildLessonRedirectActionResult(mergedLessonPrefill, missingLessonFields);
-        assistantContent = actionResult.preview;
+        try {
+          const bridgeResult = await agentContentBridge.generateLessonWithContext(
+            teacherId,
+            { type: 'generate_lesson', confidence: intent.confidence, extractedParams: { ...mergedLessonPrefill } },
+            sessionId
+          );
+          actionResult = { type: 'lesson', content: bridgeResult.content, preview: bridgeResult.preview, contentId: bridgeResult.contentId, interactionId: bridgeResult.interactionId };
+          assistantContent = bridgeResult.preview;
+          totalTokens = bridgeResult.tokensUsed;
+          bridgeHandledInteraction = true;
+        } catch (err) {
+          logger.error('In-chat lesson generation failed', { error: err, teacherId });
+          assistantContent = `I ran into an issue generating your lesson. You can try again or use the Lesson page directly.`;
+        }
       }
-      totalTokens = 0;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
     // ── QUIZ ──
@@ -1553,10 +1564,21 @@ async function processMessage(
         assistantContent = followUpQuestion;
         actionResult = buildQuizFollowUpActionResult(mergedQuizPrefill, missingQuizFields, followUpQuestion);
       } else {
-        actionResult = buildQuizRedirectActionResult(mergedQuizPrefill);
-        assistantContent = actionResult.preview;
+        try {
+          const bridgeResult = await agentContentBridge.generateQuizWithContext(
+            teacherId,
+            { type: 'generate_quiz', confidence: intent.confidence, extractedParams: { ...mergedQuizPrefill } },
+            sessionId
+          );
+          actionResult = { type: 'quiz', content: bridgeResult.content, preview: bridgeResult.preview, contentId: bridgeResult.contentId, interactionId: bridgeResult.interactionId };
+          assistantContent = bridgeResult.preview;
+          totalTokens = bridgeResult.tokensUsed;
+          bridgeHandledInteraction = true;
+        } catch (err) {
+          logger.error('In-chat quiz generation failed', { error: err, teacherId });
+          assistantContent = `I ran into an issue generating your quiz. You can try again or use the Quiz page directly.`;
+        }
       }
-      totalTokens = 0;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
     // ── FLASHCARDS ──
@@ -1577,10 +1599,21 @@ async function processMessage(
         assistantContent = followUpQuestion;
         actionResult = buildFlashcardsFollowUpActionResult(mergedFlashcardsPrefill, missingFlashcardsFields, followUpQuestion);
       } else {
-        actionResult = buildFlashcardsRedirectActionResult(mergedFlashcardsPrefill);
-        assistantContent = actionResult.preview;
+        try {
+          const bridgeResult = await agentContentBridge.generateFlashcardsWithContext(
+            teacherId,
+            { type: 'generate_flashcards', confidence: intent.confidence, extractedParams: { ...mergedFlashcardsPrefill } },
+            sessionId
+          );
+          actionResult = { type: 'flashcards', content: bridgeResult.content, preview: bridgeResult.preview, contentId: bridgeResult.contentId, interactionId: bridgeResult.interactionId };
+          assistantContent = bridgeResult.preview;
+          totalTokens = bridgeResult.tokensUsed;
+          bridgeHandledInteraction = true;
+        } catch (err) {
+          logger.error('In-chat flashcards generation failed', { error: err, teacherId });
+          assistantContent = `I ran into an issue generating your flashcards. You can try again or use the Flashcards page directly.`;
+        }
       }
-      totalTokens = 0;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
     // ── SUB PLAN ──
@@ -1601,10 +1634,21 @@ async function processMessage(
         assistantContent = followUpQuestion;
         actionResult = buildSubPlanFollowUpActionResult(mergedSubPlanPrefill, missingSubPlanFields, followUpQuestion);
       } else {
-        actionResult = buildSubPlanRedirectActionResult(mergedSubPlanPrefill);
-        assistantContent = actionResult.preview;
+        try {
+          const bridgeResult = await agentContentBridge.generateSubPlanWithContext(
+            teacherId,
+            { type: 'generate_sub_plan', confidence: intent.confidence, extractedParams: { ...mergedSubPlanPrefill } },
+            sessionId
+          );
+          actionResult = { type: 'sub_plan', content: bridgeResult.content, preview: bridgeResult.preview, contentId: bridgeResult.contentId, interactionId: bridgeResult.interactionId };
+          assistantContent = bridgeResult.preview;
+          totalTokens = bridgeResult.tokensUsed;
+          bridgeHandledInteraction = true;
+        } catch (err) {
+          logger.error('In-chat sub plan generation failed', { error: err, teacherId });
+          assistantContent = `I ran into an issue generating your substitute plan. You can try again or use the Sub Plans page directly.`;
+        }
       }
-      totalTokens = 0;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
     // ── IEP ──
@@ -1625,10 +1669,21 @@ async function processMessage(
         assistantContent = followUpQuestion;
         actionResult = buildIepFollowUpActionResult(mergedIepPrefill, missingIepFields, followUpQuestion);
       } else {
-        actionResult = buildIepRedirectActionResult(mergedIepPrefill);
-        assistantContent = actionResult.preview;
+        try {
+          const bridgeResult = await agentContentBridge.generateIEPWithContext(
+            teacherId,
+            { type: 'generate_iep', confidence: intent.confidence, extractedParams: { ...mergedIepPrefill } },
+            sessionId
+          );
+          actionResult = { type: 'iep', content: bridgeResult.content, preview: bridgeResult.preview, contentId: bridgeResult.contentId, interactionId: bridgeResult.interactionId };
+          assistantContent = bridgeResult.preview;
+          totalTokens = bridgeResult.tokensUsed;
+          bridgeHandledInteraction = true;
+        } catch (err) {
+          logger.error('In-chat IEP generation failed', { error: err, teacherId });
+          assistantContent = `I ran into an issue generating your IEP goals. You can try again or use the IEP Goals page directly.`;
+        }
       }
-      totalTokens = 0;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
     // ── CALENDAR / WEEKLY PREP ──
@@ -1686,17 +1741,37 @@ async function processMessage(
       };
       totalTokens = 0;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
-    } else if (
-      (intent.type === 'generate_parent_email' || intent.type === 'generate_report_comments') &&
-      intent.confidence >= 0.6
-    ) {
-      assistantContent = `Opening Communications for you now.`;
-      actionResult = {
-        type: 'communications',
-        content: { tab: intent.type === 'generate_parent_email' ? 'email' : 'report', prefillingSource: 'agent_chat' },
-        preview: assistantContent,
-      };
-      totalTokens = 0;
+    } else if (intent.type === 'generate_parent_email' && intent.confidence >= 0.6) {
+      try {
+        const bridgeResult = await agentContentBridge.generateParentEmailWithContext(
+          teacherId,
+          { type: 'generate_parent_email', confidence: intent.confidence, extractedParams: { ...intent.extractedParams } },
+          sessionId
+        );
+        actionResult = { type: 'parent_email', content: bridgeResult.content, preview: bridgeResult.preview, contentId: bridgeResult.contentId, interactionId: bridgeResult.interactionId };
+        assistantContent = bridgeResult.preview;
+        totalTokens = bridgeResult.tokensUsed;
+        bridgeHandledInteraction = true;
+      } catch (err) {
+        logger.error('In-chat parent email generation failed', { error: err, teacherId });
+        assistantContent = `I ran into an issue generating your parent email. You can try again or use the Communications page directly.`;
+      }
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+    } else if (intent.type === 'generate_report_comments' && intent.confidence >= 0.6) {
+      try {
+        const bridgeResult = await agentContentBridge.generateReportCommentsWithContext(
+          teacherId,
+          { type: 'generate_report_comments', confidence: intent.confidence, extractedParams: { ...intent.extractedParams } },
+          sessionId
+        );
+        actionResult = { type: 'report_comments', content: bridgeResult.content, preview: bridgeResult.preview, contentId: bridgeResult.contentId, interactionId: bridgeResult.interactionId };
+        assistantContent = bridgeResult.preview;
+        totalTokens = bridgeResult.tokensUsed;
+        bridgeHandledInteraction = true;
+      } catch (err) {
+        logger.error('In-chat report comments generation failed', { error: err, teacherId });
+        assistantContent = `I ran into an issue generating your report comments. You can try again or use the Communications page directly.`;
+      }
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
     // ── CONVERSATIONAL CHAT (fallback) ──
@@ -1713,18 +1788,25 @@ async function processMessage(
   }
 
   // 8. Record interaction (return id so UI can send approve/edit/regenerate feedback)
-  const interaction = await agentMemoryService.recordInteraction(agent.id, {
-    type: intent.type === 'chat' ? AgentInteractionType.CHAT : AgentInteractionType.CONTENT_GENERATION,
-    summary: truncate(message, 200),
-    input: message,
-    outputType: actionResult?.type || 'chat',
-    outputId: actionResult?.contentId,
-    tokensUsed: totalTokens,
-    modelUsed: actionResult ? config.gemini.models.flash : config.gemini.models.flash,
-  });
+  // Skip if the bridge already recorded the interaction (avoids double-recording)
+  let interactionId: string;
+  if (bridgeHandledInteraction && actionResult?.interactionId) {
+    interactionId = actionResult.interactionId;
+  } else {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
+      type: intent.type === 'chat' ? AgentInteractionType.CHAT : AgentInteractionType.CONTENT_GENERATION,
+      summary: truncate(message, 200),
+      input: message,
+      outputType: actionResult?.type || 'chat',
+      outputId: actionResult?.contentId,
+      tokensUsed: totalTokens,
+      modelUsed: actionResult ? config.gemini.models.flash : config.gemini.models.flash,
+    });
+    interactionId = interaction.id;
+  }
 
   const persistedActionResult = actionResult
-    ? ({ ...actionResult, interactionId: interaction.id } as AgentResponse['actionResult'])
+    ? ({ ...actionResult, interactionId } as AgentResponse['actionResult'])
     : undefined;
 
   // 9. Save assistant message
@@ -1770,7 +1852,7 @@ async function processMessage(
     message: assistantContent,
     sessionId,
     messageId: assistantMessage.id,
-    interactionId: interaction.id,
+    interactionId,
     sessionTitle: updatedSession.title,
     intent: intent.type,
     actionResult: persistedActionResult,

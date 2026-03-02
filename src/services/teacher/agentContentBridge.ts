@@ -20,6 +20,7 @@ export interface BridgeResult {
   tokensUsed: number;
   contentType: string;
   contentId?: string;
+  interactionId?: string;
 }
 
 // ============================================
@@ -50,9 +51,10 @@ async function generateLessonWithContext(
   });
 
   // Record interaction
+  let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordInteraction(agent.id, {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
       type: AgentInteractionType.CONTENT_GENERATION,
       summary: `Generated lesson: ${result.title}`,
       input: intent.extractedParams.topic,
@@ -60,6 +62,7 @@ async function generateLessonWithContext(
       tokensUsed: result.tokensUsed,
       modelUsed: result.modelUsed || 'flash',
     });
+    interactionId = interaction?.id;
   }
 
   return {
@@ -67,6 +70,7 @@ async function generateLessonWithContext(
     preview: `Created lesson: "${result.title}" with ${result.sections.length} sections`,
     tokensUsed: result.tokensUsed,
     contentType: 'lesson',
+    interactionId,
   };
 }
 
@@ -99,9 +103,10 @@ async function generateQuizWithContext(
     gradeLevel: intent.extractedParams.gradeLevel,
   });
 
+  let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordInteraction(agent.id, {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
       type: AgentInteractionType.CONTENT_GENERATION,
       summary: `Generated quiz: ${result.title} (${result.questions.length} questions)`,
       input: intent.extractedParams.topic,
@@ -109,6 +114,7 @@ async function generateQuizWithContext(
       tokensUsed: result.tokensUsed,
       modelUsed: 'flash',
     });
+    interactionId = interaction?.id;
   }
 
   return {
@@ -116,6 +122,7 @@ async function generateQuizWithContext(
     preview: `Created quiz: "${result.title}" with ${result.questions.length} questions (${result.totalPoints} points)`,
     tokensUsed: result.tokensUsed,
     contentType: 'quiz',
+    interactionId,
   };
 }
 
@@ -146,9 +153,10 @@ async function generateFlashcardsWithContext(
     gradeLevel: intent.extractedParams.gradeLevel,
   });
 
+  let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordInteraction(agent.id, {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
       type: AgentInteractionType.CONTENT_GENERATION,
       summary: `Generated flashcards: ${result.title} (${result.cards.length} cards)`,
       input: intent.extractedParams.topic,
@@ -156,6 +164,7 @@ async function generateFlashcardsWithContext(
       tokensUsed: result.tokensUsed,
       modelUsed: 'flash',
     });
+    interactionId = interaction?.id;
   }
 
   return {
@@ -163,6 +172,7 @@ async function generateFlashcardsWithContext(
     preview: `Created flashcard set: "${result.title}" with ${result.cards.length} cards`,
     tokensUsed: result.tokensUsed,
     contentType: 'flashcards',
+    interactionId,
   };
 }
 
@@ -201,9 +211,10 @@ async function generateSubPlanWithContext(
     additionalNotes: additionalNotes || undefined,
   });
 
+  let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordInteraction(agent.id, {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
       type: AgentInteractionType.CONTENT_GENERATION,
       summary: `Generated sub plan: ${result.title}`,
       input: intent.extractedParams.title,
@@ -211,6 +222,7 @@ async function generateSubPlanWithContext(
       outputId: result.id,
       modelUsed: 'flash',
     });
+    interactionId = interaction?.id;
   }
 
   return {
@@ -219,6 +231,7 @@ async function generateSubPlanWithContext(
     tokensUsed: result.tokensUsed || 0,
     contentType: 'sub_plan',
     contentId: result.id,
+    interactionId,
   };
 }
 
@@ -252,9 +265,10 @@ async function generateIEPWithContext(
     additionalContext: additionalContext || undefined,
   });
 
+  let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordInteraction(agent.id, {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
       type: AgentInteractionType.CONTENT_GENERATION,
       summary: `Generated IEP goals for ${intent.extractedParams.subjectArea || 'student'}`,
       input: intent.extractedParams.presentLevels,
@@ -262,6 +276,7 @@ async function generateIEPWithContext(
       outputId: result.id,
       modelUsed: 'flash',
     });
+    interactionId = interaction?.id;
   }
 
   return {
@@ -270,6 +285,7 @@ async function generateIEPWithContext(
     tokensUsed: result.tokensUsed || 0,
     contentType: 'iep',
     contentId: result.id,
+    interactionId,
   };
 }
 
@@ -291,9 +307,10 @@ async function generateParentEmailWithContext(
     length: intent.extractedParams.length || 'medium',
   });
 
+  let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordInteraction(agent.id, {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
       type: AgentInteractionType.CONTENT_GENERATION,
       summary: `Generated parent email: ${result.title}`,
       input: intent.extractedParams.topic,
@@ -302,6 +319,7 @@ async function generateParentEmailWithContext(
       tokensUsed: result.tokensUsed,
       modelUsed: 'flash',
     });
+    interactionId = interaction?.id;
   }
 
   return {
@@ -310,6 +328,7 @@ async function generateParentEmailWithContext(
     tokensUsed: result.tokensUsed,
     contentType: 'parent_email',
     contentId: result.id,
+    interactionId,
   };
 }
 
@@ -331,9 +350,10 @@ async function generateReportCommentsWithContext(
     commentCount: intent.extractedParams.count || 5,
   });
 
+  let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
   if (agent) {
-    await agentMemoryService.recordInteraction(agent.id, {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
       type: AgentInteractionType.CONTENT_GENERATION,
       summary: `Generated report card comments: ${result.title}`,
       input: intent.extractedParams.subject || 'general',
@@ -342,6 +362,7 @@ async function generateReportCommentsWithContext(
       tokensUsed: result.tokensUsed,
       modelUsed: 'flash',
     });
+    interactionId = interaction?.id;
   }
 
   return {
@@ -350,6 +371,7 @@ async function generateReportCommentsWithContext(
     tokensUsed: result.tokensUsed,
     contentType: 'report_comments',
     contentId: result.id,
+    interactionId,
   };
 }
 

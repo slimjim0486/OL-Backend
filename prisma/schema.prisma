@@ -3405,6 +3405,7 @@ enum PackageMaterialStatus {
 // DTC PRODUCT PACKAGE MODELS
 // ============================================
 
+// @deprecated — DTC store removed. Tables retained for existing data.
 model PackagePurchase {
   id        String @id @default(uuid())
   teacherId String
@@ -3461,6 +3462,7 @@ model PackagePurchase {
   @@index([nextDeliveryDate])  // For progressive delivery cron
 }
 
+// @deprecated — DTC store removed. Tables retained for existing data.
 model PackageWeek {
   id         String          @id @default(uuid())
   purchaseId String
@@ -3491,6 +3493,7 @@ model PackageWeek {
   @@unique([purchaseId, weekNumber])
 }
 
+// @deprecated — DTC store removed. Tables retained for existing data.
 model PackageMaterial {
   id         String          @id @default(uuid())
   purchaseId String
