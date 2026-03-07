@@ -19,6 +19,7 @@ import { agentMemoryService } from '../../services/teacher/agentMemoryService.js
 import { agentOnboardingService } from '../../services/teacher/agentOnboardingService.js';
 import { agentOrchestratorService } from '../../services/teacher/agentOrchestratorService.js';
 import { reinforcementService } from '../../services/teacher/reinforcementService.js';
+import { contentService } from '../../services/teacher/contentService.js';
 import { proactiveSuggestionService } from '../../services/teacher/proactiveSuggestionService.js';
 import { weeklyPrepService } from '../../services/teacher/weeklyPrepService.js';
 import { weeklyPrepAudioService } from '../../services/teacher/weeklyPrepAudioService.js';
@@ -202,6 +203,8 @@ const feedbackSchema = z.object({
   feedbackNote: z.string().optional(),
   contentType: z.string().optional(),
   subject: z.string().optional(),
+  // For approval: full generated content to persist to My Content library
+  generatedContent: z.any().optional(),
 });
 
 const schedulingSchema = z.object({
@@ -721,13 +724,58 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const teacherId = (req as any).teacher.id;
-      const { type, interactionId, contentId, original, edited, feedbackNote, contentType, subject } = req.body;
+      const { type, interactionId, contentId, original, edited, feedbackNote, contentType, subject, generatedContent } = req.body;
       const ctx = { contentType, subject };
 
       switch (type) {
-        case 'approval':
+        case 'approval': {
           await reinforcementService.recordApproval(teacherId, interactionId, contentId, ctx);
+
+          // Persist generated content to My Content library
+          if (generatedContent && contentType) {
+            try {
+              const CONTENT_TYPE_MAP: Record<string, string> = {
+                lesson: 'LESSON',
+                quiz: 'QUIZ',
+                flashcards: 'FLASHCARD_DECK',
+              };
+              const SUBJECT_MAP: Record<string, string> = {
+                math: 'MATH', science: 'SCIENCE', english: 'ENGLISH',
+                arabic: 'ARABIC', 'social studies': 'SOCIAL_STUDIES',
+                'social_studies': 'SOCIAL_STUDIES', history: 'HISTORY',
+                art: 'ART', music: 'MUSIC', pe: 'PE',
+                'physical education': 'PE', technology: 'TECHNOLOGY',
+              };
+
+              const mappedType = CONTENT_TYPE_MAP[contentType];
+              if (mappedType) {
+                const title = generatedContent.title || generatedContent.subject || 'Untitled';
+                const resolvedSubject = subject
+                  ? SUBJECT_MAP[subject.toLowerCase()] || undefined
+                  : generatedContent.subject
+                    ? SUBJECT_MAP[generatedContent.subject.toLowerCase()] || undefined
+                    : undefined;
+
+                await contentService.createContent(teacherId, {
+                  title,
+                  description: generatedContent.description || generatedContent.preview || undefined,
+                  contentType: mappedType as any,
+                  subject: resolvedSubject as any,
+                  gradeLevel: generatedContent.gradeLevel || generatedContent.grade || undefined,
+                  sourceType: 'AI_GENERATED' as any,
+                  status: 'PUBLISHED' as any,
+                  lessonContent: mappedType === 'LESSON' ? generatedContent : undefined,
+                  quizContent: mappedType === 'QUIZ' ? generatedContent : undefined,
+                  flashcardContent: mappedType === 'FLASHCARD_DECK' ? generatedContent : undefined,
+                });
+              }
+            } catch (saveError) {
+              // Don't fail the approval if content save fails
+              logger.warn('Failed to save approved content to library', { teacherId, contentType, error: (saveError as Error).message });
+            }
+          }
           break;
+        }
         case 'edit':
           if (!original || !edited) {
             return res.status(400).json({ error: 'original and edited are required for edit feedback' });
