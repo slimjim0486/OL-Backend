@@ -13,6 +13,7 @@ import {
   ReviewStatus,
   MessageRole,
   AgentInteractionType,
+  SourceType,
 } from '@prisma/client';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
 import { agentMemoryService } from '../../services/teacher/agentMemoryService.js';
@@ -726,6 +727,7 @@ router.post(
       const teacherId = (req as any).teacher.id;
       const { type, interactionId, contentId, original, edited, feedbackNote, contentType, subject, generatedContent } = req.body;
       const ctx = { contentType, subject };
+      let createdContentId: string | null = null;
 
       switch (type) {
         case 'approval': {
@@ -756,18 +758,19 @@ router.post(
                     ? SUBJECT_MAP[generatedContent.subject.toLowerCase()] || undefined
                     : undefined;
 
-                await contentService.createContent(teacherId, {
+                const createdContent = await contentService.createContent(teacherId, {
                   title,
                   description: generatedContent.description || generatedContent.preview || undefined,
                   contentType: mappedType as any,
                   subject: resolvedSubject as any,
                   gradeLevel: generatedContent.gradeLevel || generatedContent.grade || undefined,
-                  sourceType: 'AI_GENERATED' as any,
+                  sourceType: SourceType.TEXT,
                   status: 'PUBLISHED' as any,
                   lessonContent: mappedType === 'LESSON' ? generatedContent : undefined,
                   quizContent: mappedType === 'QUIZ' ? generatedContent : undefined,
                   flashcardContent: mappedType === 'FLASHCARD_DECK' ? generatedContent : undefined,
                 });
+                createdContentId = createdContent.id;
               }
             } catch (saveError) {
               // Don't fail the approval if content save fails
@@ -787,7 +790,11 @@ router.post(
           break;
       }
 
-      res.json({ success: true });
+      res.json({
+        success: true,
+        contentSaved: Boolean(createdContentId),
+        createdContentId,
+      });
     } catch (error) {
       next(error);
     }
