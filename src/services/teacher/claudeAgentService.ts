@@ -13,10 +13,13 @@ import { logger } from '../../utils/logger.js';
 // TYPES
 // ============================================
 
+export type ActionResultItem = NonNullable<AgentResponse['actionResult']>;
+
 export interface AgentLoopResult {
   message: string;
   intent: IntentType;
   actionResult?: AgentResponse['actionResult'];
+  actionResults?: ActionResultItem[];
   tokensUsed: number;
   bridgeHandledInteraction: boolean;
 }
@@ -119,7 +122,7 @@ export async function runAgentLoop(
 
   // Track across iterations
   let totalTokens = 0;
-  let lastContentToolResult: ToolCallResult | null = null;
+  const contentToolResults: ToolCallResult[] = [];
 
   // Agentic loop
   for (let iteration = 0; iteration < CLAUDE_AGENT_CONFIG.maxIterations; iteration++) {
@@ -143,7 +146,7 @@ export async function runAgentLoop(
       );
       const assistantText = textBlocks.map(b => b.text).join('\n\n') || 'Done!';
 
-      return buildResult(assistantText, lastContentToolResult, totalTokens);
+      return buildResult(assistantText, contentToolResults, totalTokens);
     }
 
     // If Claude wants to use tools
@@ -168,9 +171,9 @@ export async function runAgentLoop(
           (toolUse.input as Record<string, any>) || {}
         );
 
-        // Track the last content generation result for response mapping
+        // Track all content generation results for response mapping
         if (result.isContentGeneration && !result.result?.error) {
-          lastContentToolResult = result;
+          contentToolResults.push(result);
         }
 
         // Truncate result for Claude's context
@@ -199,14 +202,14 @@ export async function runAgentLoop(
       (block): block is Anthropic.Messages.TextBlock => block.type === 'text'
     );
     const fallbackText = textBlocks.map(b => b.text).join('\n\n') || "I've completed your request.";
-    return buildResult(fallbackText, lastContentToolResult, totalTokens);
+    return buildResult(fallbackText, contentToolResults, totalTokens);
   }
 
   // Max iterations reached
   logger.warn('Claude agent max iterations reached', { teacherId, sessionId });
   return buildResult(
     "I've been working on this but hit my step limit. Here's what I have so far.",
-    lastContentToolResult,
+    contentToolResults,
     totalTokens
   );
 }
@@ -215,47 +218,56 @@ export async function runAgentLoop(
 // RESPONSE MAPPING
 // ============================================
 
+function buildActionResult(
+  toolResult: ToolCallResult,
+  fallbackPreview: string
+): NonNullable<AgentResponse['actionResult']> {
+  const contentType = toolResult.contentType || TOOL_TO_CONTENT_TYPE[toolResult.toolName];
+
+  const actionResult: NonNullable<AgentResponse['actionResult']> = {
+    type: contentType || toolResult.toolName,
+    content: toolResult.result?.content || toolResult.result,
+    preview: toolResult.result?.preview || fallbackPreview,
+    contentId: toolResult.result?.content?.id ||
+               toolResult.result?.content?.prepId ||
+               toolResult.result?.contentId,
+    interactionId: toolResult.interactionId,
+  };
+
+  // For weekly prep, set contentId from prepId
+  if (contentType === 'weekly_prep' && toolResult.result?.content?.prepId) {
+    actionResult.contentId = toolResult.result.content.prepId;
+  }
+
+  return actionResult;
+}
+
 function buildResult(
   message: string,
-  lastContentToolResult: ToolCallResult | null,
+  contentToolResults: ToolCallResult[],
   totalTokens: number
 ): AgentLoopResult {
   let intent: IntentType = 'chat';
-  let actionResult: AgentResponse['actionResult'] | undefined;
   let bridgeHandledInteraction = false;
 
-  if (lastContentToolResult) {
-    const toolName = lastContentToolResult.toolName;
-    intent = TOOL_TO_INTENT[toolName] || 'chat';
-    bridgeHandledInteraction = true;
-
-    const contentType = lastContentToolResult.contentType || TOOL_TO_CONTENT_TYPE[toolName];
-
-    // Build actionResult matching the frontend's expected shape
-    actionResult = {
-      type: contentType || toolName,
-      content: lastContentToolResult.result?.content || lastContentToolResult.result,
-      preview: lastContentToolResult.result?.preview || message,
-      contentId: lastContentToolResult.result?.content?.id ||
-                 lastContentToolResult.result?.content?.prepId ||
-                 lastContentToolResult.result?.contentId,
-      interactionId: lastContentToolResult.interactionId,
-    };
-
-    // For weekly prep, set contentId from prepId
-    if (contentType === 'weekly_prep' && lastContentToolResult.result?.content?.prepId) {
-      actionResult.contentId = lastContentToolResult.result.content.prepId;
-    }
+  // Build action results for ALL content generations
+  const actionResults: NonNullable<AgentResponse['actionResult']>[] = [];
+  for (const toolResult of contentToolResults) {
+    actionResults.push(buildActionResult(toolResult, message));
   }
 
-  // Reset intent to 'chat' to match the existing orchestrator behavior
-  // (it sets intent to 'chat' after content generation for suggested replies logic)
-  const responseIntent = intent;
+  // Use the first content result for intent derivation
+  if (contentToolResults.length > 0) {
+    const firstToolName = contentToolResults[0].toolName;
+    intent = TOOL_TO_INTENT[firstToolName] || 'chat';
+    bridgeHandledInteraction = true;
+  }
 
   return {
     message,
-    intent: responseIntent,
-    actionResult,
+    intent,
+    actionResult: actionResults[0], // primary (backward compat)
+    actionResults: actionResults.length > 0 ? actionResults : undefined,
     tokensUsed: totalTokens,
     bridgeHandledInteraction,
   };

@@ -44,6 +44,13 @@ export interface AgentResponse {
     contentId?: string;
     interactionId?: string;
   };
+  actionResults?: Array<{
+    type: string;
+    content: any;
+    preview: string;
+    contentId?: string;
+    interactionId?: string;
+  }>;
   tokensUsed: number;
   suggestedReplies?: string[];
 }
@@ -1335,6 +1342,7 @@ async function processMessage(
   // 4. Fast-path: slash commands (no LLM call)
   let assistantContent: string;
   let actionResult: AgentResponse['actionResult'] | undefined;
+  let actionResults: NonNullable<AgentResponse['actionResult']>[] | undefined;
   let totalTokens = 0;
   let bridgeHandledInteraction = false;
   let intent: { type: IntentType; confidence: number; extractedParams: Record<string, any> } = {
@@ -1387,6 +1395,7 @@ async function processMessage(
     assistantContent = loopResult.message;
     intent = { type: loopResult.intent, confidence: 1, extractedParams: {} };
     actionResult = loopResult.actionResult;
+    actionResults = loopResult.actionResults;
     totalTokens = loopResult.tokensUsed;
     bridgeHandledInteraction = loopResult.bridgeHandledInteraction;
   } else if (isPlannerOrAutopilot && fromPlannerWeeklyPrompt && !switchingAwayFromActiveFlow) {
@@ -1831,14 +1840,27 @@ async function processMessage(
     ? ({ ...actionResult, interactionId } as AgentResponse['actionResult'])
     : undefined;
 
+  // Build persisted array of all action results (for multi-content generation)
+  const persistedActionResults: AgentResponse['actionResults'] = actionResults
+    ?.filter((ar): ar is NonNullable<typeof ar> => !!ar)
+    .map(ar => ({
+      ...ar,
+      interactionId: ar.interactionId || interactionId,
+    }));
+
   // 9. Save assistant message
+  // Store actionResults array in actionResult JSONB when there are multiple results
+  const storedActionResult = persistedActionResults && persistedActionResults.length > 1
+    ? { _multi: true, primary: persistedActionResult, items: persistedActionResults } as any
+    : persistedActionResult ? (persistedActionResult as any) : undefined;
+
   const assistantMessage = await prisma.agentChatMessage.create({
     data: {
       sessionId,
       role: MessageRole.ASSISTANT,
       content: assistantContent,
       actionType: persistedActionResult?.type || null,
-      actionResult: persistedActionResult ? (persistedActionResult as any) : undefined,
+      actionResult: storedActionResult,
       actionStatus: persistedActionResult ? 'completed' : null,
       model: config.gemini.models.flash,
       tokens: totalTokens,
@@ -1878,6 +1900,9 @@ async function processMessage(
     sessionTitle: updatedSession.title,
     intent: intent.type,
     actionResult: persistedActionResult,
+    actionResults: persistedActionResults && persistedActionResults.length > 1
+      ? persistedActionResults
+      : undefined,
     tokensUsed: totalTokens,
     suggestedReplies,
   };
