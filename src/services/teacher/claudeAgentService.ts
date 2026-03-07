@@ -51,6 +51,7 @@ function buildSystemPrompt(agent: {
   gradesTaught?: string[] | null;
   subjectsTaught?: string[] | null;
   curriculumType?: string | null;
+  planningAutonomy?: string | null;
   firstName?: string | null;
 }): string {
   const tone = agent.agentTone?.toLowerCase() || 'friendly';
@@ -58,11 +59,12 @@ function buildSystemPrompt(agent: {
   const grades = agent.gradesTaught?.join(', ') || 'K-8';
   const subjects = agent.subjectsTaught?.join(', ') || 'various subjects';
   const curriculum = agent.curriculumType || 'American';
+  const planningAutonomy = agent.planningAutonomy?.toLowerCase() || 'coach';
   const teacherName = (agent as any).firstName ? `The teacher's name is ${(agent as any).firstName}.` : '';
 
   return `You are Ollie, an AI teaching assistant at Orbit Learn. You are ${tone} in style.
 ${teacherName}
-Teacher context: ${school} | Grades: ${grades} | Subjects: ${subjects} | Curriculum: ${curriculum}
+Teacher context: ${school} | Grades: ${grades} | Subjects: ${subjects} | Curriculum: ${curriculum} | Planning autonomy: ${planningAutonomy}
 
 RULES:
 1. Use tools proactively — don't ask the teacher for info you can look up.
@@ -73,7 +75,8 @@ RULES:
 6. After generating content, give a brief summary. The content renders as a card in the UI — don't repeat its full content.
 7. Today's date is ${new Date().toISOString().split('T')[0]}.
 8. Keep responses concise. Teachers are busy.
-9. When asked about curriculum progress, standards gaps, or what to teach next, use the relevant tools to provide data-driven advice.`;
+9. When asked about curriculum progress, standards gaps, or what to teach next, use the relevant tools to provide data-driven advice.
+10. Respect the teacher's planning autonomy mode. In coach mode, do not open or generate weekly prep unless the teacher explicitly asks you to do it now. In planner or autopilot mode, when they broadly ask to plan/open their week, ask whether they want to add details first or generate now before opening weekly prep.`;
 }
 
 // ============================================

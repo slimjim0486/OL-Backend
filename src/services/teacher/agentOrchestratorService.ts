@@ -1377,27 +1377,6 @@ async function processMessage(
     assistantContent = commandResult.assistantContent;
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
-  } else if (isFeatureEnabled(FEATURE_FLAGS.CLAUDE_AGENT_ENABLED)) {
-    // ── CLAUDE AGENTIC PATH ──
-    // Claude decides which tools to call via agentic loop. No manual routing.
-    const chatHistory = session.messages
-      .reverse()
-      .map((m: AgentChatMessage) => ({ role: m.role, content: m.content }));
-
-    const loopResult = await claudeAgentService.runAgentLoop(
-      teacherId,
-      agent.id,
-      sessionId,
-      message,
-      chatHistory
-    );
-
-    assistantContent = loopResult.message;
-    intent = { type: loopResult.intent, confidence: 1, extractedParams: {} };
-    actionResult = loopResult.actionResult;
-    actionResults = loopResult.actionResults;
-    totalTokens = loopResult.tokensUsed;
-    bridgeHandledInteraction = loopResult.bridgeHandledInteraction;
   } else if (isPlannerOrAutopilot && fromPlannerWeeklyPrompt && !switchingAwayFromActiveFlow) {
     const shouldKeepDiscussing =
       plannerPromptChoice === 'tell_more' || isBriefAcknowledgement(trimmed) || /\?$/.test(trimmed);
@@ -1473,29 +1452,50 @@ async function processMessage(
         intent = { type: 'chat', confidence: 1, extractedParams: {} };
         totalTokens = 0;
       }
-    } else {
-    // 5. Assemble context
-    const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
+    } else if (isFeatureEnabled(FEATURE_FLAGS.CLAUDE_AGENT_ENABLED)) {
+      // ── CLAUDE AGENTIC PATH ──
+      // Claude decides which tools to call, but only after autonomy-specific weekly prep gates run.
+      const chatHistory = session.messages
+        .reverse()
+        .map((m: AgentChatMessage) => ({ role: m.role, content: m.content }));
 
-    // 5b. Pre-classify: detect common weekly-prep phrases before LLM call
-    const WEEKLY_PREP_REQUEST_RE = /\b(?:plan\s+my\s+week|plan\s+this\s+week|plan\s+the\s+week|help\s+me\s+plan\s+(?:my|this|the)\s+week|prepare?\s+(?:my|this|the)\s+week)\b/i;
-    const isExplicitWeeklyPrepRequest = WEEKLY_PREP_REQUEST_RE.test(message);
-
-    // 6. Classify intent
-    const recentMessages = session.messages
-      .reverse()
-      .slice(-5)
-      .map((m) => ({ role: m.role, content: m.content }));
-
-    if (isExplicitWeeklyPrepRequest) {
-      intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
-    } else {
-      intent = await taskRouterService.classifyIntent(
+      const loopResult = await claudeAgentService.runAgentLoop(
+        teacherId,
+        agent.id,
+        sessionId,
         message,
-        recentMessages,
-        context.identityContext
+        chatHistory
       );
-    }
+
+      assistantContent = loopResult.message;
+      intent = { type: loopResult.intent, confidence: 1, extractedParams: {} };
+      actionResult = loopResult.actionResult;
+      actionResults = loopResult.actionResults;
+      totalTokens = loopResult.tokensUsed;
+      bridgeHandledInteraction = loopResult.bridgeHandledInteraction;
+    } else {
+      // 5. Assemble context
+      const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
+
+      // 5b. Pre-classify: detect common weekly-prep phrases before LLM call
+      const WEEKLY_PREP_REQUEST_RE = /\b(?:plan\s+my\s+week|plan\s+this\s+week|plan\s+the\s+week|help\s+me\s+plan\s+(?:my|this|the)\s+week|prepare?\s+(?:my|this|the)\s+week)\b/i;
+      const isExplicitWeeklyPrepRequest = WEEKLY_PREP_REQUEST_RE.test(message);
+
+      // 6. Classify intent
+      const recentMessages = session.messages
+        .reverse()
+        .slice(-5)
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      if (isExplicitWeeklyPrepRequest) {
+        intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
+      } else {
+        intent = await taskRouterService.classifyIntent(
+          message,
+          recentMessages,
+          context.identityContext
+        );
+      }
 
     logger.info('Intent classified', { teacherId, sessionId, intent: intent.type, confidence: intent.confidence });
 
