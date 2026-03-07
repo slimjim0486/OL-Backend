@@ -13,56 +13,52 @@ import * as ContentSlideModule from './3-ContentSlide';
 import * as KeyConceptSlideModule from './4-KeyConceptSlide';
 import * as SummarySlideModule from './5-SummarySlide';
 
-// Export default components
 export {
   TitleSlide,
   LearningObjectivesSlide,
   ContentSlide,
   KeyConceptSlide,
-  SummarySlide
+  SummarySlide,
 };
 
-// Export all layouts array for Presenton template discovery
 export const layouts = [
   {
     id: TitleSlideModule.layoutId,
     name: TitleSlideModule.layoutName,
     description: TitleSlideModule.layoutDescription,
     schema: TitleSlideModule.Schema,
-    component: TitleSlide
+    component: TitleSlide,
   },
   {
     id: LearningObjectivesSlideModule.layoutId,
     name: LearningObjectivesSlideModule.layoutName,
     description: LearningObjectivesSlideModule.layoutDescription,
     schema: LearningObjectivesSlideModule.Schema,
-    component: LearningObjectivesSlide
+    component: LearningObjectivesSlide,
   },
   {
     id: ContentSlideModule.layoutId,
     name: ContentSlideModule.layoutName,
     description: ContentSlideModule.layoutDescription,
     schema: ContentSlideModule.Schema,
-    component: ContentSlide
+    component: ContentSlide,
   },
   {
     id: KeyConceptSlideModule.layoutId,
     name: KeyConceptSlideModule.layoutName,
     description: KeyConceptSlideModule.layoutDescription,
     schema: KeyConceptSlideModule.Schema,
-    component: KeyConceptSlide
+    component: KeyConceptSlide,
   },
   {
     id: SummarySlideModule.layoutId,
     name: SummarySlideModule.layoutName,
     description: SummarySlideModule.layoutDescription,
     schema: SummarySlideModule.Schema,
-    component: SummarySlide
-  }
+    component: SummarySlide,
+  },
 ];
 
-// Export layout count for validation
 export const layoutCount = layouts.length;
 
-// Default export for dynamic imports
 export default layouts;

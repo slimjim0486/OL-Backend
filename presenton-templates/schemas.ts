@@ -1,8 +1,12 @@
 import { z } from "zod";
 
 /**
- * Shared schemas for Presenton template images and icons.
- * These follow Presenton's conventions for AI-generated visuals.
+ * Shared schemas for Presenton template images and icons
+ * These follow Presenton's conventions for AI-generated visuals
+ */
+
+/**
+ * Schema for images that can be AI-generated or sourced from stock
  */
 export const ImageSchema = z.object({
   __image_url__: z
@@ -19,6 +23,9 @@ export const ImageSchema = z.object({
     })
 });
 
+/**
+ * Schema for icons (typically smaller, simpler graphics)
+ */
 export const IconSchema = z.object({
   __icon_url__: z
     .string()
@@ -29,7 +36,7 @@ export const IconSchema = z.object({
     .string()
     .max(100)
     .meta({
-      description: "Search query or description for finding or generating the icon"
+      description: "Search query or description for finding/generating the icon"
     })
 });
 
