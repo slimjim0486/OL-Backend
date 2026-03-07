@@ -22,6 +22,8 @@ import { weeklyPrepService } from './weeklyPrepService.js';
 import { detectPlannerNavigationIntent } from './plannerNavigationIntent.js';
 import { queueWeeklyPrep } from '../../jobs/index.js';
 import { logger } from '../../utils/logger.js';
+import { isFeatureEnabled, FEATURE_FLAGS } from '../../config/featureFlags.js';
+import * as claudeAgentService from './claudeAgentService.js';
 
 // ============================================
 // TYPES
@@ -1367,6 +1369,26 @@ async function processMessage(
     assistantContent = commandResult.assistantContent;
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
+  } else if (isFeatureEnabled(FEATURE_FLAGS.CLAUDE_AGENT_ENABLED)) {
+    // ── CLAUDE AGENTIC PATH ──
+    // Claude decides which tools to call via agentic loop. No manual routing.
+    const chatHistory = session.messages
+      .reverse()
+      .map((m: AgentChatMessage) => ({ role: m.role, content: m.content }));
+
+    const loopResult = await claudeAgentService.runAgentLoop(
+      teacherId,
+      agent.id,
+      sessionId,
+      message,
+      chatHistory
+    );
+
+    assistantContent = loopResult.message;
+    intent = { type: loopResult.intent, confidence: 1, extractedParams: {} };
+    actionResult = loopResult.actionResult;
+    totalTokens = loopResult.tokensUsed;
+    bridgeHandledInteraction = loopResult.bridgeHandledInteraction;
   } else if (isPlannerOrAutopilot && fromPlannerWeeklyPrompt && !switchingAwayFromActiveFlow) {
     const shouldKeepDiscussing =
       plannerPromptChoice === 'tell_more' || isBriefAcknowledgement(trimmed) || /\?$/.test(trimmed);

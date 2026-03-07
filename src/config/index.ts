@@ -107,6 +107,11 @@ export const config = {
     supportedLanguages: ['en', 'ar'], // English and Arabic for Gulf region
   },
 
+  // Anthropic (Claude)
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  },
+
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
   debug: process.env.DEBUG === 'true',

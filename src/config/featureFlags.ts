@@ -3,10 +3,12 @@
 
 export const FEATURE_FLAGS = {
   TEACHER_AGENT_ENABLED: 'FEATURE_TEACHER_AGENT_ENABLED',
+  CLAUDE_AGENT_ENABLED: 'FEATURE_CLAUDE_AGENT_ENABLED',
 } as const;
 
 const FLAG_DEFAULTS: Record<string, boolean> = {
   [FEATURE_FLAGS.TEACHER_AGENT_ENABLED]: false,
+  [FEATURE_FLAGS.CLAUDE_AGENT_ENABLED]: false,
 };
 
 export function isFeatureEnabled(flag: string): boolean {
