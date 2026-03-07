@@ -1,6 +1,6 @@
 import React from 'react';
 import * as z from "zod";
-import { ImageSchema } from '@/presentation-templates/defaultSchemes';
+import { ImageSchema } from '../schemas';
 
 export const layoutId = 'orbit-learn-content-slide';
 export const layoutName = 'Content Slide';

@@ -1,6 +1,6 @@
 import React from 'react';
 import * as z from "zod";
-import { IconSchema } from '@/presentation-templates/defaultSchemes';
+import { IconSchema } from '../schemas';
 
 export const layoutId = 'orbit-learn-objectives-slide';
 export const layoutName = 'Learning Objectives';

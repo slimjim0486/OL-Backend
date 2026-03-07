@@ -13,6 +13,9 @@ RUN sed -i 's/gemini-2.5-flash-image-preview/gemini-2.5-flash-image/g' /app/serv
 # Copy Orbit Learn teacher templates
 COPY orbit-learn-teacher /app/servers/nextjs/presentation-templates/orbit-learn-teacher
 
+# Copy shared schemas used by the Orbit Learn templates
+COPY schemas.ts /app/servers/nextjs/presentation-templates/schemas.ts
+
 # Set working directory to Next.js app for rebuild
 WORKDIR /app/servers/nextjs
 
