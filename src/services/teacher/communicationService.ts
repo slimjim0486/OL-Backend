@@ -16,7 +16,7 @@ import { generateAndParseJson, truncatePromptText } from '../../utils/modelJson.
 
 export interface GenerateParentEmailInput {
   topic: string;
-  tone?: 'positive' | 'concern' | 'update' | 'celebration';
+  tone?: 'positive' | 'concern' | 'update' | 'celebration' | 'event' | 'reminder';
   subject?: string; // Academic subject
   studentGroup?: string;
   gradeLevel?: string;
@@ -65,6 +65,8 @@ async function generateParentEmail(
     concern: 'professional and supportive, addressing areas for growth',
     update: 'informative and friendly',
     celebration: 'enthusiastic and congratulatory',
+    event: 'clear, welcoming, and action-oriented for an upcoming class or school event',
+    reminder: 'brief, clear, and helpful with the key action or deadline easy to find',
   };
 
   const lengthMap = {

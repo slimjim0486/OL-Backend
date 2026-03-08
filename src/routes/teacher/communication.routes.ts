@@ -16,7 +16,7 @@ router.use(authenticateTeacher);
 
 const parentEmailSchema = z.object({
   topic: z.string().min(1, 'Topic is required'),
-  tone: z.enum(['positive', 'concern', 'update', 'celebration']).optional(),
+  tone: z.enum(['positive', 'concern', 'update', 'celebration', 'event', 'reminder']).optional(),
   subject: z.string().optional(),
   studentGroup: z.string().optional(),
   gradeLevel: z.string().optional(),
