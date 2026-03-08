@@ -253,12 +253,24 @@ async function generateIEPWithContext(
   const modelContext = contextAssemblerService.buildAdditionalContextString(context);
   const teacherAdditionalContext = String(intent.extractedParams.additionalContext || '').trim();
   const additionalContext = [teacherAdditionalContext, modelContext].filter(Boolean).join('\n\n');
+  const missingFields: string[] = [];
+
+  if (!intent.extractedParams.gradeLevel) missingFields.push('grade level');
+  if (!intent.extractedParams.disabilityCategory) missingFields.push('disability category');
+  if (!intent.extractedParams.subjectArea) missingFields.push('focus area');
+  if (!intent.extractedParams.presentLevels || String(intent.extractedParams.presentLevels).trim().length < 10) {
+    missingFields.push('present levels');
+  }
+
+  if (missingFields.length > 0) {
+    throw new Error(`Need ${missingFields.join(', ')} before drafting IEP goals.`);
+  }
 
   const result = await iepGoalService.createIEPSession(teacherId, {
-    gradeLevel: intent.extractedParams.gradeLevel || 'General',
-    disabilityCategory: intent.extractedParams.disabilityCategory || 'SPECIFIC_LEARNING_DISABILITY',
-    subjectArea: intent.extractedParams.subjectArea || 'READING_COMPREHENSION',
-    presentLevels: intent.extractedParams.presentLevels || 'Student is performing below grade level.',
+    gradeLevel: intent.extractedParams.gradeLevel,
+    disabilityCategory: intent.extractedParams.disabilityCategory,
+    subjectArea: intent.extractedParams.subjectArea,
+    presentLevels: intent.extractedParams.presentLevels,
     studentIdentifier: intent.extractedParams.studentIdentifier || intent.extractedParams.studentName,
     strengths: intent.extractedParams.strengths,
     challenges: intent.extractedParams.challenges,

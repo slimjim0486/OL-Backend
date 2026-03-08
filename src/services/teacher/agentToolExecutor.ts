@@ -321,12 +321,24 @@ export async function executeToolCall(
         );
         const modelContext = contextAssemblerService.buildAdditionalContextString(context);
         const additionalContext = [toolInput.additionalContext, modelContext].filter(Boolean).join('\n\n');
+        const missingFields: string[] = [];
+
+        if (!toolInput.gradeLevel) missingFields.push('grade level');
+        if (!toolInput.disabilityCategory) missingFields.push('disability category');
+        if (!toolInput.subjectArea) missingFields.push('focus area');
+        if (!toolInput.presentLevels || String(toolInput.presentLevels).trim().length < 10) {
+          missingFields.push('present levels');
+        }
+
+        if (missingFields.length > 0) {
+          throw new Error(`Need ${missingFields.join(', ')} before drafting IEP goals.`);
+        }
 
         const result = await iepGoalService.createIEPSession(teacherId, {
-          gradeLevel: toolInput.gradeLevel || 'General',
-          disabilityCategory: toolInput.disabilityCategory || 'SPECIFIC_LEARNING_DISABILITY',
-          subjectArea: toolInput.subjectArea || 'READING_COMPREHENSION',
-          presentLevels: toolInput.presentLevels || 'Student is performing below grade level.',
+          gradeLevel: toolInput.gradeLevel,
+          disabilityCategory: toolInput.disabilityCategory,
+          subjectArea: toolInput.subjectArea,
+          presentLevels: toolInput.presentLevels,
           studentIdentifier: toolInput.studentName,
           additionalContext: additionalContext || undefined,
         });

@@ -833,7 +833,7 @@ const generateFromWeeklyMaterialSchema = z.object({
 });
 
 const generateQuizSchema = z.object({
-  content: z.string().min(50, 'Content must be at least 50 characters'),
+  content: z.string().min(5, 'Content must be at least 5 characters'),
   title: z.string().max(255).optional(),
   questionCount: z.number().min(1).max(50).optional(),
   questionTypes: z.array(z.enum(['multiple_choice', 'true_false', 'fill_blank', 'short_answer'])).optional(),
@@ -1637,6 +1637,34 @@ router.post(
           title: content.title,
         },
         message: 'Material generated and saved to My Content.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/content/generate/quiz
+ * Generate a quiz directly from topic or source text without creating source content
+ */
+router.post(
+  '/generate/quiz',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(generateQuizSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await contentGenerationService.generateQuiz(
+        req.teacher!.id,
+        '',
+        req.body
+      );
+
+      res.json({
+        success: true,
+        data: result,
+        message: 'Quiz generated successfully',
       });
     } catch (error) {
       next(error);
