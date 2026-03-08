@@ -10,8 +10,6 @@ import { logger } from '../utils/logger.js';
 import { prisma } from '../config/database.js';
 import { weeklyPrepService } from '../services/teacher/weeklyPrepService.js';
 import { weeklyPrepAudioService } from '../services/teacher/weeklyPrepAudioService.js';
-import { emailService } from '../services/email/emailService.js';
-import { config } from '../config/index.js';
 import { WeeklyPrepStatus } from '@prisma/client';
 
 const QUEUE_NAME = 'weekly-prep';
@@ -78,15 +76,6 @@ export async function initializeWeeklyPrepJob(): Promise<void> {
         prepId: result?.prepId,
         materialsGenerated: result?.materialsGenerated,
       });
-
-      // Send digest email notification
-      if (result?.prepId && result?.success) {
-        try {
-          await sendPrepReadyEmail(result.prepId);
-        } catch (emailErr) {
-          logger.error('Failed to send weekly prep digest email', { prepId: result.prepId, error: emailErr });
-        }
-      }
     });
 
     weeklyPrepWorker.on('failed', async (job, err) => {
@@ -166,47 +155,6 @@ async function processWeeklyPrepJob(
     logger.error('Weekly prep job processing failed', { prepId, error: errorMessage });
     throw new Error(errorMessage);
   }
-}
-
-/**
- * Send digest email after prep generation completes
- */
-async function sendPrepReadyEmail(prepId: string): Promise<void> {
-  const prep = await prisma.agentWeeklyPrep.findUnique({
-    where: { id: prepId },
-    include: {
-      agent: {
-        include: {
-          teacher: { select: { email: true, firstName: true, lastName: true } },
-        },
-      },
-      materials: { select: { dayOfWeek: true } },
-    },
-  });
-
-  if (!prep || !prep.agent?.teacher) return;
-
-  const teacher = prep.agent.teacher;
-  const teacherName = [teacher.firstName, teacher.lastName].filter(Boolean).join(' ') || 'Teacher';
-
-  // Build day breakdown (0=Mon..4=Fri)
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const dayBreakdown: Record<string, number> = {};
-  for (const mat of prep.materials) {
-    const dayName = dayNames[mat.dayOfWeek] || `Day ${mat.dayOfWeek + 1}`;
-    dayBreakdown[dayName] = (dayBreakdown[dayName] || 0) + 1;
-  }
-
-  const reviewUrl = `${config.frontendUrl}/en/teacher/agent/weekly-prep/${prepId}`;
-
-  await emailService.sendWeeklyPrepDigestEmail(
-    teacher.email,
-    teacherName,
-    prep.weekLabel,
-    prep.materials.length,
-    dayBreakdown,
-    reviewUrl
-  );
 }
 
 /**
