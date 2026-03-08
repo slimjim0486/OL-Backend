@@ -42,7 +42,6 @@ import webhookRoutes from './routes/webhook.routes.js';
 // Cron Jobs
 import { scheduleBrevoInactivityChecks } from './jobs/brevoInactivityChecks.js';
 import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
-import { scheduleWeeklyPrepDelivery } from './jobs/scheduledWeeklyPrepJob.js';
 import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/monthlyReviewJob.js';
 import { scheduleDownloadReminders } from './jobs/downloadReminderJob.js';
 import contactRoutes from './routes/contact.routes.js';
@@ -319,10 +318,8 @@ async function startServer(): Promise<void> {
     }
 
     // Initialize weekly prep job queue (async weekly material generation)
-    let weeklyPrepReady = false;
     try {
       await initializeWeeklyPrepJob();
-      weeklyPrepReady = true;
       logger.info('Weekly prep job initialized');
     } catch (error) {
       logger.warn('Weekly prep job initialization skipped');
@@ -350,15 +347,6 @@ async function startServer(): Promise<void> {
       // Schedule daily games refresh (connections + icebreakers)
       scheduleDailyGamesRefresh();
       logger.info('Daily games refresh scheduled for 00:05 UTC');
-
-      // Schedule weekly prep delivery (checks every 30 min for teachers' preferred times)
-      if (!weeklyPrepReady) {
-        logger.warn('Weekly prep delivery scheduler disabled because weekly prep queue is not initialized');
-      } else if (config.enableWeeklyPrepScheduler) {
-        scheduleWeeklyPrepDelivery();
-      } else {
-        logger.info('Weekly prep delivery scheduler disabled (ENABLE_WEEKLY_PREP_SCHEDULER=false)');
-      }
 
       // Schedule monthly review auto-generation (1st of month, 6 AM UTC)
       scheduleMonthlyReviewJob();

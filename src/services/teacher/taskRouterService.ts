@@ -38,7 +38,6 @@ export interface TaskIntent {
 const CLASSIFICATION_PROMPT = `You are an intent classifier for a teacher AI assistant. Given a teacher's message, classify the intent into one of these categories:
 
 - chat: General conversation, questions about teaching, advice, or anything that doesn't require content generation
-- open_calendar: User wants to open/view the calendar, planner, weekly prep, or schedule view (keywords: open calendar, show my schedule, open planner, open weekly prep, let me see it on calendar, take me to week 9 calendar, open new calendar)
 - generate_lesson: Create a lesson plan (keywords: lesson, plan, teach, unit)
 - generate_quiz: Create a quiz, test, or worksheet (keywords: quiz, test, assessment, worksheet, practice problems, practice sheet)
 - generate_flashcards: Create flashcards (keywords: flashcards, review cards, study cards)
@@ -48,7 +47,7 @@ const CLASSIFICATION_PROMPT = `You are an intent classifier for a teacher AI ass
 - generate_parent_email: Draft an email to parents (keywords: email parents, parent letter, parent communication, draft email, write email to parents)
 - generate_report_comments: Generate report card comments (keywords: report card, progress report, report comments, student comments, grades comments)
 - update_curriculum: Update curriculum progress or pacing (keywords: pacing, standards, covered, taught today)
-- weekly_prep: Help with weekly planning (keywords: this week, plan for next week, upcoming)
+- weekly_prep: Help with weekly planning in chat (keywords: plan my week, this week, next week, planner, calendar, schedule, upcoming, weekly prep)
 - export: Export or download content (keywords: download, export, PDF, PowerPoint)
 
 Respond with ONLY a JSON object:
@@ -153,10 +152,10 @@ function heuristicIntent(message: string, reason: string): TaskIntent {
   const navigationIntent = detectPlannerNavigationIntent(message);
   if (navigationIntent.isNavigation) {
     return {
-      type: 'open_calendar',
+      type: 'weekly_prep',
       confidence: navigationIntent.forceFresh ? 0.86 : 0.8,
       extractedParams: {},
-      reasoning: `${reason}; detected planner navigation phrasing`,
+      reasoning: `${reason}; detected weekly planning phrasing`,
     };
   }
   return {
@@ -619,10 +618,10 @@ function ruleBasedIntent(
   const navigationIntent = detectPlannerNavigationIntent(trimmed);
   if (navigationIntent.isNavigation) {
     return {
-      type: 'open_calendar',
+      type: 'weekly_prep',
       confidence: navigationIntent.forceFresh ? 0.86 : 0.8,
       extractedParams: {},
-      reasoning: 'Detected planner navigation phrasing',
+      reasoning: 'Detected weekly planning phrasing',
     };
   }
 
@@ -662,7 +661,7 @@ function ruleBasedIntent(
       return { type: 'export', confidence: 0.72, extractedParams: {}, reasoning: 'Matched export/download heuristic' };
     }
   }
-  if (/\b(?:weekly prep|plan (?:my|the) week|plan for next week|next week|this week)\b/i.test(trimmed)) {
+  if (/\b(?:weekly prep|plan (?:my|the) week|plan for next week|next week|this week|planner|calendar|schedule)\b/i.test(trimmed)) {
     return { type: 'weekly_prep', confidence: 0.72, extractedParams: {}, reasoning: 'Matched weekly planning heuristic' };
   }
   {
@@ -804,18 +803,19 @@ async function classifyIntent(
       return heuristicIntent(message, 'Classifier response was not parseable; used heuristic fallback');
     }
     const rawType = String(parsed.type || 'chat') as IntentType;
-    const type: IntentType = VALID_INTENTS.has(rawType) ? rawType : 'chat';
+    const normalizedType = rawType === 'open_calendar' ? 'weekly_prep' : rawType;
+    const type: IntentType = VALID_INTENTS.has(normalizedType as IntentType) ? (normalizedType as IntentType) : 'chat';
     const confidence = Math.min(1, Math.max(0, parsed.confidence || 0.5));
     const navigationIntent = detectPlannerNavigationIntent(message);
 
     if (navigationIntent.isNavigation && (type === 'chat' || type === 'unknown')) {
       return {
-        type: 'open_calendar',
+        type: 'weekly_prep',
         confidence: Math.max(confidence, navigationIntent.forceFresh ? 0.88 : 0.82),
         extractedParams: parsed.extractedParams || {},
         reasoning:
           parsed.reasoning ||
-          'Classifier returned chat/unknown, but navigation intent detector matched planner request',
+          'Classifier returned chat/unknown, but navigation intent detector matched weekly planning request',
       };
     }
 

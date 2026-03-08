@@ -6,11 +6,9 @@ import { contentGenerationService } from './contentGenerationService.js';
 import { subPlanService } from './subPlanService.js';
 import { iepGoalService } from './iepGoalService.js';
 import { communicationService } from './communicationService.js';
-import { weeklyPrepService } from './weeklyPrepService.js';
 import { standardsAnalysisService } from './standardsAnalysisService.js';
 import { proactiveSuggestionService } from './proactiveSuggestionService.js';
 import { reinforcementService } from './reinforcementService.js';
-import { queueWeeklyPrep } from '../../jobs/index.js';
 import { logger } from '../../utils/logger.js';
 
 // ============================================
@@ -29,7 +27,7 @@ export interface ToolCallResult {
 const CONTENT_TOOLS = new Set([
   'generate_lesson', 'generate_quiz', 'generate_flashcards',
   'generate_sub_plan', 'generate_iep_goals', 'generate_parent_email',
-  'generate_report_comments', 'create_weekly_prep', 'navigate_to_weekly_prep',
+  'generate_report_comments',
 ]);
 
 export const TOOL_TO_CONTENT_TYPE: Record<string, string> = {
@@ -40,8 +38,6 @@ export const TOOL_TO_CONTENT_TYPE: Record<string, string> = {
   generate_iep_goals: 'iep',
   generate_parent_email: 'parent_email',
   generate_report_comments: 'report_comments',
-  create_weekly_prep: 'weekly_prep',
-  navigate_to_weekly_prep: 'weekly_prep',
 };
 
 // ============================================
@@ -73,7 +69,7 @@ export async function executeToolCall(
             yearsExperience: agent.yearsExperience,
             teachingPhilosophy: agent.teachingPhilosophy,
             agentTone: agent.agentTone,
-            planningAutonomy: agent.planningAutonomy,
+            planningAutonomy: agent.planningAutonomy === 'AUTOPILOT' ? 'PLANNER' : agent.planningAutonomy,
             firstName: (agent as any).firstName,
             lastName: (agent as any).lastName,
           },
@@ -168,18 +164,6 @@ export async function executeToolCall(
           })),
           isContentGeneration: false,
         };
-      }
-
-      case 'get_weekly_prep': {
-        const prep = await weeklyPrepService.getWeeklyPrep(toolInput.prepId, teacherId);
-        if (!prep) return { toolName, result: { error: 'Weekly prep not found' }, isContentGeneration: false };
-        return { toolName, result: truncateResult(prep), isContentGeneration: false };
-      }
-
-      case 'list_weekly_preps': {
-        const limit = Math.min(toolInput.limit || 5, 10);
-        const preps = await weeklyPrepService.getWeeklyPrepList(teacherId, { limit });
-        return { toolName, result: truncateResult(preps), isContentGeneration: false };
       }
 
       case 'get_standards_overview': {
@@ -422,28 +406,6 @@ export async function executeToolCall(
         };
       }
 
-      case 'create_weekly_prep': {
-        const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
-          triggeredBy: 'chat',
-        });
-
-        if (!existed) {
-          await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
-        }
-
-        return {
-          toolName,
-          result: {
-            content: { prepId, weekLabel },
-            preview: existed
-              ? `Opening your weekly prep for "${weekLabel}" now.`
-              : `I'm generating your weekly prep package for "${weekLabel}" now. This usually takes 2-3 minutes.`,
-          },
-          isContentGeneration: true,
-          contentType: 'weekly_prep',
-        };
-      }
-
       // ── STATE & NAVIGATION TOOLS ──
       case 'update_curriculum_progress': {
         const updated = await agentMemoryService.updateCurriculumState(agentId, toolInput.subject, {
@@ -455,28 +417,6 @@ export async function executeToolCall(
           toolName,
           result: { success: true, subject: toolInput.subject, updated: !!updated },
           isContentGeneration: false,
-        };
-      }
-
-      case 'navigate_to_weekly_prep': {
-        const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
-          triggeredBy: 'chat',
-        });
-
-        if (!existed) {
-          await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
-        }
-
-        return {
-          toolName,
-          result: {
-            content: { prepId, weekLabel },
-            preview: existed
-              ? `Opening your weekly prep for "${weekLabel}".`
-              : `Creating and generating your weekly prep for "${weekLabel}". This usually takes 2-3 minutes.`,
-          },
-          isContentGeneration: true,
-          contentType: 'weekly_prep',
         };
       }
 

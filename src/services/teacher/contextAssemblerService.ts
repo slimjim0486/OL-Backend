@@ -401,7 +401,7 @@ function buildSystemPrompt(
 
   if (taskType === 'CHAT') {
     sections.push(`You are in a conversational chat with the teacher. Be helpful, contextual, and proactive. If the teacher's message implies content creation (e.g., "make me a quiz"), indicate the tool you'd use. Otherwise, respond conversationally with teaching expertise.`);
-    sections.push(`If the teacher asks to open or navigate to the calendar, schedule, or weekly prep view, respond with exactly one short confirmation sentence and no follow-up question. Example: "Opening your calendar now."`);
+    sections.push(`If the teacher asks to plan the week or mentions calendar, schedule, planner, or weekly prep, keep the conversation in chat. Help them sequence the week and then offer to generate specific materials one item at a time.`);
     sections.push(
       `If the teacher message is short/ambiguous (examples: "sure", "no thanks", "2", "checklist"), treat it as a reply to the recent conversation. Infer what they likely mean based on context. If it's still ambiguous, ask ONE clarifying question and offer 2-3 concrete options they can pick from.`
     );

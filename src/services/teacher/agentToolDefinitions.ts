@@ -82,36 +82,6 @@ export const AGENT_TOOLS: Anthropic.Messages.Tool[] = [
     },
   },
   {
-    name: 'get_weekly_prep',
-    description:
-      'Get a specific weekly prep package with all its materials, statuses, and day breakdown.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        prepId: {
-          type: 'string',
-          description: 'The ID of the weekly prep to retrieve',
-        },
-      },
-      required: ['prepId'],
-    },
-  },
-  {
-    name: 'list_weekly_preps',
-    description:
-      'List recent weekly prep packages with their status and week labels. Use to check if a prep already exists for the current week.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        limit: {
-          type: 'number',
-          description: 'Number of recent preps to retrieve (default: 5)',
-        },
-      },
-      required: [],
-    },
-  },
-  {
     name: 'get_standards_overview',
     description:
       'Get KPI overview of standards coverage: overall coverage percentage, gaps count, and per-subject summaries. Use when teacher asks about progress or readiness.',
@@ -362,19 +332,8 @@ export const AGENT_TOOLS: Anthropic.Messages.Tool[] = [
       required: [],
     },
   },
-  {
-    name: 'create_weekly_prep',
-    description:
-      'Queue a weekly prep generation (async BullMQ job). This creates a full week of differentiated materials. The prep will generate in the background (2-3 minutes). Returns a prep ID the teacher can navigate to.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {},
-      required: [],
-    },
-  },
-
   // ============================================
-  // WRITE TOOLS — STATE & NAVIGATION (4)
+  // WRITE TOOLS — STATE & NAVIGATION (3)
   // ============================================
   {
     name: 'update_curriculum_progress',
@@ -403,21 +362,6 @@ export const AGENT_TOOLS: Anthropic.Messages.Tool[] = [
         },
       },
       required: ['subject'],
-    },
-  },
-  {
-    name: 'navigate_to_weekly_prep',
-    description:
-      'Navigate to the weekly prep calendar. If no prep exists for the current week, creates one and starts generation. Use when the teacher wants to plan their week, open their calendar, or review weekly materials.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        forceFresh: {
-          type: 'boolean',
-          description: 'If true, create a new prep even if one exists for this week',
-        },
-      },
-      required: [],
     },
   },
   {

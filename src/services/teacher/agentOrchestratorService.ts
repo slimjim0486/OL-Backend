@@ -19,7 +19,6 @@ import { agentContentBridge } from './agentContentBridge.js';
 import { agentFlowPolicy } from './agentFlowPolicy.js';
 import type { AgentFlowType } from './agentFlowPolicy.js';
 import { weeklyPrepService } from './weeklyPrepService.js';
-import { detectPlannerNavigationIntent } from './plannerNavigationIntent.js';
 import { queueWeeklyPrep } from '../../jobs/index.js';
 import { logger } from '../../utils/logger.js';
 import { isFeatureEnabled, FEATURE_FLAGS } from '../../config/featureFlags.js';
@@ -145,8 +144,11 @@ function normalizeModeArg(raw: string): PlanningAutonomy | null {
   const v = String(raw || '').trim().toLowerCase();
   if (v === 'coach') return PlanningAutonomy.COACH;
   if (v === 'planner') return PlanningAutonomy.PLANNER;
-  if (v === 'autopilot') return PlanningAutonomy.AUTOPILOT;
   return null;
+}
+
+function resolvePlanningAutonomy(raw: PlanningAutonomy | string | null | undefined): PlanningAutonomy {
+  return raw === PlanningAutonomy.AUTOPILOT ? PlanningAutonomy.PLANNER : (raw as PlanningAutonomy) || PlanningAutonomy.COACH;
 }
 
 function describeMode(mode: PlanningAutonomy): { title: string; description: string } {
@@ -159,13 +161,12 @@ function describeMode(mode: PlanningAutonomy): { title: string; description: str
     case PlanningAutonomy.PLANNER:
       return {
         title: 'Planner',
-        description: "I draft daily/weekly plans for you to approve.",
+        description: 'I help structure the week in chat and draft the materials you want next.',
       };
     case PlanningAutonomy.AUTOPILOT:
       return {
-        title: 'Autopilot',
-        description:
-          'I can generate weekly prep automatically on your schedule. You still review and approve materials.',
+        title: 'Planner',
+        description: 'I help structure the week in chat and draft the materials you want next.',
       };
   }
 }
@@ -209,6 +210,53 @@ function buildExportHelpMessage(): string {
     `3. Use **Export** to download **PDF** or **PowerPoint (PPTX slides)**.\n\n` +
     `Tell me the lesson title (or paste the first few words), and I can help you locate the right one.`
   );
+}
+
+function isWeeklyOutlineRequest(message: string): boolean {
+  const normalized = normalizePromptChoiceText(message);
+  if (!normalized) return false;
+
+  return (
+    /\b(?:outline|sequence|map out|pace out|plan out|break down)\b/.test(normalized) ||
+    /\b(?:monday|tuesday|wednesday|thursday|friday|mon fri)\b/.test(normalized) ||
+    /\b(?:what should i teach each day|day by day|week at a glance)\b/.test(normalized)
+  );
+}
+
+function normalizeLegacyWeeklyPromptMessage(
+  message: string,
+  plannerChoice: PlannerWeeklyPrepChoice,
+  coachChoice: CoachWeeklyPrepChoice
+): string {
+  if (plannerChoice === 'generate_now' || coachChoice === 'generate_weekly_prep') {
+    return 'Help me plan this week in chat and figure out what to generate first.';
+  }
+  if (plannerChoice === 'tell_more' || coachChoice === 'one_subject') {
+    return 'Help me plan this week in chat. Ask me for the most important missing detail first.';
+  }
+  if (coachChoice === 'outline') {
+    return 'Give me a concise Monday to Friday outline for this week in chat only.';
+  }
+  return message;
+}
+
+async function generateWeeklyPlanningChatResponse(
+  teacherId: string,
+  sessionId: string,
+  message: string,
+  recentMessages: Array<{ role: string; content: string }>
+): Promise<{ response: string; tokensUsed: number }> {
+  const context = await contextAssemblerService.assembleChatContext(teacherId, sessionId);
+  const wantsOutline = isWeeklyOutlineRequest(message);
+  const planningInstruction = wantsOutline
+    ? `The teacher wants a concise weekly teaching outline in chat only. Do not mention Weekly Prep, a calendar page, a planner page, automation, or background jobs. Provide a practical Monday-Friday outline with the clearest next material to generate. If a critical detail is missing, ask exactly one short follow-up question instead of guessing.`
+    : `The teacher wants help planning the week in chat only. Do not mention Weekly Prep, a calendar page, a planner page, automation, or background jobs. Help them frame the week conversationally and offer to generate specific lessons, quizzes, flashcards, sub plans, IEP goals, or communications one item at a time. If a critical detail is missing, ask exactly one short follow-up question instead of guessing.`;
+
+  const planningPrompt =
+    `${planningInstruction}\n\n` +
+    `Teacher request:\n${message}`;
+
+  return generateChatResponse(context.systemPrompt, planningPrompt, recentMessages);
 }
 
 function normalizePromptChoiceText(input: string): string {
@@ -1183,8 +1231,7 @@ async function maybeHandleSlashCommand(
         assistantContent:
           `To change planning autonomy, use:\n` +
           `- /mode coach\n` +
-          `- /mode planner\n` +
-          `- /mode autopilot`,
+          `- /mode planner`,
         intent: 'chat',
         tokensUsed: 0,
       };
@@ -1196,16 +1243,11 @@ async function maybeHandleSlashCommand(
     });
 
     const desc = describeMode(mode);
-    const needsSchedule =
-      mode === PlanningAutonomy.AUTOPILOT && (!agent.preferredPlanningDay || !agent.preferredDeliveryTime);
 
     return {
       assistantContent:
         `Planning mode set to **${desc.title}**.\n` +
-        `${desc.description}\n` +
-        (needsSchedule
-          ? `\nTo enable scheduled weekly prep, set a planning day/time in AI Assistant settings.`
-          : ''),
+        `${desc.description}`,
       intent: 'chat',
       tokensUsed: 0,
     };
@@ -1248,10 +1290,7 @@ function computeSuggestedReplies(
     actionResult?.type === 'sub_plan' ||
     actionResult?.type === 'iep' ||
     actionResult?.type === 'audio' ||
-    actionResult?.type === 'communications' ||
-    actionResult?.type === 'weekly_prep' ||
-    actionResult?.type === 'coach_weekly_prep_prompt' ||
-    actionResult?.type === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
+    actionResult?.type === 'communications';
 
   if (suppressContextualReplies) {
     return [];
@@ -1281,7 +1320,7 @@ function computeSuggestedReplies(
     if (uniqueSubjects.length > 0) {
       replies = uniqueSubjects.slice(0, 3).map(formatSubjectName);
     } else if (!hasPriorAssistantMessages) {
-      replies = ['Create a lesson', 'Make a quiz', 'Plan my week'];
+      replies = ['Create a lesson', 'Make a quiz', 'Make flashcards'];
     }
   }
 
@@ -1352,20 +1391,19 @@ async function processMessage(
   };
 
   const commandResult = await maybeHandleSlashCommand(teacherId, agent as any, message);
-  const navigationIntent = detectPlannerNavigationIntent(message);
   const trimmed = String(message || '').trim();
   const explicitSwitchTarget = agentFlowPolicy.detectExplicitFlowSwitch(trimmed);
   const recentAssistant = session.messages.find((m) => m.role === MessageRole.ASSISTANT);
+  const recentMessages = session.messages
+    .slice(-5)
+    .map((m) => ({ role: m.role, content: m.content }));
   const recentActionType =
     recentAssistant && typeof (recentAssistant as any).actionType === 'string'
       ? (recentAssistant as any).actionType
       : (recentAssistant as any)?.actionResult && typeof (recentAssistant as any).actionResult === 'object'
         ? String(((recentAssistant as any).actionResult as any).type || '')
         : '';
-  const planningMode = (agent.planningAutonomy || PlanningAutonomy.COACH) as PlanningAutonomy;
-  const isCoach = planningMode === PlanningAutonomy.COACH;
-  const isPlannerOrAutopilot =
-    planningMode === PlanningAutonomy.PLANNER || planningMode === PlanningAutonomy.AUTOPILOT;
+  const planningMode = resolvePlanningAutonomy(agent.planningAutonomy || PlanningAutonomy.COACH);
   const fromCoachWeeklyPrompt = recentActionType === COACH_WEEKLY_PREP_PROMPT_TYPE;
   const fromPlannerWeeklyPrompt = recentActionType === PLANNER_WEEKLY_PREP_PROMPT_TYPE;
   const plannerPromptChoice = detectPlannerWeeklyPrepChoice(trimmed);
@@ -1377,84 +1415,24 @@ async function processMessage(
     assistantContent = commandResult.assistantContent;
     intent = { type: commandResult.intent, confidence: 1, extractedParams: {} };
     totalTokens = commandResult.tokensUsed;
-  } else if (isPlannerOrAutopilot && fromPlannerWeeklyPrompt && !switchingAwayFromActiveFlow) {
-    const shouldKeepDiscussing =
-      plannerPromptChoice === 'tell_more' || isBriefAcknowledgement(trimmed) || /\?$/.test(trimmed);
-    if (shouldKeepDiscussing) {
-      assistantContent =
-        `Perfect. Tell me anything you'd like me to account for this week (subjects, standards, pacing, assessments, accommodations, or special events).\n\n` +
-        `When you're ready, say **"generate now"** and I'll take you to the calendar.`;
-      actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'details');
-      intent = { type: 'chat', confidence: 1, extractedParams: {} };
-      totalTokens = 0;
-    } else {
-      actionResult = await buildWeeklyPrepGenerationActionResult(teacherId);
-      assistantContent = actionResult.preview;
-      intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
-      totalTokens = 0;
-    }
-  } else if (isPlannerOrAutopilot && navigationIntent.isNavigation) {
-    assistantContent =
-      `Before I open Weekly Prep, would you like to tell me more about the lessons, or should I generate the week based on what I know now?\n\n` +
-      `Reply with **1) Tell me more first** or **2) Generate now**.`;
-    actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'initial');
+  } else if ((fromPlannerWeeklyPrompt || fromCoachWeeklyPrompt) && !switchingAwayFromActiveFlow) {
+    const normalizedWeeklyMessage = normalizeLegacyWeeklyPromptMessage(
+      trimmed,
+      plannerPromptChoice,
+      coachPromptChoice
+    );
+    const weeklyPlanningResponse = await generateWeeklyPlanningChatResponse(
+      teacherId,
+      sessionId,
+      normalizedWeeklyMessage,
+      recentMessages
+    );
+    assistantContent = weeklyPlanningResponse.response;
     intent = { type: 'chat', confidence: 1, extractedParams: {} };
-    totalTokens = 0;
-  } else if (navigationIntent.isNavigation) {
-    actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message, {
-      forceFresh: navigationIntent.forceFresh,
-    });
-    assistantContent = 'Opening your calendar now.';
-    intent = { type: 'open_calendar', confidence: 1, extractedParams: {} };
-    totalTokens = 0;
+    totalTokens = weeklyPlanningResponse.tokensUsed;
   } else {
-    // Coach-mode weekly prompt follow-ups: keep this path in weekly prep unless the teacher
-    // explicitly chooses quick outline.
-    const wantsGenerateWeeklyPrep =
-      coachPromptChoice === 'generate_weekly_prep' ||
-      /^2\b/.test(trimmed) ||
-      plannerPromptChoice === 'generate_now' ||
-      /\b(?:generate|create|make)\b[\s\S]*\bweekly\s+prep\b/i.test(trimmed);
-
-    if (isCoach && fromCoachWeeklyPrompt && !switchingAwayFromActiveFlow && coachPromptChoice !== 'outline') {
-      if (wantsGenerateWeeklyPrep) {
-        const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
-          triggeredBy: 'chat',
-        });
-
-        if (!existed) {
-          await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'chat' });
-        }
-        actionResult = {
-          type: 'weekly_prep',
-          content: { prepId, weekLabel },
-          preview: existed
-            ? `Opening your weekly prep for "${weekLabel}" now.`
-            : `I'm generating your weekly prep package for "${weekLabel}" now. This usually takes 2-3 minutes. You can check the progress on the Weekly Prep page.`,
-          contentId: prepId,
-        };
-        assistantContent = actionResult.preview;
-        intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
-        totalTokens = 0;
-      } else {
-        const normalized = normalizePromptChoiceText(trimmed);
-        const providedSubjectFocus =
-          coachPromptChoice === 'one_subject' ||
-          /\b(?:reading|math|science|english|ela|social studies|history|subject|grade|fluency|comprehension|vocabulary|fiction|nonfiction)\b/i.test(
-            normalized
-          );
-        assistantContent = providedSubjectFocus
-          ? `Perfect. I'll focus Weekly Prep around that. Reply **"generate now"** and I'll open your weekly prep view, or add one more must-have first.`
-          : `I can open Weekly Prep as soon as you're ready. Reply **"generate now"**, or share one subject + grade to focus first.`;
-        actionResult = buildCoachWeeklyPrepPromptActionResult(
-          providedSubjectFocus ? 'one_subject_details' : 'initial'
-        );
-        intent = { type: 'chat', confidence: 1, extractedParams: {} };
-        totalTokens = 0;
-      }
-    } else if (isFeatureEnabled(FEATURE_FLAGS.CLAUDE_AGENT_ENABLED)) {
+    if (isFeatureEnabled(FEATURE_FLAGS.CLAUDE_AGENT_ENABLED)) {
       // ── CLAUDE AGENTIC PATH ──
-      // Claude decides which tools to call, but only after autonomy-specific weekly prep gates run.
       const chatHistory = session.messages
         .reverse()
         .map((m: AgentChatMessage) => ({ role: m.role, content: m.content }));
@@ -1482,11 +1460,6 @@ async function processMessage(
       const isExplicitWeeklyPrepRequest = WEEKLY_PREP_REQUEST_RE.test(message);
 
       // 6. Classify intent
-      const recentMessages = session.messages
-        .reverse()
-        .slice(-5)
-        .map((m) => ({ role: m.role, content: m.content }));
-
       if (isExplicitWeeklyPrepRequest) {
         intent = { type: 'weekly_prep', confidence: 1, extractedParams: {} };
       } else {
@@ -1719,47 +1692,30 @@ async function processMessage(
 
     // ── CALENDAR / WEEKLY PREP ──
     } else if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
-      if (isPlannerOrAutopilot) {
-        assistantContent =
-          `Before I open Weekly Prep, would you like to tell me more about the lessons, or should I generate the week based on what I know now?\n\n` +
-          `Reply with **1) Tell me more first** or **2) Generate now**.`;
-        actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'initial');
-        totalTokens = 0;
-        intent = { type: 'chat', confidence: 1, extractedParams: {} };
-      } else {
-        actionResult = await buildCalendarNavigationActionResult(teacherId, session.messages, message);
-        assistantContent = 'Opening your calendar now.';
-      }
+      const weeklyPlanningResponse = await generateWeeklyPlanningChatResponse(
+        teacherId,
+        sessionId,
+        message,
+        recentMessages
+      );
+      assistantContent = weeklyPlanningResponse.response;
+      totalTokens = weeklyPlanningResponse.tokensUsed;
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
     } else if (intent.type === 'export' && intent.confidence >= 0.6) {
       assistantContent = buildExportHelpMessage();
       totalTokens = 0;
     } else if (
       intent.type === 'weekly_prep' &&
-      intent.confidence >= 0.6 &&
-      isPlannerOrAutopilot
+      intent.confidence >= 0.6
     ) {
-      assistantContent =
-        `Before I generate this week, would you like to tell me more about the lessons, or should I generate based on what I know now?\n\n` +
-        `Reply with **1) Tell me more first** or **2) Generate now**.`;
-      totalTokens = 0;
-      actionResult = buildPlannerWeeklyPrepPromptActionResult(planningMode, 'initial');
-      intent = { type: 'chat', confidence: 1, extractedParams: {} };
-    } else if (
-      intent.type === 'weekly_prep' &&
-      intent.confidence >= 0.6 &&
-      isCoach
-    ) {
-      assistantContent =
-        `In **Coach** mode, I'll suggest options and you choose what to generate.\n\n` +
-        `Pick one:\n` +
-        `1) **Quick outline** (goals + pacing + what to teach each day)\n` +
-        `2) **Generate Weekly Prep** (build the calendar + materials package)\n` +
-        `3) **Focus on one subject** (tell me which subject + grade)\n\n` +
-        `Reply with **1**, **2**, or **3**.`;
-      totalTokens = 0;
-      actionResult = {
-        ...buildCoachWeeklyPrepPromptActionResult('initial'),
-      };
+      const weeklyPlanningResponse = await generateWeeklyPlanningChatResponse(
+        teacherId,
+        sessionId,
+        message,
+        recentMessages
+      );
+      assistantContent = weeklyPlanningResponse.response;
+      totalTokens = weeklyPlanningResponse.tokensUsed;
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
     // ── AUDIO / PARENT EMAIL / REPORT COMMENTS → simple redirect ──

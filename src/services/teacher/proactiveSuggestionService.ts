@@ -185,11 +185,6 @@ async function getSuggestions(teacherId: string): Promise<ProactiveSuggestion[]>
       const styleSuggestions = await getStyleSuggestions(agent.id);
       suggestions.push(...styleSuggestions);
 
-      const weeklyImprovementSugg = await getWeeklyImprovementSuggestion(agent.id);
-      if (weeklyImprovementSugg) {
-        suggestions.push(weeklyImprovementSugg);
-      }
-
       // Review reminder: last 3 days of the month
       const reviewSugg = await getReviewReminderSuggestion(agent.id);
       if (reviewSugg) {
@@ -356,11 +351,11 @@ async function getWeeklyImprovementSuggestion(agentId: string): Promise<Proactiv
     return {
       id: `weekly-improvement-${recentPrep.id}`,
       type: 'weekly_improvement',
-      title: 'Weekly prep summary',
+      title: 'Planning summary',
       description,
-      actionLabel: 'View details',
-      actionType: 'navigate',
-      actionPayload: { path: `/teacher/agent/weekly-prep/${recentPrep.id}` },
+      actionLabel: 'Plan in chat',
+      actionType: 'chat',
+      actionPayload: { message: 'Help me plan this week in chat based on what you learned from my recent edits.' },
       priority: 2,
     };
   } catch (error) {

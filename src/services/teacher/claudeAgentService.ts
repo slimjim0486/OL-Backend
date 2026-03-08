@@ -33,8 +33,6 @@ const TOOL_TO_INTENT: Record<string, IntentType> = {
   generate_iep_goals: 'generate_iep',
   generate_parent_email: 'generate_parent_email',
   generate_report_comments: 'generate_report_comments',
-  create_weekly_prep: 'weekly_prep',
-  navigate_to_weekly_prep: 'open_calendar',
   update_curriculum_progress: 'update_curriculum',
   navigate_to_page: 'chat',
   suggest_gap_actions: 'chat',
@@ -59,7 +57,10 @@ function buildSystemPrompt(agent: {
   const grades = agent.gradesTaught?.join(', ') || 'K-8';
   const subjects = agent.subjectsTaught?.join(', ') || 'various subjects';
   const curriculum = agent.curriculumType || 'American';
-  const planningAutonomy = agent.planningAutonomy?.toLowerCase() || 'coach';
+  const planningAutonomy =
+    agent.planningAutonomy === 'AUTOPILOT'
+      ? 'planner'
+      : agent.planningAutonomy?.toLowerCase() || 'coach';
   const teacherName = (agent as any).firstName ? `The teacher's name is ${(agent as any).firstName}.` : '';
 
   return `You are Ollie, an AI teaching assistant at Orbit Learn. You are ${tone} in style.
@@ -71,12 +72,12 @@ RULES:
 2. Before generating content, ALWAYS call get_style_preferences and get_classrooms first.
 3. If essential params are missing (topic, subject, grade), ask the teacher naturally.
 4. Be personal — reference specific classroom details and curriculum progress.
-5. For navigation requests, use navigate_to_weekly_prep or navigate_to_page immediately.
+5. For navigation requests, use navigate_to_page when there is a real destination in the current UI.
 6. After generating content, give a brief summary. The content renders as a card in the UI — don't repeat its full content.
 7. Today's date is ${new Date().toISOString().split('T')[0]}.
 8. Keep responses concise. Teachers are busy.
 9. When asked about curriculum progress, standards gaps, or what to teach next, use the relevant tools to provide data-driven advice.
-10. Respect the teacher's planning autonomy mode. In coach mode, do not open or generate weekly prep unless the teacher explicitly asks you to do it now. In planner or autopilot mode, when they broadly ask to plan/open their week, ask whether they want to add details first or generate now before opening weekly prep.`;
+10. Respect the teacher's planning autonomy mode. When the teacher asks to plan the week, stay in chat, help sequence the week, and then generate specific lessons or materials one at a time. Do not reference Weekly Prep, calendars, planner pages, automation, or background jobs.`;
 }
 
 // ============================================
