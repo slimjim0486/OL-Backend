@@ -16,6 +16,44 @@ COPY orbit-learn-teacher /app/servers/nextjs/presentation-templates/orbit-learn-
 # Copy shared schemas used by the Orbit Learn templates
 COPY schemas.ts /app/servers/nextjs/presentation-templates/schemas.ts
 
+# Copy Orbit Learn registry shim for the current Presenton template registry
+COPY orbit-learn-teacher.registry.tsx /app/servers/nextjs/app/presentation-templates/orbit-learn-teacher.registry.tsx
+
+# Register Orbit Learn templates in Presenton's hardcoded Next.js template registry
+RUN python - <<'PY'
+from pathlib import Path
+import re
+
+path = Path("/app/servers/nextjs/app/presentation-templates/index.tsx")
+text = path.read_text()
+
+import_line = 'import { orbitLearnTeacherTemplates, orbitLearnTeacherTemplateSettings } from "./orbit-learn-teacher.registry";'
+if import_line not in text:
+    anchor = 'import neoSwiftSettings from "./neo-swift/settings.json";'
+    text = text.replace(anchor, anchor + "\n" + import_line)
+
+if "...orbitLearnTeacherTemplates," not in text:
+    text = text.replace(
+        "    ...swiftTemplates,\n\n\n];",
+        "    ...swiftTemplates,\n    ...orbitLearnTeacherTemplates,\n\n\n];",
+    )
+
+if 'id: "orbit-learn-teacher"' not in text:
+    marker = '\n];\n\n// Helper to get templates by group ID'
+    block = """
+    {
+        id: "orbit-learn-teacher",
+        name: "Orbit Learn Teacher",
+        description: orbitLearnTeacherTemplateSettings.description,
+        settings: orbitLearnTeacherTemplateSettings as TemplateGroupSettings,
+        layouts: orbitLearnTeacherTemplates,
+    },
+"""
+    text = text.replace(marker, block + marker)
+
+path.write_text(text)
+PY
+
 # Set working directory to Next.js app for rebuild
 WORKDIR /app/servers/nextjs
 
