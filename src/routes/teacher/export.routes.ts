@@ -10,6 +10,7 @@ import { prisma } from '../../config/database.js';
 import { exportContent, exportMultipleContent, ExportOptions } from '../../services/teacher/exportService.js';
 import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
 import * as googleDriveService from '../../services/teacher/googleDriveService.js';
+import { createGoogleSlidesPresentation } from '../../services/teacher/googleSlidesService.js';
 import { uploadFile } from '../../services/storage/storageService.js';
 import { SUBSCRIPTION_PRODUCTS } from '../../config/stripeProducts.js';
 import { checkDownloadAccess, consumeFreeDownloadAllowance, getDownloadAccess } from '../../services/teacher/downloadAccessService.js';
@@ -768,6 +769,83 @@ router.delete('/drive/disconnect', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to disconnect Google Drive',
+    });
+  }
+});
+
+/**
+ * Create editable Google Slides presentation
+ * POST /api/teacher/export/:contentId/google-slides
+ */
+router.post('/:contentId/google-slides', async (req: Request, res: Response) => {
+  try {
+    const { contentId } = req.params;
+    const teacherId = req.teacher!.id;
+
+    const content = await prisma.teacherContent.findFirst({
+      where: {
+        id: contentId,
+        teacherId,
+      },
+    });
+
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        error: 'Content not found',
+      });
+    }
+
+    if (
+      content.contentType !== 'LESSON' &&
+      content.contentType !== 'FLASHCARD_DECK' &&
+      content.contentType !== 'WORKSHEET'
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Google Slides export is currently available for lessons, worksheets, and flashcard decks.',
+      });
+    }
+
+    const access = await checkDownloadAccess(
+      teacherId,
+      contentId,
+      content.contentType,
+      'drive'
+    );
+
+    if (!access.allowed) {
+      return res.status(403).json(getDownloadBlockedPayload(access));
+    }
+
+    if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contentId))) {
+      return;
+    }
+
+    const result = await createGoogleSlidesPresentation(teacherId, content, {
+      includeAnswers: req.body.includeAnswers !== false,
+      includeTeacherNotes: req.body.includeTeacherNotes !== false,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        presentationId: result.presentationId,
+        fileId: result.fileId,
+        webViewLink: result.webViewLink,
+        title: result.title,
+      },
+    });
+  } catch (error) {
+    console.error('Google Slides export error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create Google Slides presentation';
+    const status = message.toLowerCase().includes('google') || message.toLowerCase().includes('reconnect')
+      ? 400
+      : 500;
+
+    return res.status(status).json({
+      success: false,
+      error: message,
     });
   }
 });

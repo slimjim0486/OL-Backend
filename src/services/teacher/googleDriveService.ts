@@ -17,6 +17,7 @@ const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost
 // Scopes needed for Drive access
 const SCOPES = [
   'https://www.googleapis.com/auth/drive.file', // Only files created by the app
+  'https://www.googleapis.com/auth/presentations',
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 
@@ -115,7 +116,21 @@ export async function disconnectGoogleDrive(teacherId: string): Promise<void> {
 /**
  * Get an authenticated Drive client for a teacher
  */
-async function getDriveClient(teacherId: string): Promise<drive_v3.Drive | null> {
+function attachTokenRefreshHandler(
+  oauth2Client: OAuth2Client,
+  teacherId: string,
+  tokens: ExtendedCredentials
+) {
+  oauth2Client.on('tokens', async (newTokens) => {
+    const mergedTokens = {
+      ...tokens,
+      ...newTokens,
+    };
+    await saveTeacherDriveTokens(teacherId, mergedTokens);
+  });
+}
+
+export async function getAuthenticatedOAuth2Client(teacherId: string): Promise<OAuth2Client | null> {
   const tokens = await getTeacherDriveTokens(teacherId);
 
   if (!tokens) {
@@ -124,16 +139,15 @@ async function getDriveClient(teacherId: string): Promise<drive_v3.Drive | null>
 
   const oauth2Client = createOAuth2Client();
   oauth2Client.setCredentials(tokens);
+  attachTokenRefreshHandler(oauth2Client, teacherId, tokens);
+  return oauth2Client;
+}
 
-  // Set up token refresh callback
-  oauth2Client.on('tokens', async (newTokens) => {
-    // Merge with existing tokens (preserve refresh token if not returned)
-    const mergedTokens = {
-      ...tokens,
-      ...newTokens,
-    };
-    await saveTeacherDriveTokens(teacherId, mergedTokens);
-  });
+async function getDriveClient(teacherId: string): Promise<drive_v3.Drive | null> {
+  const oauth2Client = await getAuthenticatedOAuth2Client(teacherId);
+  if (!oauth2Client) {
+    return null;
+  }
 
   return google.drive({ version: 'v3', auth: oauth2Client });
 }
@@ -142,7 +156,7 @@ async function getDriveClient(teacherId: string): Promise<drive_v3.Drive | null>
  * Create the Orbit Learn folder in Drive if it doesn't exist
  * Uses stored folder ID to avoid needing search permissions
  */
-async function getOrCreateOrbitFolder(
+export async function getOrCreateOrbitFolderId(
   drive: drive_v3.Drive,
   teacherId: string
 ): Promise<string> {
@@ -216,7 +230,7 @@ export async function uploadToDrive(
 
   try {
     // Get or create the Orbit Learn folder
-    const folderId = options.folderId || await getOrCreateOrbitFolder(drive, teacherId);
+    const folderId = options.folderId || await getOrCreateOrbitFolderId(drive, teacherId);
 
     // Convert data to stream
     const stream = new Readable();
@@ -304,7 +318,7 @@ export async function listDriveFiles(
   }
 
   try {
-    const folderId = await getOrCreateOrbitFolder(drive, teacherId);
+    const folderId = await getOrCreateOrbitFolderId(drive, teacherId);
 
     const response = await drive.files.list({
       q: `'${folderId}' in parents and trashed=false`,
@@ -379,6 +393,8 @@ export default {
   exchangeCodeForTokens,
   saveTeacherDriveTokens,
   getTeacherDriveTokens,
+  getAuthenticatedOAuth2Client,
+  getOrCreateOrbitFolderId,
   isGoogleDriveConnected,
   disconnectGoogleDrive,
   uploadToDrive,
