@@ -4,6 +4,7 @@ import { genAI, TEACHER_CONTENT_SAFETY_SETTINGS } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { agentMemoryService } from './agentMemoryService.js';
 import { logger } from '../../utils/logger.js';
+import { generateAndParseJson } from '../../utils/modelJson.js';
 
 // ============================================
 // TYPES
@@ -372,15 +373,26 @@ async function extractStructuredData(
   });
 
   const prompt = `${schemas[step]}\n\nTeacher's message: "${userMessage}"\n\nExtract the data as JSON. Use null for anything not mentioned.`;
-
-  const result = await model.generateContent(prompt);
-  let text = result.response.text().trim();
-  // Strip markdown code fences if present
-  if (text.startsWith('```')) {
-    text = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
-  }
-  logger.info('Gemini onboarding extraction result', { step, rawText: text.substring(0, 500) });
-  return JSON.parse(text);
+  const parsedResult = await generateAndParseJson<Record<string, any>>({
+    contextLabel: `Onboarding ${step} extraction`,
+    prompts: [
+      prompt,
+      `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. No markdown, no commentary, no code fences.`,
+    ],
+    estimatedTokens: 1000,
+    invoke: async (attemptPrompt) => model.generateContent(attemptPrompt),
+    normalize: (value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('Onboarding extraction did not return a JSON object');
+      }
+      return value as Record<string, any>;
+    },
+  });
+  logger.info('Gemini onboarding extraction result', {
+    step,
+    rawText: parsedResult.text.substring(0, 500),
+  });
+  return parsedResult.data;
 }
 
 // ============================================
@@ -591,10 +603,17 @@ async function parsePacingGuide(
 
 Document content:
 ${fileContent.substring(0, 8000)}`;
-
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  return JSON.parse(text);
+  const parsedResult = await generateAndParseJson<PacingGuideData>({
+    contextLabel: 'Pacing guide extraction',
+    prompts: [
+      prompt,
+      `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. No markdown or extra explanation.`,
+    ],
+    estimatedTokens: 2000,
+    invoke: async (attemptPrompt) => model.generateContent(attemptPrompt),
+    normalize: (value) => value as PacingGuideData,
+  });
+  return parsedResult.data;
 }
 
 // ============================================
@@ -743,6 +762,19 @@ async function quickSetup(teacherId: string, data: QuickSetupInput): Promise<{
     subjectsTaught: validSubjects.length ? validSubjects : undefined,
     curriculumType: data.curriculumType || CurriculumType.AMERICAN,
   });
+
+  const currentTopic = String(data.currentTopic || '').trim();
+  if (currentTopic && validSubjects.length > 0) {
+    // The streamlined flow captures one topic. Attach it to the first selected subject
+    // so the chat experience starts with usable curriculum memory instead of losing it.
+    await agentMemoryService.updateCurriculumState(agent.id, validSubjects[0], {
+      subject: validSubjects[0],
+      schoolYear: getCurrentSchoolYear(),
+      topicProgress: {
+        currentTopic,
+      },
+    });
+  }
 
   // Create a default classroom with student count if provided
   const existingClassrooms = await agentMemoryService.getClassroomContexts(agent.id);
