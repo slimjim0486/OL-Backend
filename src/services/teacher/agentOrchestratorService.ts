@@ -18,6 +18,7 @@ import { taskRouterService, IntentType } from './taskRouterService.js';
 import { agentContentBridge } from './agentContentBridge.js';
 import { agentFlowPolicy } from './agentFlowPolicy.js';
 import type { AgentFlowType } from './agentFlowPolicy.js';
+import { detectPlannerNavigationIntent } from './plannerNavigationIntent.js';
 import { weeklyPrepService } from './weeklyPrepService.js';
 import { queueWeeklyPrep } from '../../jobs/index.js';
 import { logger } from '../../utils/logger.js';
@@ -82,7 +83,7 @@ type LessonMissingField = 'topic' | 'subject' | 'gradeLevel';
 type QuizMissingField = 'topic' | 'gradeLevel';
 type FlashcardsMissingField = 'topic' | 'gradeLevel';
 type SubPlanMissingField = 'subject' | 'gradeLevel';
-type IepMissingField = 'disabilityCategory' | 'subjectArea' | 'gradeLevel';
+type IepMissingField = 'disabilityCategory' | 'subjectArea' | 'gradeLevel' | 'presentLevels';
 
 interface LessonPrefill {
   title?: string;
@@ -1156,13 +1157,26 @@ function getMissingIepFields(prefill: IepPrefill): IepMissingField[] {
   if (!prefill.disabilityCategory) missing.push('disabilityCategory');
   if (!prefill.subjectArea) missing.push('subjectArea');
   if (!prefill.gradeLevel) missing.push('gradeLevel');
+  if (!prefill.presentLevels || prefill.presentLevels.trim().length < 10) missing.push('presentLevels');
   return missing;
 }
 
 function buildIepFollowUpQuestion(missing: IepMissingField[]): string {
   const missingSet = new Set(missing);
+  if (missingSet.size === 4) {
+    return `Before I draft IEP goals, what is the student's disability category, the focus area, grade level, and present level or main challenge?`;
+  }
+  if (missingSet.has('presentLevels') && missingSet.has('disabilityCategory') && missingSet.has('subjectArea')) {
+    return `What is the student's disability category, focus area, and current present level or main challenge?`;
+  }
+  if (missingSet.has('presentLevels') && missingSet.has('subjectArea') && missingSet.has('gradeLevel')) {
+    return `What focus area, grade level, and present level or main challenge should these IEP goals reflect?`;
+  }
+  if (missingSet.has('presentLevels') && missingSet.has('disabilityCategory') && missingSet.has('gradeLevel')) {
+    return `What is the student's disability category, grade level, and current present level or main challenge?`;
+  }
   if (missingSet.size === 3) {
-    return `Before I open IEP Goals, I need a few details: What is the student's disability category, the focus area (e.g., reading, math, social skills), and grade level?`;
+    return `Before I draft IEP goals, what is the student's disability category, the focus area (e.g., reading, math, social skills), and grade level?`;
   }
   if (missingSet.has('disabilityCategory') && missingSet.has('subjectArea')) {
     return `What is the student's disability category and the focus area for these IEP goals?`;
@@ -1173,8 +1187,18 @@ function buildIepFollowUpQuestion(missing: IepMissingField[]): string {
   if (missingSet.has('subjectArea') && missingSet.has('gradeLevel')) {
     return `What focus area and grade level should these IEP goals target?`;
   }
+  if (missingSet.has('gradeLevel') && missingSet.has('presentLevels')) {
+    return `What grade level is the student in, and what is the student's present level or main challenge?`;
+  }
+  if (missingSet.has('subjectArea') && missingSet.has('presentLevels')) {
+    return `What focus area should these IEP goals target, and what is the student's present level or main challenge?`;
+  }
+  if (missingSet.has('disabilityCategory') && missingSet.has('presentLevels')) {
+    return `What is the student's disability category, and what is the student's present level or main challenge?`;
+  }
   if (missingSet.has('disabilityCategory')) return `What is the student's disability category?`;
   if (missingSet.has('subjectArea')) return `What focus area should these IEP goals target (e.g., reading, math, social skills)?`;
+  if (missingSet.has('presentLevels')) return `What is the student's current present level or main challenge?`;
   return `What grade level is the student in?`;
 }
 

@@ -1,6 +1,7 @@
 import type { IntentType } from './taskRouterService.js';
 
 export type AgentFlowType =
+  | 'weekly_prep'
   | 'lesson'
   | 'quiz'
   | 'flashcards'
@@ -22,6 +23,9 @@ interface FlowMessageLike {
 }
 
 const FLOW_FROM_ACTION_TYPE: Record<string, Exclude<AgentFlowType, null>> = {
+  weekly_prep: 'weekly_prep',
+  planner_weekly_prep_prompt: 'weekly_prep',
+  coach_weekly_prep_prompt: 'weekly_prep',
   lesson: 'lesson',
   lesson_followup_prompt: 'lesson',
   quiz: 'quiz',
@@ -35,6 +39,8 @@ const FLOW_FROM_ACTION_TYPE: Record<string, Exclude<AgentFlowType, null>> = {
 };
 
 const FLOW_FROM_INTENT: Partial<Record<IntentType, Exclude<AgentFlowType, null>>> = {
+  open_calendar: 'weekly_prep',
+  weekly_prep: 'weekly_prep',
   generate_lesson: 'lesson',
   generate_quiz: 'quiz',
   generate_flashcards: 'flashcards',
@@ -43,6 +49,7 @@ const FLOW_FROM_INTENT: Partial<Record<IntentType, Exclude<AgentFlowType, null>>
 };
 
 const FLOW_TARGET_PATTERNS: Record<Exclude<AgentFlowType, null>, RegExp> = {
+  weekly_prep: /\b(?:weekly\s+prep|plan(?:\s+my)?\s+week|calendar|planner|schedule|week\s+view|weekly\s+plan)\b/i,
   lesson: /\b(?:lesson(?:\s+plan)?|content editor)\b/i,
   quiz: /\b(?:quiz(?:zes)?|test|assessment|exit ticket|worksheet|work sheet|practice sheet|practice problems)\b/i,
   flashcards: /\b(?:flashcards?|flash cards?|study cards?|review cards?)\b/i,
@@ -57,6 +64,7 @@ const REQUEST_DETAIL_CUE_RE =
 const GRADE_CUE_RE =
   /\b(?:grade\s*(?:\d{1,2}|k|pre[\s-]?k)|(?:\d{1,2}(?:st|nd|rd|th)?|k|kindergarten|pre[\s-]?k)\s*grade)\b/i;
 const BARE_TARGET_ONLY_RE: Record<Exclude<AgentFlowType, null>, RegExp> = {
+  weekly_prep: /^(?:weekly\s+prep|plan(?:\s+my)?\s+week|calendar|planner|schedule|week\s+view|weekly\s+plan)$/i,
   lesson: /^(?:lesson|lesson plan|content editor)$/i,
   quiz: /^(?:quiz|test|assessment|exit ticket|worksheet|work sheet|practice sheet)$/i,
   flashcards: /^(?:flashcards?|flash cards?|study cards?|review cards?)$/i,
@@ -129,6 +137,7 @@ export function detectExplicitFlowSwitch(message: string): AgentFlowType {
   if (matches.length === 1) return matches[0];
 
   const specificityOrder: Array<Exclude<AgentFlowType, null>> = [
+    'weekly_prep',
     'lesson',
     'quiz',
     'flashcards',
@@ -175,6 +184,8 @@ export function applyFlowLock(input: FlowLockInput): FlowLockResult {
 
 export function describeFlow(flow: AgentFlowType): string {
   switch (flow) {
+    case 'weekly_prep':
+      return 'Weekly Prep';
     case 'lesson':
       return 'Lesson';
     case 'quiz':

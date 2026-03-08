@@ -403,6 +403,11 @@ export interface GeneratedQuiz {
   tokensUsed: number;
 }
 
+type PartialGeneratedQuizQuestion = Partial<GeneratedQuiz['questions'][number]>;
+type PartialGeneratedQuiz = Omit<Partial<GeneratedQuiz>, 'questions'> & {
+  questions?: PartialGeneratedQuizQuestion[];
+};
+
 const QUIZ_SOURCE_CONTENT_MAX_CHARS = 10000;
 const QUIZ_MIN_OUTPUT_TOKENS = 4000;
 const QUIZ_MAX_OUTPUT_TOKENS = 12000;
@@ -1432,7 +1437,7 @@ function truncateQuizSourceContent(content: string): string {
 }
 
 export function normalizeGeneratedQuiz(
-  quiz: Partial<GeneratedQuiz>,
+  quiz: PartialGeneratedQuiz,
   input: GenerateQuizInput
 ): Omit<GeneratedQuiz, 'tokensUsed'> {
   const fallbackDifficulty = input.difficulty === 'mixed' || !input.difficulty
