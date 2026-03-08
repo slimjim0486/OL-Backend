@@ -403,6 +403,12 @@ export interface GeneratedQuiz {
   tokensUsed: number;
 }
 
+const QUIZ_SOURCE_CONTENT_MAX_CHARS = 10000;
+const QUIZ_MIN_OUTPUT_TOKENS = 4000;
+const QUIZ_MAX_OUTPUT_TOKENS = 12000;
+const QUIZ_BASE_OUTPUT_TOKENS = 1200;
+const QUIZ_TOKENS_PER_QUESTION = 240;
+
 export interface GenerateFlashcardsInput {
   content: string;
   title?: string;
@@ -750,68 +756,78 @@ export const contentGenerationService = {
 
     logger.info('Generating quiz', { teacherId, contentId, questionCount: input.questionCount });
 
-    const prompt = buildQuizPrompt(input);
+    const attempts = [
+      { label: 'standard', compact: false },
+      { label: 'compact-retry', compact: true },
+    ] as const;
+    const requestedQuestionCount = Math.max(1, input.questionCount || 10);
 
-    const model = genAI.getGenerativeModel({
-      model: config.gemini.models.flash,
-      generationConfig: {
-        temperature: 0.6,
-        maxOutputTokens: 4000,
-        responseMimeType: 'application/json',
-      },
-      safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    });
+    let totalTokensUsed = 0;
+    let lastError: string | undefined;
+    let lastResponseText = '';
 
-    const result = await model.generateContent(prompt);
+    for (const attempt of attempts) {
+      let attemptResponseText = '';
 
-    // Check for blocked or empty responses
-    const responseCheck = checkGeminiResponse(result);
-    if (responseCheck.isBlocked || responseCheck.isEmpty) {
-      logger.warn('Quiz generation blocked or empty', {
-        teacherId,
-        contentId,
-        blockReason: responseCheck.blockReason,
-        finishReason: responseCheck.finishReason,
-      });
-      throw new Error('Unable to generate quiz for this content. Try simplifying the text or removing any special characters.');
-    }
+      try {
+        const prompt = buildQuizPrompt(input, { compact: attempt.compact });
+        const result = await generateQuizContent(prompt, requestedQuestionCount);
 
-    const responseText = responseCheck.responseText;
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+        totalTokensUsed += result.tokensUsed;
+        attemptResponseText = result.responseText;
+        const parsed = JSON.parse(extractJSON(result.responseText)) as Partial<GeneratedQuiz>;
+        const quiz = normalizeGeneratedQuiz(parsed, input);
 
-    try {
-      const quiz = JSON.parse(extractJSON(responseText)) as Omit<GeneratedQuiz, 'tokensUsed'>;
+        if (quiz.questions.length < requestedQuestionCount) {
+          throw new Error(
+            `Generated ${quiz.questions.length} of ${requestedQuestionCount} requested questions`
+          );
+        }
 
-      // Record usage
-      await quotaService.recordUsage({
-        teacherId,
-        operation: TokenOperation.QUIZ_GENERATION,
-        tokensUsed,
-        modelUsed: config.gemini.models.flash,
-        resourceType: 'quiz',
-        resourceId: contentId,
-      });
-
-      // Update content if contentId provided
-      if (contentId) {
-        await contentService.recordAIUsage(
-          contentId,
+        // Record usage
+        await quotaService.recordUsage({
           teacherId,
-          tokensUsed,
-          config.gemini.models.flash,
-          TokenOperation.QUIZ_GENERATION,
-          { recordQuota: false }
-        );
-      }
+          operation: TokenOperation.QUIZ_GENERATION,
+          tokensUsed: totalTokensUsed,
+          modelUsed: config.gemini.models.flash,
+          resourceType: 'quiz',
+          resourceId: contentId,
+        });
 
-      return { ...quiz, tokensUsed };
-    } catch (error) {
-      logger.error('Failed to parse generated quiz', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        responseText: responseText.substring(0, 500),
-      });
-      throw new Error('Quiz generation failed unexpectedly. Try again, or use shorter source content.');
+        // Update content if contentId provided
+        if (contentId) {
+          await contentService.recordAIUsage(
+            contentId,
+            teacherId,
+            totalTokensUsed,
+            config.gemini.models.flash,
+            TokenOperation.QUIZ_GENERATION,
+            { recordQuota: false }
+          );
+        }
+
+        return { ...quiz, tokensUsed: totalTokensUsed };
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'Unknown error';
+        lastResponseText = attemptResponseText;
+        logger.warn('Quiz generation attempt failed', {
+          teacherId,
+          contentId,
+          attempt: attempt.label,
+          error: lastError,
+          responseStart: lastResponseText.substring(0, 250),
+          responseEnd: lastResponseText.substring(Math.max(0, lastResponseText.length - 250)),
+        });
+      }
     }
+
+    logger.error('Failed to parse generated quiz', {
+      teacherId,
+      contentId,
+      error: lastError || 'Unknown error',
+      responseText: lastResponseText.substring(0, 500),
+    });
+    throw new Error('Quiz generation failed unexpectedly. Try again, or ask for a shorter or more focused quiz.');
   },
 
   /**
@@ -1367,7 +1383,248 @@ Sections: ${lessonResult.sections.map(s => s.title).join(', ')}
 // HELPER FUNCTIONS
 // ============================================
 
-function extractJSON(text: string): string {
+async function generateQuizContent(
+  prompt: string,
+  requestedQuestionCount: number
+): Promise<{ responseText: string; tokensUsed: number }> {
+  const model = genAI.getGenerativeModel({
+    model: config.gemini.models.flash,
+    generationConfig: {
+      temperature: 0.5,
+      maxOutputTokens: getQuizMaxOutputTokens(requestedQuestionCount),
+      responseMimeType: 'application/json',
+    },
+    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+  });
+
+  const result = await model.generateContent(prompt);
+  const responseCheck = checkGeminiResponse(result);
+
+  if (responseCheck.isBlocked || responseCheck.isEmpty) {
+    logger.warn('Quiz generation blocked or empty', {
+      blockReason: responseCheck.blockReason,
+      finishReason: responseCheck.finishReason,
+      requestedQuestionCount,
+    });
+    throw new Error('Unable to generate quiz for this content. Try simplifying the text or removing any special characters.');
+  }
+
+  return {
+    responseText: responseCheck.responseText,
+    tokensUsed: result.response.usageMetadata?.totalTokenCount || QUIZ_MIN_OUTPUT_TOKENS,
+  };
+}
+
+export function getQuizMaxOutputTokens(questionCount?: number): number {
+  const requested = Math.max(1, questionCount || 10);
+  const calculated = QUIZ_BASE_OUTPUT_TOKENS + requested * QUIZ_TOKENS_PER_QUESTION;
+  return Math.max(QUIZ_MIN_OUTPUT_TOKENS, Math.min(QUIZ_MAX_OUTPUT_TOKENS, calculated));
+}
+
+function truncateQuizSourceContent(content: string): string {
+  const trimmed = String(content || '').trim();
+  if (trimmed.length <= QUIZ_SOURCE_CONTENT_MAX_CHARS) return trimmed;
+
+  return (
+    `${trimmed.slice(0, QUIZ_SOURCE_CONTENT_MAX_CHARS)}\n\n` +
+    '[Source content truncated to keep quiz generation within model limits.]'
+  );
+}
+
+export function normalizeGeneratedQuiz(
+  quiz: Partial<GeneratedQuiz>,
+  input: GenerateQuizInput
+): Omit<GeneratedQuiz, 'tokensUsed'> {
+  const fallbackDifficulty = input.difficulty === 'mixed' || !input.difficulty
+    ? 'medium'
+    : input.difficulty;
+
+  const questions = Array.isArray(quiz.questions)
+    ? quiz.questions
+        .map((question, index) => {
+          const stem = typeof question?.question === 'string' ? question.question.trim() : '';
+          const correctAnswer = typeof question?.correctAnswer === 'string'
+            ? question.correctAnswer.trim()
+            : '';
+
+          if (!stem || !correctAnswer) {
+            return null;
+          }
+
+          const type = typeof question?.type === 'string' && question.type.trim()
+            ? question.type.trim()
+            : 'multiple_choice';
+
+          const options = Array.isArray(question?.options)
+            ? question.options
+                .map((option) => String(option || '').trim())
+                .filter(Boolean)
+            : undefined;
+
+          return {
+            id: typeof question?.id === 'string' && question.id.trim() ? question.id.trim() : `q${index + 1}`,
+            question: stem,
+            type,
+            options: options?.length ? options : undefined,
+            correctAnswer,
+            explanation: typeof question?.explanation === 'string' && question.explanation.trim()
+              ? question.explanation.trim()
+              : 'Review the lesson content to confirm why this answer is correct.',
+            difficulty: typeof question?.difficulty === 'string' && question.difficulty.trim()
+              ? question.difficulty.trim()
+              : fallbackDifficulty,
+            points: Number.isFinite(question?.points) && Number(question.points) > 0
+              ? Number(question.points)
+              : 1,
+          };
+        })
+        .filter((question): question is NonNullable<typeof question> => Boolean(question))
+    : [];
+
+  if (!questions.length) {
+    throw new Error('Generated quiz did not contain any valid questions');
+  }
+
+  const totalPoints = Number.isFinite(quiz.totalPoints) && Number(quiz.totalPoints) > 0
+    ? Number(quiz.totalPoints)
+    : questions.reduce((sum, question) => sum + question.points, 0);
+
+  const estimatedTime = Number.isFinite(quiz.estimatedTime) && Number(quiz.estimatedTime) > 0
+    ? Number(quiz.estimatedTime)
+    : Math.max(5, Math.ceil(questions.length * 1.2));
+
+  return {
+    title: typeof quiz.title === 'string' && quiz.title.trim()
+      ? quiz.title.trim()
+      : input.title?.trim() || 'Generated Quiz',
+    questions,
+    totalPoints,
+    estimatedTime,
+  };
+}
+
+function attemptTruncatedJSONRepair(candidate: string): string {
+  const cutPoints = getStructuralCommaPositions(candidate);
+  const attempts = [candidate.length, ...cutPoints.reverse()];
+
+  for (const cutPoint of attempts) {
+    let repaired = candidate.slice(0, cutPoint);
+    repaired = repaired.replace(/[\s,]+$/, '');
+    repaired = repaired.replace(/:\s*$/, '');
+    repaired = closeOpenJsonString(repaired);
+    repaired = closeOpenJsonStructures(repaired);
+
+    try {
+      JSON.parse(repaired);
+      return repaired;
+    } catch {
+      // Try an earlier structural comma.
+    }
+  }
+
+  throw new Error('JSON response was truncated and could not be repaired.');
+}
+
+function getStructuralCommaPositions(text: string): number[] {
+  const positions: number[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString && char === ',') {
+      positions.push(i);
+    }
+  }
+
+  return positions;
+}
+
+function closeOpenJsonString(text: string): string {
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+    }
+  }
+
+  const sanitized = escaped ? text.slice(0, -1) : text;
+  return inString ? `${sanitized}"` : sanitized;
+}
+
+function closeOpenJsonStructures(text: string): string {
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === '{' || char === '[') {
+      stack.push(char);
+    } else if (char === '}' && stack[stack.length - 1] === '{') {
+      stack.pop();
+    } else if (char === ']' && stack[stack.length - 1] === '[') {
+      stack.pop();
+    }
+  }
+
+  let repaired = text;
+  for (let i = stack.length - 1; i >= 0; i--) {
+    repaired += stack[i] === '{' ? '}' : ']';
+  }
+
+  return repaired;
+}
+
+export function extractJSON(text: string): string {
   // Try to parse as-is first
   try {
     JSON.parse(text);
@@ -1398,7 +1655,28 @@ function extractJSON(text: string): string {
       ? jsonArrayMatch[0]
       : jsonObjectMatch[0];
   } else {
-    candidate = jsonArrayMatch?.[0] || jsonObjectMatch?.[0] || text;
+    candidate = jsonObjectMatch?.[0] || jsonArrayMatch?.[0] || text;
+  }
+
+  const firstObjectStart = text.indexOf('{');
+  const firstArrayStart = text.indexOf('[');
+  const firstStructuredStart = [firstObjectStart, firstArrayStart]
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0];
+
+  if (
+    firstStructuredStart !== undefined &&
+    candidate.length < text.length - firstStructuredStart &&
+    !candidate.trimStart().startsWith('{') &&
+    !candidate.trimStart().startsWith('[')
+  ) {
+    candidate = text.slice(firstStructuredStart);
+  } else if (
+    firstStructuredStart !== undefined &&
+    (candidate === jsonArrayMatch?.[0] || candidate === jsonObjectMatch?.[0]) &&
+    candidate.length < text.length - firstStructuredStart
+  ) {
+    candidate = text.slice(firstStructuredStart);
   }
 
   // Try to parse the candidate
@@ -1412,7 +1690,13 @@ function extractJSON(text: string): string {
     const openBrackets = (candidate.match(/\[/g) || []).length;
     const closeBrackets = (candidate.match(/\]/g) || []).length;
 
-    if (openBraces > closeBraces || openBrackets > closeBrackets) {
+    const parseErrorMessage = error instanceof Error ? error.message : '';
+
+    if (
+      openBraces > closeBraces ||
+      openBrackets > closeBrackets ||
+      parseErrorMessage.includes('Unexpected end')
+    ) {
       // JSON is truncated - try to repair by closing brackets
       logger.warn('Detected truncated JSON response, attempting repair', {
         openBraces,
@@ -1422,19 +1706,7 @@ function extractJSON(text: string): string {
         textLength: text.length,
       });
 
-      // Try to repair truncated JSON by closing unclosed brackets/braces
-      let repaired = candidate;
-      // Remove incomplete key-value pairs at the end
-      repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"]*$/, '');
-      repaired = repaired.replace(/,\s*$/, '');
-
-      // Add missing closing brackets
-      for (let i = 0; i < openBrackets - closeBrackets; i++) {
-        repaired += ']';
-      }
-      for (let i = 0; i < openBraces - closeBraces; i++) {
-        repaired += '}';
-      }
+      const repaired = attemptTruncatedJSONRepair(candidate);
 
       try {
         JSON.parse(repaired);
@@ -1757,14 +2029,19 @@ IMPORTANT:
 - This should be comprehensive enough to use as a standalone study resource`;
 }
 
-function buildQuizPrompt(input: GenerateQuizInput): string {
+function buildQuizPrompt(
+  input: GenerateQuizInput,
+  options: { compact?: boolean } = {}
+): string {
   const questionCount = input.questionCount || 10;
   const types = input.questionTypes || ['multiple_choice', 'true_false'];
+  const compactMode = options.compact || questionCount >= 20;
+  const sourceContent = truncateQuizSourceContent(input.content);
 
   return `You are an expert educator creating an assessment quiz.
 
 CONTENT TO CREATE QUIZ FROM:
-${input.content}
+${sourceContent}
 
 QUIZ REQUIREMENTS:
 - Number of questions: ${questionCount}
@@ -1772,6 +2049,11 @@ QUIZ REQUIREMENTS:
 - Difficulty: ${input.difficulty || 'mixed'}
 - Grade level: ${input.gradeLevel || 'Elementary'}
 ${input.title ? `- Quiz title: ${input.title}` : ''}
+- Output must be valid JSON only
+- Keep question stems concise and classroom-ready
+- Keep answer explanations to ${compactMode ? '1 short sentence (max 18 words)' : '1-2 short sentences'}
+- Keep options short and avoid unnecessary repetition
+- Make sure the response includes ALL ${questionCount} questions before closing the JSON
 
 Create a quiz that:
 1. Tests understanding of key concepts
@@ -1797,7 +2079,13 @@ Return JSON with this structure:
   ],
   "totalPoints": 10,
   "estimatedTime": 15
-}`;
+}
+
+IMPORTANT:
+- Return ONLY JSON. No markdown fences or commentary.
+- Every question object must include id, question, type, correctAnswer, explanation, difficulty, and points.
+- Use plain double quotes only.
+- Keep the total response compact enough to avoid truncation.`;
 }
 
 function buildFlashcardsPrompt(input: GenerateFlashcardsInput): string {
