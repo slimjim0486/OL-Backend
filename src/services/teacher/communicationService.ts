@@ -8,7 +8,7 @@ import { getCurriculumConfig } from '../../config/curricula.js';
 import { agentMemoryService } from './agentMemoryService.js';
 import { contextAssemblerService } from './contextAssemblerService.js';
 import { quotaService } from './quotaService.js';
-import { logger } from '../../utils/logger.js';
+import { generateAndParseJson, truncatePromptText } from '../../utils/modelJson.js';
 
 // ============================================
 // TYPES
@@ -34,6 +34,10 @@ export interface GenerateReportCommentsInput {
   commentCount?: number;
 }
 
+const COMMUNICATION_CONTEXT_MAX_CHARS = 6000;
+const PARENT_EMAIL_INPUT_CONTEXT_MAX_CHARS = 2000;
+const REPORT_COMMENT_FOCUS_MAX_CHARS = 1200;
+
 // ============================================
 // PARENT EMAIL GENERATION
 // ============================================
@@ -51,7 +55,10 @@ async function generateParentEmail(
   const currConfig = getCurriculumConfig(curriculumType);
 
   const context = await contextAssemblerService.assembleContext(teacherId, 'CHAT');
-  const additionalContext = contextAssemblerService.buildAdditionalContextString(context);
+  const additionalContext = truncatePromptText(
+    contextAssemblerService.buildAdditionalContextString(context),
+    COMMUNICATION_CONTEXT_MAX_CHARS
+  );
 
   const toneMap = {
     positive: 'warm and encouraging',
@@ -67,7 +74,7 @@ async function generateParentEmail(
   };
 
   const communicationTone = currConfig?.parentExpectations?.communicationTone || 'friendly';
-  const keyTerms = currConfig?.parentExpectations?.keyTerminology || {};
+  const keyTerms: Record<string, string> = currConfig?.parentExpectations?.keyTerminology || {};
 
   const prompt = `You are helping a teacher write a parent email. Use the following curriculum-specific communication style:
 
@@ -89,7 +96,7 @@ EMAIL REQUEST:
 ${input.subject ? `- Subject: ${input.subject}` : ''}
 ${input.studentGroup ? `- Student Group: ${input.studentGroup}` : ''}
 ${input.gradeLevel ? `- Grade Level: ${input.gradeLevel}` : ''}
-${input.additionalContext ? `- Additional Context: ${input.additionalContext}` : ''}
+${input.additionalContext ? `- Additional Context: ${truncatePromptText(input.additionalContext, PARENT_EMAIL_INPUT_CONTEXT_MAX_CHARS)}` : ''}
 
 Generate a professional parent email. Include:
 1. A warm greeting
@@ -104,27 +111,30 @@ Return JSON:
   "content": "Full email body text with proper paragraphs"
 }`;
 
-  const model = genAI.getGenerativeModel({
-    model: config.gemini.models.flash,
-    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 2000,
-      responseMimeType: 'application/json',
+  const parsedResult = await generateAndParseJson({
+    contextLabel: 'Parent email',
+    prompts: [
+      prompt,
+      `${prompt}\n\nIMPORTANT: Return a single compact JSON object only. Keep the email concise and avoid unnecessary repetition.`,
+    ],
+    estimatedTokens,
+    invoke: async (attemptPrompt) => {
+      const model = genAI.getGenerativeModel({
+        model: config.gemini.models.flash,
+        safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: getParentEmailMaxOutputTokens(input.length),
+          responseMimeType: 'application/json',
+        },
+      });
+      return model.generateContent(attemptPrompt);
     },
+    normalize: normalizeParentEmail,
   });
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
-
-  let parsed: { title: string; content: string };
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    logger.error('Failed to parse parent email JSON', { text: text.substring(0, 500) });
-    throw new Error('Failed to generate email. Please try again.');
-  }
+  const parsed = parsedResult.data;
+  const tokensUsed = parsedResult.tokensUsed;
 
   // Save to database
   const communication = await prisma.teacherCommunication.create({
@@ -177,7 +187,10 @@ async function generateReportComments(
   const currConfig = getCurriculumConfig(curriculumType);
 
   const context = await contextAssemblerService.assembleContext(teacherId, 'CHAT');
-  const additionalContext = contextAssemblerService.buildAdditionalContextString(context);
+  const additionalContext = truncatePromptText(
+    contextAssemblerService.buildAdditionalContextString(context),
+    COMMUNICATION_CONTEXT_MAX_CHARS
+  );
 
   // Load curriculum state for subject context
   let curriculumContext = '';
@@ -191,7 +204,7 @@ async function generateReportComments(
     }
   }
 
-  const keyTerms = currConfig?.parentExpectations?.keyTerminology || {};
+  const keyTerms: Record<string, string> = currConfig?.parentExpectations?.keyTerminology || {};
   const commentCount = input.commentCount || 5;
 
   const prompt = `You are helping a teacher write report card comments. Use curriculum-specific language:
@@ -214,7 +227,7 @@ COMMENT REQUEST:
 ${input.subject ? `- Subject: ${input.subject}` : ''}
 ${input.gradeLevel ? `- Grade Level: ${input.gradeLevel}` : ''}
 ${input.studentGroup ? `- Student Group: ${input.studentGroup}` : ''}
-${input.focusAreas?.length ? `- Focus Areas: ${input.focusAreas.join(', ')}` : ''}
+${input.focusAreas?.length ? `- Focus Areas: ${truncatePromptText(input.focusAreas.join(', '), REPORT_COMMENT_FOCUS_MAX_CHARS)}` : ''}
 ${input.includeGoals ? '- Include specific learning goals for next term' : ''}
 
 Generate ${commentCount} unique report card comments appropriate for students at the "${input.performanceLevel || 'meeting'}" level. Each comment should:
@@ -236,27 +249,30 @@ Return JSON:
   ]
 }`;
 
-  const model = genAI.getGenerativeModel({
-    model: config.gemini.models.flash,
-    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    generationConfig: {
-      temperature: 0.8,
-      maxOutputTokens: 4000,
-      responseMimeType: 'application/json',
+  const parsedResult = await generateAndParseJson({
+    contextLabel: 'Report comments',
+    prompts: [
+      prompt,
+      `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep each comment compact but specific.`,
+    ],
+    estimatedTokens,
+    invoke: async (attemptPrompt) => {
+      const model = genAI.getGenerativeModel({
+        model: config.gemini.models.flash,
+        safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: getReportCommentsMaxOutputTokens(commentCount),
+          responseMimeType: 'application/json',
+        },
+      });
+      return model.generateContent(attemptPrompt);
     },
+    normalize: (value) => normalizeReportComments(value, input.subject, input.performanceLevel, commentCount),
   });
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
-
-  let parsed: { title: string; comments: Array<{ comment: string; strengthArea: string; growthArea: string }> };
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    logger.error('Failed to parse report comments JSON', { text: text.substring(0, 500) });
-    throw new Error('Failed to generate comments. Please try again.');
-  }
+  const parsed = parsedResult.data;
+  const tokensUsed = parsedResult.tokensUsed;
 
   // Format comments into readable content
   const formattedContent = parsed.comments
@@ -367,3 +383,56 @@ export const communicationService = {
   updateCommunication,
   deleteCommunication,
 };
+
+function getParentEmailMaxOutputTokens(length?: GenerateParentEmailInput['length']): number {
+  switch (length) {
+    case 'short':
+      return 1400;
+    case 'long':
+      return 2600;
+    case 'medium':
+    default:
+      return 2000;
+  }
+}
+
+function getReportCommentsMaxOutputTokens(commentCount: number): number {
+  return Math.min(8000, Math.max(3500, 1200 + commentCount * 450));
+}
+
+function normalizeParentEmail(value: any): { title: string; content: string } {
+  const title = String(value?.title || '').trim();
+  const content = String(value?.content || '').trim();
+
+  if (!title || !content) {
+    throw new Error('Parent email JSON missing title or content');
+  }
+
+  return { title, content };
+}
+
+function normalizeReportComments(
+  value: any,
+  subject?: string,
+  performanceLevel?: string,
+  requestedCount?: number
+): { title: string; comments: Array<{ comment: string; strengthArea: string; growthArea: string }> } {
+  const comments = Array.isArray(value?.comments)
+    ? value.comments
+        .map((item: any) => ({
+          comment: String(item?.comment || '').trim(),
+          strengthArea: String(item?.strengthArea || '').trim(),
+          growthArea: String(item?.growthArea || '').trim(),
+        }))
+        .filter((item: { comment: string; strengthArea: string; growthArea: string }) => item.comment)
+    : [];
+
+  if (!comments.length) {
+    throw new Error('Report comments JSON did not contain any valid comments');
+  }
+
+  return {
+    title: String(value?.title || '').trim() || `Report Card Comments - ${subject || 'General'} ${performanceLevel || 'meeting'}`,
+    comments: comments.slice(0, requestedCount || comments.length),
+  };
+}

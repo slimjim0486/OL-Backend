@@ -3,6 +3,7 @@ import { genAI, TEACHER_CONTENT_SAFETY_SETTINGS } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { quotaService } from './quotaService.js';
 import { logger } from '../../utils/logger.js';
+import { getGeminiResponseText, parseModelJson } from '../../utils/modelJson.js';
 
 const MODEL = config.gemini.models.flash;
 
@@ -228,13 +229,16 @@ ${trimmed.text}`;
     });
 
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const responseText = response.text().trim();
-    const tokensUsed = response.usageMetadata?.totalTokenCount || estimatedTokens;
+    const response = getGeminiResponseText(result, 'Lesson review', estimatedTokens);
+    const responseText = response.text;
+    const tokensUsed = response.tokensUsed;
 
     let parsed: LessonReviewReport = {};
     try {
-      parsed = JSON.parse(extractJSON(responseText)) as LessonReviewReport;
+      parsed = parseModelJson<LessonReviewReport>(responseText, {
+        contextLabel: 'Lesson review',
+        normalize: (value) => value as LessonReviewReport,
+      });
     } catch (error) {
       logger.warn('Lesson review JSON parse failed; falling back to plain text', {
         teacherId,
@@ -277,31 +281,3 @@ ${trimmed.text}`;
     };
   },
 };
-
-function extractJSON(text: string): string {
-  try {
-    JSON.parse(text);
-    return text;
-  } catch {
-    // continue
-  }
-
-  const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonBlockMatch) {
-    const extracted = jsonBlockMatch[1].trim();
-    try {
-      JSON.parse(extracted);
-      return extracted;
-    } catch {
-      // continue
-    }
-  }
-
-  const jsonObjectMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonObjectMatch) {
-    return jsonObjectMatch[0];
-  }
-
-  return text;
-}
-

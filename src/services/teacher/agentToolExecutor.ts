@@ -628,5 +628,8 @@ function truncateResult(data: any): any {
   }
 
   // Fallback: stringify and truncate
-  return JSON.parse(json.substring(0, 8000));
+  return {
+    _truncated: true,
+    preview: json.substring(0, 8000) + ' [truncated]',
+  };
 }

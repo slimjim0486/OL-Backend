@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getTTSClient } from '../../config/tts.js';
 import { NotFoundError, ValidationError } from '../../middleware/errorHandler.js';
 import { buildLessonSummariesFromPlan, type WeeklyPlan } from './weeklyPrepAudioUtils.js';
+import { generateAndParseJson, truncatePromptText } from '../../utils/modelJson.js';
 
 // ============================================
 // TYPES
@@ -154,39 +155,33 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
     });
 
     // Use Gemini 3 Flash for script generation
-    const model = genAI.getGenerativeModel({
-      model: config.gemini.models.flash,
-      generationConfig: {
-        temperature: 0.8, // Creative but coherent
-        maxOutputTokens: 8000,
-        responseMimeType: 'application/json',
+    const parsedResult = await generateAndParseJson({
+      contextLabel: 'Audio update script',
+      prompts: [
+        prompt,
+        `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep the script concise and easy to read aloud.`,
+      ],
+      estimatedTokens,
+      invoke: async (attemptPrompt) => {
+        const model = genAI.getGenerativeModel({
+          model: config.gemini.models.flash,
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: getAudioScriptMaxOutputTokens(duration),
+            responseMimeType: 'application/json',
+          },
+        });
+        return model.generateContent(attemptPrompt);
       },
+      normalize: normalizeGeneratedScript,
     });
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
-
-    try {
-      const parsed = JSON.parse(extractJSON(responseText)) as {
-        title: string;
-        script: string;
-        estimatedDurationSeconds: number;
-      };
-
-      return {
-        title: parsed.title,
-        script: parsed.script,
-        estimatedDuration: parsed.estimatedDurationSeconds,
-        tokensUsed,
-      };
-    } catch (error) {
-      logger.error('Failed to parse generated script', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        responseText: responseText.substring(0, 500),
-      });
-      throw new Error('Script generation failed. Try selecting fewer lessons or adding custom notes to guide the content.');
-    }
+    return {
+      title: parsedResult.data.title,
+      script: parsedResult.data.script,
+      estimatedDuration: parsedResult.data.estimatedDurationSeconds,
+      tokensUsed: parsedResult.tokensUsed,
+    };
   },
 
   /**
@@ -509,36 +504,6 @@ ${content?.sections ? `Key Sections: ${content.sections.map(s => s.title).join('
 // HELPER FUNCTIONS
 // ============================================
 
-function extractJSON(text: string): string {
-  // Try to parse as-is first
-  try {
-    JSON.parse(text);
-    return text;
-  } catch {
-    // Continue to extraction logic
-  }
-
-  // Try to extract JSON from markdown code blocks
-  const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonBlockMatch) {
-    const extracted = jsonBlockMatch[1].trim();
-    try {
-      JSON.parse(extracted);
-      return extracted;
-    } catch {
-      // Continue
-    }
-  }
-
-  // Try to find JSON object
-  const jsonObjectMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonObjectMatch) {
-    return jsonObjectMatch[0];
-  }
-
-  return text;
-}
-
 interface PodcastPromptParams {
   lessonSummaries: string;
   customNotes?: string;
@@ -559,10 +524,10 @@ function buildPodcastScriptPrompt(params: PodcastPromptParams): string {
 Your goal is to help parents understand what their children are learning and how they can support at home.
 
 LESSON CONTENT FROM THIS WEEK:
-${lessonSummaries}
+${truncatePromptText(lessonSummaries, 18000)}
 
-${customNotes ? `TEACHER'S ADDITIONAL NOTES:\n${customNotes}\n` : ''}
-${focusAreas?.length ? `FOCUS AREAS TO EMPHASIZE:\n${focusAreas.join('\n')}\n` : ''}
+${customNotes ? `TEACHER'S ADDITIONAL NOTES:\n${truncatePromptText(customNotes, 2500)}\n` : ''}
+${focusAreas?.length ? `FOCUS AREAS TO EMPHASIZE:\n${truncatePromptText(focusAreas.join('\n'), 1200)}\n` : ''}
 
 Create a ${durationMinutes} minute podcast-style script for parents about ${weekLabel}'s learning activities.
 
@@ -625,6 +590,38 @@ function getDurationWords(minutes: string): string {
     '6-8': '900-1200',
   };
   return durationMap[minutes] || '600-750';
+}
+
+function getAudioScriptMaxOutputTokens(duration: GenerateAudioScriptInput['duration']): number {
+  switch (duration) {
+    case 'short':
+      return 4500;
+    case 'long':
+      return 10000;
+    case 'medium':
+    default:
+      return 7000;
+  }
+}
+
+function normalizeGeneratedScript(value: any): {
+  title: string;
+  script: string;
+  estimatedDurationSeconds: number;
+} {
+  const title = String(value?.title || '').trim();
+  const script = String(value?.script || '').trim();
+  const estimatedDurationSeconds = Number(value?.estimatedDurationSeconds);
+
+  if (!title || !script || !Number.isFinite(estimatedDurationSeconds) || estimatedDurationSeconds <= 0) {
+    throw new Error('Audio update script JSON was missing required fields');
+  }
+
+  return {
+    title,
+    script,
+    estimatedDurationSeconds: Math.round(estimatedDurationSeconds),
+  };
 }
 
 export default audioUpdateService;

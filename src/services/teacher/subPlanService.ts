@@ -1,11 +1,12 @@
 // Substitute Teacher Plan Service - AI-generated emergency sub plans
 // Creates comprehensive, self-contained plans for substitute teachers
-import { genAI } from '../../config/gemini.js';
+import { genAI, TEACHER_CONTENT_SAFETY_SETTINGS } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { prisma } from '../../config/database.js';
 import { TokenOperation, SubstitutePlan } from '@prisma/client';
 import { quotaService } from './quotaService.js';
 import { logger } from '../../utils/logger.js';
+import { generateAndParseJson, truncatePromptText } from '../../utils/modelJson.js';
 
 // ============================================
 // TYPES
@@ -110,6 +111,10 @@ export interface GeneratedSubPlan {
   backupActivities: BackupActivity[];
   tokensUsed: number;
 }
+
+const SUB_PLAN_UPLOADED_CONTENT_MAX_CHARS = 30000;
+const SUB_PLAN_LESSON_SUMMARY_MAX_CHARS = 1200;
+const SUB_PLAN_ADDITIONAL_NOTES_MAX_CHARS = 2500;
 
 export interface CreateSubPlanInput extends GenerateSubPlanInput {
   // Title is required in base interface, can override here if needed
@@ -217,50 +222,40 @@ export const subPlanService = {
       uploadedContent: input.uploadedContent,
     });
 
-    // Use Gemini 3 Flash for sub plan generation
-    // Gemini Flash supports up to 1M tokens input, 65k output
-    const model = genAI.getGenerativeModel({
-      model: config.gemini.models.flash,
-      generationConfig: {
-        temperature: 0.6, // Balanced creativity and reliability
-        maxOutputTokens: 65000, // Allow detailed plans with lots of material
-        responseMimeType: 'application/json',
+    const parsedResult = await generateAndParseJson({
+      contextLabel: 'Sub plan',
+      prompts: [
+        prompt,
+        `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep the plan detailed but remove any filler or repetition.`,
+      ],
+      estimatedTokens,
+      invoke: async (attemptPrompt) => {
+        const model = genAI.getGenerativeModel({
+          model: config.gemini.models.flash,
+          safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+          generationConfig: {
+            temperature: 0.6,
+            maxOutputTokens: 65000,
+            responseMimeType: 'application/json',
+          },
+        });
+        return model.generateContent(attemptPrompt);
       },
+      normalize: normalizeSubPlan,
     });
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+    await quotaService.recordUsage({
+      teacherId,
+      operation: TokenOperation.SUB_PLAN_GENERATION,
+      tokensUsed: parsedResult.tokensUsed,
+      modelUsed: config.gemini.models.flash,
+      resourceType: 'sub_plan',
+    });
 
-    try {
-      const parsed = JSON.parse(extractJSON(responseText)) as {
-        title: string;
-        schedule: ScheduleBlock[];
-        activities: ActivityDetail[];
-        materials: MaterialItem[];
-        backupActivities: BackupActivity[];
-      };
-
-      // Record usage
-      await quotaService.recordUsage({
-        teacherId,
-        operation: TokenOperation.SUB_PLAN_GENERATION,
-        tokensUsed,
-        modelUsed: config.gemini.models.flash,
-        resourceType: 'sub_plan',
-      });
-
-      return {
-        ...parsed,
-        tokensUsed,
-      };
-    } catch (error) {
-      logger.error('Failed to parse generated sub plan', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        responseText: responseText.substring(0, 500),
-      });
-      throw new Error('Sub plan generation failed. Try providing more lesson details or simplifying the schedule.');
-    }
+    return {
+      ...parsedResult.data,
+      tokensUsed: parsedResult.tokensUsed,
+    };
   },
 
   /**
@@ -510,36 +505,6 @@ export const subPlanService = {
 // HELPER FUNCTIONS
 // ============================================
 
-function extractJSON(text: string): string {
-  // Try to parse as-is first
-  try {
-    JSON.parse(text);
-    return text;
-  } catch {
-    // Continue to extraction logic
-  }
-
-  // Try to extract JSON from markdown code blocks
-  const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonBlockMatch) {
-    const extracted = jsonBlockMatch[1].trim();
-    try {
-      JSON.parse(extracted);
-      return extracted;
-    } catch {
-      // Continue
-    }
-  }
-
-  // Try to find JSON object
-  const jsonObjectMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonObjectMatch) {
-    return jsonObjectMatch[0];
-  }
-
-  return text;
-}
-
 interface SubPlanPromptParams {
   lessons: Array<{
     id: string;
@@ -587,10 +552,7 @@ function buildSubPlanPrompt(params: SubPlanPromptParams): string {
   // Build uploaded content section if provided
   let uploadedContentText = '';
   if (uploadedContent?.text) {
-    // Truncate to first 60000 characters (~15k tokens) - Gemini Flash handles up to 1M input tokens
-    const truncatedText = uploadedContent.text.length > 60000
-      ? uploadedContent.text.substring(0, 60000) + '\n...[content truncated]'
-      : uploadedContent.text;
+    const truncatedText = truncatePromptText(uploadedContent.text, SUB_PLAN_UPLOADED_CONTENT_MAX_CHARS);
 
     uploadedContentText = `
 UPLOADED LESSON MATERIAL (${uploadedContent.sourceType?.toUpperCase() || 'FILE'}):
@@ -611,8 +573,8 @@ Use this uploaded content to create specific, detailed activities that match the
 LESSON: ${lesson.title}
 Subject: ${lesson.subject}
 Grade: ${lesson.gradeLevel}
-Summary: ${lesson.summary}
-${lesson.objectives.length > 0 ? `Objectives: ${lesson.objectives.join(', ')}` : ''}
+Summary: ${truncatePromptText(lesson.summary, SUB_PLAN_LESSON_SUMMARY_MAX_CHARS)}
+${lesson.objectives.length > 0 ? `Objectives: ${truncatePromptText(lesson.objectives.join(', '), 800)}` : ''}
 ${lesson.sections.length > 0 ? `Sections: ${lesson.sections.join(', ')}` : ''}
 `).join('\n---\n')
     : uploadedContent?.text
@@ -665,7 +627,7 @@ ${classroomText}
 ${emergencyText}
 ${helpfulText}
 
-${additionalNotes ? `ADDITIONAL NOTES FROM TEACHER:\n${additionalNotes}\n` : ''}
+${additionalNotes ? `ADDITIONAL NOTES FROM TEACHER:\n${truncatePromptText(additionalNotes, SUB_PLAN_ADDITIONAL_NOTES_MAX_CHARS)}\n` : ''}
 
 Create a COMPREHENSIVE substitute teacher plan with:
 
@@ -731,6 +693,70 @@ Return JSON with this structure:
 }
 
 Make the instructions extremely detailed and practical. The sub should feel confident they can handle anything that comes up.`;
+}
+
+function normalizeSubPlan(value: any): Omit<GeneratedSubPlan, 'tokensUsed'> {
+  const schedule = Array.isArray(value?.schedule)
+    ? value.schedule
+        .map((item: any) => ({
+          startTime: String(item?.startTime || '').trim(),
+          endTime: String(item?.endTime || '').trim(),
+          activity: String(item?.activity || '').trim(),
+          description: String(item?.description || '').trim(),
+          lessonId: String(item?.lessonId || '').trim() || undefined,
+        }))
+        .filter((item: ScheduleBlock) => item.startTime && item.endTime && item.activity)
+    : [];
+
+  const activities = Array.isArray(value?.activities)
+    ? value.activities
+        .map((item: any) => ({
+          name: String(item?.name || '').trim(),
+          duration: Number(item?.duration) || 0,
+          objectives: Array.isArray(item?.objectives) ? item.objectives.map((v: any) => String(v || '').trim()).filter(Boolean) : [],
+          materials: Array.isArray(item?.materials) ? item.materials.map((v: any) => String(v || '').trim()).filter(Boolean) : [],
+          stepByStep: Array.isArray(item?.stepByStep) ? item.stepByStep.map((v: any) => String(v || '').trim()).filter(Boolean) : [],
+          assessmentTips: String(item?.assessmentTips || '').trim() || undefined,
+          commonIssues: Array.isArray(item?.commonIssues) ? item.commonIssues.map((v: any) => String(v || '').trim()).filter(Boolean) : undefined,
+          differentiationNotes: String(item?.differentiationNotes || '').trim() || undefined,
+        }))
+        .filter((item: ActivityDetail) => item.name && item.stepByStep.length > 0)
+    : [];
+
+  if (!schedule.length || !activities.length) {
+    throw new Error('Sub plan JSON was missing schedule or activities');
+  }
+
+  const materials = Array.isArray(value?.materials)
+    ? value.materials
+        .map((item: any) => ({
+          item: String(item?.item || '').trim(),
+          location: String(item?.location || '').trim(),
+          quantity: String(item?.quantity || '').trim() || undefined,
+          alternatives: Array.isArray(item?.alternatives) ? item.alternatives.map((v: any) => String(v || '').trim()).filter(Boolean) : undefined,
+        }))
+        .filter((item: MaterialItem) => item.item && item.location)
+    : [];
+
+  const backupActivities = Array.isArray(value?.backupActivities)
+    ? value.backupActivities
+        .map((item: any) => ({
+          name: String(item?.name || '').trim(),
+          duration: Number(item?.duration) || 0,
+          materials: Array.isArray(item?.materials) ? item.materials.map((v: any) => String(v || '').trim()).filter(Boolean) : [],
+          instructions: Array.isArray(item?.instructions) ? item.instructions.map((v: any) => String(v || '').trim()).filter(Boolean) : [],
+          whenToUse: String(item?.whenToUse || '').trim(),
+        }))
+        .filter((item: BackupActivity) => item.name && item.instructions.length > 0)
+    : [];
+
+  return {
+    title: String(value?.title || '').trim() || 'Generated Sub Plan',
+    schedule,
+    activities,
+    materials,
+    backupActivities,
+  };
 }
 
 export default subPlanService;

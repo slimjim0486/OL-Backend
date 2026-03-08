@@ -1,11 +1,12 @@
 // IEP Goal Writer Service - AI-generated SMART goals and accommodations
 // Creates legally-compliant IEP goals based on present levels of performance
-import { genAI } from '../../config/gemini.js';
+import { genAI, TEACHER_CONTENT_SAFETY_SETTINGS } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { prisma } from '../../config/database.js';
 import { TokenOperation, IEPGoalSession, DisabilityCategory, IEPSubjectArea, Prisma } from '@prisma/client';
 import { quotaService } from './quotaService.js';
 import { logger } from '../../utils/logger.js';
+import { generateAndParseJson, truncatePromptText } from '../../utils/modelJson.js';
 
 // ============================================
 // TYPES
@@ -58,6 +59,9 @@ export interface GeneratedIEPContent {
   progressMonitoring: ProgressMonitoringPlan[];
   tokensUsed: number;
 }
+
+const IEP_PRESENT_LEVELS_MAX_CHARS = 12000;
+const IEP_ADDITIONAL_CONTEXT_MAX_CHARS = 3000;
 
 export interface CreateIEPSessionInput extends GenerateIEPGoalsInput {
   studentIdentifier?: string;      // Optional reference (e.g., "Student A")
@@ -136,48 +140,40 @@ export const iepGoalService = {
     });
 
     const prompt = buildIEPGoalPrompt(input);
-
-    // Use Gemini 3 Flash for IEP goal generation
-    const model = genAI.getGenerativeModel({
-      model: config.gemini.models.flash,
-      generationConfig: {
-        temperature: 0.5, // Lower temperature for more consistent, compliant goals
-        maxOutputTokens: 8000,
-        responseMimeType: 'application/json',
+    const parsedResult = await generateAndParseJson({
+      contextLabel: 'IEP goals',
+      prompts: [
+        prompt,
+        `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep each rationale concise and avoid unnecessary repetition.`,
+      ],
+      estimatedTokens,
+      invoke: async (attemptPrompt) => {
+        const model = genAI.getGenerativeModel({
+          model: config.gemini.models.flash,
+          safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+          generationConfig: {
+            temperature: 0.5,
+            maxOutputTokens: getIEPMaxOutputTokens(input),
+            responseMimeType: 'application/json',
+          },
+        });
+        return model.generateContent(attemptPrompt);
       },
+      normalize: normalizeIEPContent,
     });
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+    await quotaService.recordUsage({
+      teacherId,
+      operation: TokenOperation.IEP_GOAL_GENERATION,
+      tokensUsed: parsedResult.tokensUsed,
+      modelUsed: config.gemini.models.flash,
+      resourceType: 'iep_goals',
+    });
 
-    try {
-      const parsed = JSON.parse(extractJSON(responseText)) as {
-        goals: SMARTGoal[];
-        accommodations: AccommodationCategory[];
-        progressMonitoring: ProgressMonitoringPlan[];
-      };
-
-      // Record usage
-      await quotaService.recordUsage({
-        teacherId,
-        operation: TokenOperation.IEP_GOAL_GENERATION,
-        tokensUsed,
-        modelUsed: config.gemini.models.flash,
-        resourceType: 'iep_goals',
-      });
-
-      return {
-        ...parsed,
-        tokensUsed,
-      };
-    } catch (error) {
-      logger.error('Failed to parse generated IEP goals', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        responseText: responseText.substring(0, 500),
-      });
-      throw new Error('IEP goal generation failed. Try providing more detail in the present levels or selecting a different disability category.');
-    }
+    return {
+      ...parsedResult.data,
+      tokensUsed: parsedResult.tokensUsed,
+    };
   },
 
   /**
@@ -392,33 +388,6 @@ export const iepGoalService = {
 // HELPER FUNCTIONS
 // ============================================
 
-function extractJSON(text: string): string {
-  try {
-    JSON.parse(text);
-    return text;
-  } catch {
-    // Continue
-  }
-
-  const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonBlockMatch) {
-    const extracted = jsonBlockMatch[1].trim();
-    try {
-      JSON.parse(extracted);
-      return extracted;
-    } catch {
-      // Continue
-    }
-  }
-
-  const jsonObjectMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonObjectMatch) {
-    return jsonObjectMatch[0];
-  }
-
-  return text;
-}
-
 function buildIEPGoalPrompt(input: GenerateIEPGoalsInput): string {
   const disabilityLabel = DISABILITY_LABELS[input.disabilityCategory];
   const subjectLabel = SUBJECT_AREA_LABELS[input.subjectArea];
@@ -431,12 +400,12 @@ STUDENT INFORMATION:
 - Goal Area: ${subjectLabel}
 
 PRESENT LEVELS OF PERFORMANCE:
-${input.presentLevels}
+${truncatePromptText(input.presentLevels, IEP_PRESENT_LEVELS_MAX_CHARS)}
 
-${input.strengths ? `STUDENT STRENGTHS:\n${input.strengths}\n` : ''}
-${input.challenges ? `AREAS OF CHALLENGE:\n${input.challenges}\n` : ''}
-${input.previousGoals ? `PREVIOUS IEP GOALS (for continuity):\n${input.previousGoals}\n` : ''}
-${input.additionalContext ? `ADDITIONAL CONTEXT:\n${input.additionalContext}\n` : ''}
+${input.strengths ? `STUDENT STRENGTHS:\n${truncatePromptText(input.strengths, 2000)}\n` : ''}
+${input.challenges ? `AREAS OF CHALLENGE:\n${truncatePromptText(input.challenges, 2500)}\n` : ''}
+${input.previousGoals ? `PREVIOUS IEP GOALS (for continuity):\n${truncatePromptText(input.previousGoals, 2500)}\n` : ''}
+${input.additionalContext ? `ADDITIONAL CONTEXT:\n${truncatePromptText(input.additionalContext, IEP_ADDITIONAL_CONTEXT_MAX_CHARS)}\n` : ''}
 
 Generate 3-5 SMART IEP goals following this format:
 "By [timeframe], [student] will [measurable skill/behavior] from [baseline] to [target], as measured by [assessment method], with [accuracy/frequency] across [number] consecutive [trials/data points]."
@@ -521,6 +490,87 @@ IMPORTANT:
 - Include both academic/skill goals and may include behavioral components if relevant
 - Accommodations should be disability-specific, not generic
 - Progress monitoring should be feasible for classroom teachers`;
+}
+
+function getIEPMaxOutputTokens(input: GenerateIEPGoalsInput): number {
+  const detailFactor = Math.ceil(
+    (
+      String(input.presentLevels || '').length +
+      String(input.strengths || '').length +
+      String(input.challenges || '').length +
+      String(input.previousGoals || '').length +
+      String(input.additionalContext || '').length
+    ) / 40
+  );
+  return Math.min(14000, Math.max(8000, 7000 + detailFactor));
+}
+
+function normalizeIEPContent(value: any): Omit<GeneratedIEPContent, 'tokensUsed'> {
+  const goals = Array.isArray(value?.goals)
+    ? value.goals
+        .map((goal: any, index: number) => ({
+          id: String(goal?.id || `goal_${index + 1}`).trim(),
+          goalStatement: String(goal?.goalStatement || '').trim(),
+          baseline: String(goal?.baseline || '').trim(),
+          target: String(goal?.target || '').trim(),
+          measurementMethod: String(goal?.measurementMethod || '').trim(),
+          frequency: String(goal?.frequency || '').trim(),
+          accuracyCriteria: String(goal?.accuracyCriteria || '').trim(),
+          trials: String(goal?.trials || '').trim(),
+          timeframe: String(goal?.timeframe || '').trim(),
+          shortTermObjectives: Array.isArray(goal?.shortTermObjectives)
+            ? goal.shortTermObjectives.map((item: any) => String(item || '').trim()).filter(Boolean)
+            : undefined,
+        }))
+        .filter((goal: SMARTGoal) => goal.goalStatement && goal.target)
+    : [];
+
+  if (!goals.length) {
+    throw new Error('IEP goals JSON did not contain any valid goals');
+  }
+
+  const accommodations = Array.isArray(value?.accommodations)
+    ? value.accommodations
+        .map((category: any) => ({
+          category: normalizeAccommodationCategory(category?.category),
+          title: String(category?.title || '').trim(),
+          accommodations: Array.isArray(category?.accommodations)
+            ? category.accommodations
+                .map((item: any) => ({
+                  accommodation: String(item?.accommodation || '').trim(),
+                  rationale: String(item?.rationale || '').trim(),
+                  implementationTips: String(item?.implementationTips || '').trim() || undefined,
+                }))
+                .filter((item: { accommodation: string; rationale: string }) => item.accommodation && item.rationale)
+            : [],
+        }))
+        .filter((category: AccommodationCategory) => category.title && category.accommodations.length > 0)
+    : [];
+
+  const progressMonitoring = Array.isArray(value?.progressMonitoring)
+    ? value.progressMonitoring
+        .map((item: any) => ({
+          tool: String(item?.tool || '').trim(),
+          frequency: String(item?.frequency || '').trim(),
+          dataCollection: String(item?.dataCollection || '').trim(),
+          decisionRules: String(item?.decisionRules || '').trim(),
+        }))
+        .filter((item: ProgressMonitoringPlan) => item.tool && item.frequency)
+    : [];
+
+  return {
+    goals,
+    accommodations,
+    progressMonitoring,
+  };
+}
+
+function normalizeAccommodationCategory(value: unknown): AccommodationCategory['category'] {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'presentation' || normalized === 'response' || normalized === 'setting' || normalized === 'timing') {
+    return normalized;
+  }
+  return 'presentation';
 }
 
 export default iepGoalService;

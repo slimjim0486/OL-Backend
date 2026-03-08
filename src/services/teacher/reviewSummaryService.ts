@@ -7,6 +7,7 @@ import { config } from '../../config/index.js';
 import { agentMemoryService } from './agentMemoryService.js';
 import { quotaService } from './quotaService.js';
 import { logger } from '../../utils/logger.js';
+import { generateAndParseJson, truncatePromptText } from '../../utils/modelJson.js';
 
 // ============================================
 // TYPES
@@ -36,6 +37,8 @@ interface ReviewData {
   periodStart: Date;
   periodEnd: Date;
 }
+
+const REVIEW_INTERACTIONS_LIMIT = 120;
 
 // ============================================
 // MONTHLY REVIEW
@@ -128,7 +131,7 @@ async function gatherReviewData(
     },
     select: { type: true, outputType: true, summary: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
-    take: 200,
+    take: REVIEW_INTERACTIONS_LIMIT,
   });
 
   // Current curriculum states
@@ -166,17 +169,31 @@ async function createReviewFromData(
 
   const isYearly = type === ReviewType.YEARLY;
 
+  const weeklyPrepSummary = truncatePromptText(
+    data.weeklyPreps
+      .map((p) => `  * ${p.weekLabel}: ${p.materialsCount} materials (${p.approvedCount} approved), subjects: ${p.subjects.join(', ')}`)
+      .join('\n'),
+    5000
+  );
+  const interactionSummary = truncatePromptText(summarizeInteractions(data.interactions), 2500);
+  const curriculumSummary = truncatePromptText(
+    data.curriculumStates
+      .map((s) => `  * ${s.subject}: ${s.standardsTaught.length} taught, ${s.standardsAssessed.length} assessed, week ${s.currentWeek}`)
+      .join('\n'),
+    2500
+  );
+
   const prompt = `You are an educational data analyst creating a ${isYearly ? 'yearly' : 'monthly'} teaching review summary for the period "${data.periodLabel}".
 
 DATA:
 - Weekly Prep Packages: ${data.weeklyPreps.length}
-${data.weeklyPreps.map(p => `  * ${p.weekLabel}: ${p.materialsCount} materials (${p.approvedCount} approved), subjects: ${p.subjects.join(', ')}`).join('\n')}
+${weeklyPrepSummary}
 
 - Teaching Interactions: ${data.interactions.length}
-${summarizeInteractions(data.interactions)}
+${interactionSummary}
 
 - Curriculum Coverage:
-${data.curriculumStates.map(s => `  * ${s.subject}: ${s.standardsTaught.length} taught, ${s.standardsAssessed.length} assessed, week ${s.currentWeek}`).join('\n')}
+${curriculumSummary}
 
 Generate a comprehensive ${isYearly ? 'yearly' : 'monthly'} review. Return JSON:
 {
@@ -190,27 +207,30 @@ Generate a comprehensive ${isYearly ? 'yearly' : 'monthly'} review. Return JSON:
   "recommendations": [{ "recommendation": "<rec>", "priority": "high" | "medium" | "low" }]${isYearly ? ',\n  "handoverNotes": "Notes for next year teacher including student group dynamics, effective strategies, and curriculum positioning"' : ''}
 }`;
 
-  const model = genAI.getGenerativeModel({
-    model: config.gemini.models.flash,
-    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    generationConfig: {
-      temperature: 0.6,
-      maxOutputTokens: 4000,
-      responseMimeType: 'application/json',
+  const parsedResult = await generateAndParseJson({
+    contextLabel: 'Review summary',
+    prompts: [
+      prompt,
+      `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep the executive summary concise and the lists focused.`,
+    ],
+    estimatedTokens,
+    invoke: async (attemptPrompt) => {
+      const model = genAI.getGenerativeModel({
+        model: config.gemini.models.flash,
+        safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+        generationConfig: {
+          temperature: 0.6,
+          maxOutputTokens: getReviewSummaryMaxOutputTokens(data, isYearly),
+          responseMimeType: 'application/json',
+        },
+      });
+      return model.generateContent(attemptPrompt);
     },
+    normalize: (value) => normalizeReviewSummary(value, isYearly),
   });
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    logger.error('Failed to parse review summary JSON', { text: text.substring(0, 500) });
-    throw new Error('Failed to generate review. Please try again.');
-  }
+  const parsed = parsedResult.data;
+  const tokensUsed = parsedResult.tokensUsed;
 
   const review = await prisma.teacherReviewSummary.create({
     data: {
@@ -334,6 +354,33 @@ function summarizeInteractions(interactions: Array<{ type: string; outputType: s
   return Object.entries(counts)
     .map(([key, count]) => `  * ${key}: ${count}`)
     .join('\n');
+}
+
+function getReviewSummaryMaxOutputTokens(data: ReviewData, isYearly: boolean): number {
+  const base = isYearly ? 5500 : 4200;
+  const weeklyPrepFactor = data.weeklyPreps.length * 90;
+  const interactionFactor = data.interactions.length * 8;
+  const curriculumFactor = data.curriculumStates.length * 120;
+  return Math.min(9000, Math.max(4000, base + weeklyPrepFactor + interactionFactor + curriculumFactor));
+}
+
+function normalizeReviewSummary(value: any, isYearly: boolean): any {
+  const executiveSummary = String(value?.executiveSummary || '').trim();
+  if (!executiveSummary) {
+    throw new Error('Review summary JSON missing executiveSummary');
+  }
+
+  return {
+    executiveSummary,
+    lessonsDelivered: value?.lessonsDelivered && typeof value.lessonsDelivered === 'object' ? value.lessonsDelivered : {},
+    assessmentsGiven: value?.assessmentsGiven && typeof value.assessmentsGiven === 'object' ? value.assessmentsGiven : {},
+    standardsCovered: value?.standardsCovered && typeof value.standardsCovered === 'object' ? value.standardsCovered : {},
+    studentGrowth: value?.studentGrowth && typeof value.studentGrowth === 'object' ? value.studentGrowth : {},
+    attentionAreas: Array.isArray(value?.attentionAreas) ? value.attentionAreas : [],
+    upcomingFocus: Array.isArray(value?.upcomingFocus) ? value.upcomingFocus : [],
+    recommendations: Array.isArray(value?.recommendations) ? value.recommendations : [],
+    handoverNotes: isYearly ? String(value?.handoverNotes || '').trim() || null : null,
+  };
 }
 
 // ============================================

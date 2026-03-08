@@ -16,6 +16,7 @@ import { reinforcementService } from './reinforcementService.js';
 import { logger } from '../../utils/logger.js';
 import { NotFoundError } from '../../middleware/errorHandler.js';
 import { z } from 'zod';
+import { generateAndParseJson, parseModelJson, truncatePromptText } from '../../utils/modelJson.js';
 
 // ============================================
 // TYPES
@@ -67,64 +68,11 @@ const weeklyPlanSchema = z.object({
   totalMaterialCount: z.number().int().optional().default(0),
 }).passthrough();
 
-function extractJSON(text: string): string {
-  const normalized = String(text || '').replace(/^\uFEFF/, '').trim();
-  if (!normalized) return normalized;
-
-  // Try to extract JSON from markdown code blocks
-  const jsonBlockMatch = normalized.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (jsonBlockMatch) {
-    return jsonBlockMatch[1].trim();
-  }
-
-  // Try to find a JSON object within surrounding text
-  const jsonObjectMatch = normalized.match(/\{[\s\S]*\}/);
-  if (jsonObjectMatch) {
-    return jsonObjectMatch[0].trim();
-  }
-
-  return normalized;
-}
-
-function repairJSON(jsonLike: string): string {
-  // Minimal repair: remove trailing commas which commonly appear in model output.
-  return jsonLike.replace(/,\s*([}\]])/g, '$1');
-}
-
 function parseWeeklyPlanFromAIResponse(text: string): WeeklyPlan {
-  const raw = String(text || '').trim();
-  if (!raw) {
-    throw new Error('Empty response');
-  }
-
-  const attempts: Array<{ strategy: string; value: string }> = [
-    { strategy: 'raw', value: raw },
-    { strategy: 'extract', value: extractJSON(raw) },
-  ];
-
-  for (const attempt of attempts) {
-    for (const variant of [attempt.value, repairJSON(attempt.value)]) {
-      try {
-        const parsed = JSON.parse(variant);
-        const validated = weeklyPlanSchema.safeParse(parsed);
-        if (validated.success) {
-          return validated.data as unknown as WeeklyPlan;
-        }
-      } catch {
-        // continue
-      }
-    }
-  }
-
-  // Final try: parse JSON first, then surface validation errors for logging upstream.
-  const extracted = extractJSON(raw);
-  const parsed = JSON.parse(repairJSON(extracted));
-  const validated = weeklyPlanSchema.safeParse(parsed);
-  if (!validated.success) {
-    const issues = validated.error.issues.slice(0, 5).map(i => `${i.path.join('.')}: ${i.message}`);
-    throw new Error(`Invalid plan schema: ${issues.join(' | ')}`);
-  }
-  return validated.data as unknown as WeeklyPlan;
+  return parseModelJson<WeeklyPlan>(text, {
+    contextLabel: 'Weekly prep plan',
+    normalize: normalizeWeeklyPlan,
+  });
 }
 
 interface MaterialGenerationOptions {
@@ -146,6 +94,8 @@ const REVIEWABLE_STATUSES: MaterialStatus[] = [
   MaterialStatus.APPROVED,
   ...PENDING_REVIEW_STATUSES,
 ];
+
+const WEEKLY_PREP_CONTEXT_MAX_CHARS = 12000;
 
 // ============================================
 // INITIATING A WEEKLY PREP
@@ -243,36 +193,89 @@ async function generateWeeklyPlan(prepId: string): Promise<void> {
     'WEEKLY_PREP'
   );
 
-  const additionalContext = contextAssemblerService.buildAdditionalContextString(context);
+  const additionalContext = truncatePromptText(
+    contextAssemblerService.buildAdditionalContextString(context),
+    WEEKLY_PREP_CONTEXT_MAX_CHARS
+  );
 
   const prompt = buildPlanningPrompt(prep.weekLabel, prep.weekStartDate, additionalContext);
 
-  const model = genAI.getGenerativeModel({
-    model: config.gemini.models.flash,
-    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 8000,
-      responseMimeType: 'application/json',
-    },
-  });
-
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const planTokens = result.response.usageMetadata?.totalTokenCount || 2000;
-
   let plan: WeeklyPlan;
   try {
-    plan = parseWeeklyPlanFromAIResponse(text);
+    const parsedResult = await generateAndParseJson({
+      contextLabel: 'Weekly prep plan',
+      prompts: [
+        prompt,
+        `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep descriptions short and avoid repetition.`,
+      ],
+      estimatedTokens: 2000,
+      invoke: async (attemptPrompt) => {
+        const model = genAI.getGenerativeModel({
+          model: config.gemini.models.flash,
+          safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: getWeeklyPlanMaxOutputTokens(prep.agent.subjectsTaught?.length || 3),
+            responseMimeType: 'application/json',
+          },
+        });
+        return model.generateContent(attemptPrompt);
+      },
+      normalize: normalizeWeeklyPlan,
+    });
+    plan = parsedResult.data;
+    const planTokens = parsedResult.tokensUsed;
+
+    // Create AgentMaterial records in PENDING status
+    const materialRecords: Prisma.AgentMaterialCreateManyInput[] = [];
+    let totalCount = 0;
+
+    for (const day of plan.days) {
+      let sortOrder = 0;
+      const dayDate = new Date(day.date);
+
+      for (const subjectBlock of day.subjects) {
+        for (const mat of subjectBlock.materials) {
+          materialRecords.push({
+            weeklyPrepId: prepId,
+            dayOfWeek: day.dayOfWeek,
+            dayDate,
+            sortOrder: sortOrder++,
+            subject: subjectBlock.subject.toUpperCase(),
+            materialType: mapToMaterialType(mat.type),
+            title: mat.title,
+            description: mat.description,
+            planContext: {
+              topic: subjectBlock.topic,
+              standards: subjectBlock.standards || [],
+              notes: mat.description,
+            } as any,
+            status: MaterialStatus.PENDING,
+          });
+          totalCount++;
+        }
+      }
+    }
+
+    await prisma.agentMaterial.createMany({ data: materialRecords });
+
+    await prisma.agentWeeklyPrep.update({
+      where: { id: prepId },
+      data: {
+        plan: plan as any,
+        totalMaterials: totalCount,
+        planTokensUsed: planTokens,
+        totalTokensUsed: planTokens,
+      },
+    });
+
+    logger.info('Weekly plan generated', { prepId, totalMaterials: totalCount, planTokens });
+    return;
   } catch (error) {
-    const candidates = (result.response as any)?.candidates;
-    const finishReason = candidates?.[0]?.finishReason;
     logger.error('Failed to parse weekly plan JSON', {
       prepId,
-      finishReason,
-      textLength: text.length,
       error: error instanceof Error ? error.message : 'Unknown error',
-      textPreview: text.substring(0, 800),
+      textPreview: String((error as Error & { responseText?: string }).responseText || '').substring(0, 800),
     });
     await prisma.agentWeeklyPrep.update({
       where: { id: prepId },
@@ -280,51 +283,6 @@ async function generateWeeklyPlan(prepId: string): Promise<void> {
     });
     throw new Error(`Failed to parse weekly plan from AI (prepId=${prepId})`);
   }
-
-  // Create AgentMaterial records in PENDING status
-  const materialRecords: Prisma.AgentMaterialCreateManyInput[] = [];
-  let totalCount = 0;
-
-  for (const day of plan.days) {
-    let sortOrder = 0;
-    const dayDate = new Date(day.date);
-
-    for (const subjectBlock of day.subjects) {
-      for (const mat of subjectBlock.materials) {
-        materialRecords.push({
-          weeklyPrepId: prepId,
-          dayOfWeek: day.dayOfWeek,
-          dayDate,
-          sortOrder: sortOrder++,
-          subject: subjectBlock.subject.toUpperCase(),
-          materialType: mapToMaterialType(mat.type),
-          title: mat.title,
-          description: mat.description,
-          planContext: {
-            topic: subjectBlock.topic,
-            standards: subjectBlock.standards || [],
-            notes: mat.description,
-          } as any,
-          status: MaterialStatus.PENDING,
-        });
-        totalCount++;
-      }
-    }
-  }
-
-  await prisma.agentMaterial.createMany({ data: materialRecords });
-
-  await prisma.agentWeeklyPrep.update({
-    where: { id: prepId },
-    data: {
-      plan: plan as any,
-      totalMaterials: totalCount,
-      planTokensUsed: planTokens,
-      totalTokensUsed: planTokens,
-    },
-  });
-
-  logger.info('Weekly plan generated', { prepId, totalMaterials: totalCount, planTokens });
 }
 
 // ============================================
@@ -453,29 +411,29 @@ async function generateSingleMaterial(
     opts
   );
 
-  const model = genAI.getGenerativeModel({
-    model: config.gemini.models.flash,
-    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    generationConfig: {
-      temperature: 0.65,
-      maxOutputTokens: getMaterialTokenLimit(material.materialType),
-      responseMimeType: 'application/json',
+  const parsedResult = await generateAndParseJson({
+    contextLabel: `Weekly prep ${material.materialType.toLowerCase()} material`,
+    prompts: [
+      prompt,
+      `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep the content focused and compact.`,
+    ],
+    estimatedTokens: 1000,
+    invoke: async (attemptPrompt) => {
+      const model = genAI.getGenerativeModel({
+        model: config.gemini.models.flash,
+        safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+        generationConfig: {
+          temperature: 0.65,
+          maxOutputTokens: getMaterialTokenLimit(material.materialType),
+          responseMimeType: 'application/json',
+        },
+      });
+      return model.generateContent(attemptPrompt);
     },
+    normalize: normalizeGeneratedMaterialContent,
   });
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const tokensUsed = result.response.usageMetadata?.totalTokenCount || 1000;
-
-  let content: any;
-  try {
-    content = JSON.parse(text);
-  } catch {
-    // Fall back to text content
-    content = { rawContent: text, title: material.title };
-  }
-
-  return { content, tokensUsed, modelUsed: config.gemini.models.flash };
+  return { content: parsedResult.data, tokensUsed: parsedResult.tokensUsed, modelUsed: config.gemini.models.flash };
 }
 
 // ============================================
@@ -505,19 +463,29 @@ Create differentiated versions in this JSON structure:
 
 Each version should maintain the same topic and learning objective but adjust complexity, vocabulary, and scaffolding. Return ONLY valid JSON.`;
 
-  const model = genAI.getGenerativeModel({
-    model: config.gemini.models.flash,
-    safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
-    generationConfig: {
-      temperature: 0.5,
-      maxOutputTokens: 6000,
-      responseMimeType: 'application/json',
+  const parsedResult = await generateAndParseJson({
+    contextLabel: 'Weekly prep differentiated versions',
+    prompts: [
+      prompt,
+      `${prompt}\n\nIMPORTANT: Return a single valid JSON object only. Keep each differentiated version concise and classroom-ready.`,
+    ],
+    estimatedTokens: 1500,
+    invoke: async (attemptPrompt) => {
+      const model = genAI.getGenerativeModel({
+        model: config.gemini.models.flash,
+        safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 6000,
+          responseMimeType: 'application/json',
+        },
+      });
+      return model.generateContent(attemptPrompt);
     },
+    normalize: normalizeGeneratedMaterialContent,
   });
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  return JSON.parse(text);
+  return parsedResult.data;
 }
 
 // ============================================
@@ -914,19 +882,49 @@ function getMaterialTokenLimit(type: MaterialType): number {
   switch (type) {
     case MaterialType.WARM_UP:
     case MaterialType.EXIT_TICKET:
-      return 2000;
+      return 2500;
     case MaterialType.QUIZ:
     case MaterialType.FLASHCARDS:
-      return 3000;
+      return 5000;
     case MaterialType.LESSON:
-      return 6000;
+      return 8000;
     case MaterialType.WORKSHEET:
     case MaterialType.ACTIVITY:
     case MaterialType.HOMEWORK:
-      return 4000;
+      return 5000;
     default:
-      return 3000;
+      return 4000;
   }
+}
+
+function getWeeklyPlanMaxOutputTokens(subjectCount: number): number {
+  return Math.min(20000, Math.max(8000, 3000 + subjectCount * 2200));
+}
+
+function normalizeWeeklyPlan(value: any): WeeklyPlan {
+  const validated = weeklyPlanSchema.safeParse(value);
+  if (!validated.success) {
+    const issues = validated.error.issues.slice(0, 5).map((issue) => `${issue.path.join('.')}: ${issue.message}`);
+    throw new Error(`Invalid weekly plan schema: ${issues.join(' | ')}`);
+  }
+
+  const normalized = validated.data as unknown as WeeklyPlan;
+  const totalMaterialCount = normalized.days.reduce(
+    (sum, day) => sum + day.subjects.reduce((daySum, subject) => daySum + subject.materials.length, 0),
+    0
+  );
+
+  return {
+    ...normalized,
+    totalMaterialCount: normalized.totalMaterialCount || totalMaterialCount,
+  };
+}
+
+function normalizeGeneratedMaterialContent(value: any): Record<string, any> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Generated material was not a JSON object');
+  }
+  return value as Record<string, any>;
 }
 
 function extractStudentGroups(classrooms: any[]): Array<{ name: string; level: string; count: number }> {
