@@ -558,7 +558,26 @@ Structure slides as: objective/hook, materials, step-by-step procedure, debrief 
 Prioritize teacher usability and clear student action cues.`;
   }
 
-  return `Create an engaging educational presentation for Grade ${gradeLevel} students. Use clear headings, bullet points, and include relevant images.`;
+  return `Create an engaging educational presentation for Grade ${gradeLevel} students.
+Use clear headings, strong visual hierarchy, and relevant classroom-friendly illustrations.
+Use AI-generated educational visuals on roughly every other explanatory slide.
+Avoid placing images on assessment-heavy, worksheet-style, or overly text-dense slides.
+Do not add text inside images.`;
+}
+
+function getPresentonImageType(
+  content: TeacherContent,
+  templateType: WeeklyTemplateType | undefined
+): PresentonRequest['image_type'] {
+  if (content.contentType === 'FLASHCARD_DECK') {
+    return 'ai-generated';
+  }
+
+  if (templateType === 'WORKSHEET' || templateType === 'HOMEWORK') {
+    return 'stock';
+  }
+
+  return 'ai-generated';
 }
 
 /**
@@ -672,7 +691,7 @@ export async function generateLessonPPTX(
     tone: 'educational',
     verbosity: options.slideStyle === 'dense' ? 'concise' : 'standard',
     web_search: false,
-    image_type: 'stock',
+    image_type: getPresentonImageType(content, weeklyTemplateType),
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',
@@ -872,12 +891,14 @@ export async function generateFlashcardPPTX(
     content: flashcardPrompt,
     instructions: `Create an engaging flashcard study presentation for Grade ${content.gradeLevel} students.
 Format as a study/review deck where each card shows the question/term prominently, then reveals the answer.
-Use large, readable fonts and educational imagery. Make it visually appealing for classroom or self-study use.
+Use large, readable fonts and AI-generated educational imagery.
+Use visuals on roughly every other study slide rather than on every slide.
+Do not place text inside generated images.
 Include a title slide, the flashcards in an easy-to-study format, and end with study tips.`,
     tone: 'educational',
     verbosity: options.slideStyle === 'dense' ? 'concise' : 'standard',
     web_search: false,
-    image_type: 'stock',
+    image_type: 'ai-generated',
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',

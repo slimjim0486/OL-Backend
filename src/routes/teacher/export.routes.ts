@@ -10,7 +10,7 @@ import { prisma } from '../../config/database.js';
 import { exportContent, exportMultipleContent, ExportOptions } from '../../services/teacher/exportService.js';
 import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
 import * as googleDriveService from '../../services/teacher/googleDriveService.js';
-import { createGoogleSlidesPresentation } from '../../services/teacher/googleSlidesService.js';
+import { createGoogleSlidesPresentationFromPptx } from '../../services/teacher/googleSlidesService.js';
 import { uploadFile } from '../../services/storage/storageService.js';
 import { SUBSCRIPTION_PRODUCTS } from '../../config/stripeProducts.js';
 import { checkDownloadAccess, consumeFreeDownloadAllowance, getDownloadAccess } from '../../services/teacher/downloadAccessService.js';
@@ -781,6 +781,19 @@ router.post('/:contentId/google-slides', async (req: Request, res: Response) => 
   try {
     const { contentId } = req.params;
     const teacherId = req.teacher!.id;
+    const themeMap: Record<string, PresentonExportOptions['theme']> = {
+      professional: 'professional-blue',
+      colorful: 'mint-blue',
+    };
+    const frontendTheme = (req.body.theme as string) || 'professional';
+    const options: PresentonExportOptions = {
+      theme: themeMap[frontendTheme] || 'professional-blue',
+      slideStyle: (req.body.slideStyle as 'focused' | 'dense') || 'focused',
+      includeAnswers: req.body.includeAnswers !== false,
+      includeTeacherNotes: req.body.includeTeacherNotes !== false,
+      includeInfographic: req.body.includeInfographic !== false,
+      language: (req.body.language as string) || 'English',
+    };
 
     const content = await prisma.teacherContent.findFirst({
       where: {
@@ -822,9 +835,16 @@ router.post('/:contentId/google-slides', async (req: Request, res: Response) => 
       return;
     }
 
-    const result = await createGoogleSlidesPresentation(teacherId, content, {
-      includeAnswers: req.body.includeAnswers !== false,
-      includeTeacherNotes: req.body.includeTeacherNotes !== false,
+    const pptx = content.contentType === 'FLASHCARD_DECK'
+      ? await generateFlashcardPPTX(content, options)
+      : await generateLessonPPTX(content, options);
+
+    const result = await createGoogleSlidesPresentationFromPptx(teacherId, {
+      data: pptx.data,
+      filename: pptx.filename,
+      title: content.contentType === 'FLASHCARD_DECK'
+        ? `${content.title} - Orbit Learn Flashcards`
+        : `${content.title} - Orbit Learn`,
     });
 
     return res.json({

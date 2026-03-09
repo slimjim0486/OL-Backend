@@ -1,5 +1,6 @@
 import { TeacherContent } from '@prisma/client';
 import { google, drive_v3, slides_v1 } from 'googleapis';
+import { Readable } from 'stream';
 import {
   disconnectGoogleDrive,
   getAuthenticatedOAuth2Client,
@@ -43,6 +44,9 @@ type Flashcard = {
   term?: string;
   definition?: string;
 };
+
+const GOOGLE_SLIDES_MIME_TYPE = 'application/vnd.google-apps.presentation';
+const PPTX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -497,6 +501,67 @@ export async function createGoogleSlidesPresentation(
       fileId: presentationId,
       webViewLink,
       title,
+    };
+  } catch (error) {
+    const message = toFriendlyGoogleError(error);
+    if (
+      message.includes('reconnect your Google account') ||
+      message.includes('authorization expired')
+    ) {
+      await disconnectGoogleDrive(teacherId);
+    }
+    throw new Error(message);
+  }
+}
+
+export async function createGoogleSlidesPresentationFromPptx(
+  teacherId: string,
+  pptx: {
+    data: Buffer;
+    filename: string;
+    title?: string;
+  }
+): Promise<{
+  presentationId: string;
+  fileId: string;
+  webViewLink?: string;
+  title: string;
+}> {
+  const auth = await getAuthenticatedOAuth2Client(teacherId);
+  if (!auth) {
+    throw new Error('Google Drive not connected. Please connect your Google account first.');
+  }
+
+  const drive = google.drive({ version: 'v3', auth });
+  const title = (pptx.title || pptx.filename).replace(/\.pptx$/i, '').trim() || 'Orbit Learn';
+
+  try {
+    const folderId = await getOrCreateOrbitFolderId(drive, teacherId);
+    const media = Readable.from(pptx.data);
+
+    const created = await drive.files.create({
+      requestBody: {
+        name: title,
+        mimeType: GOOGLE_SLIDES_MIME_TYPE,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: PPTX_MIME_TYPE,
+        body: media,
+      },
+      fields: 'id,name,webViewLink',
+    });
+
+    const fileId = created.data.id;
+    if (!fileId) {
+      throw new Error('Google Drive did not return a presentation ID.');
+    }
+
+    return {
+      presentationId: fileId,
+      fileId,
+      webViewLink: created.data.webViewLink || undefined,
+      title: created.data.name || title,
     };
   } catch (error) {
     const message = toFriendlyGoogleError(error);
