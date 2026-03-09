@@ -180,7 +180,13 @@ Return JSON:
 async function generateReportComments(
   teacherId: string,
   input: GenerateReportCommentsInput
-): Promise<{ id: string; title: string; content: string; tokensUsed: number }> {
+): Promise<{
+  id: string;
+  title: string;
+  content: string;
+  comments: Array<{ comment: string; strengthArea: string; growthArea: string }>;
+  tokensUsed: number;
+}> {
   const estimatedTokens = 4000;
   await quotaService.enforceQuota(teacherId, TokenOperation.REPORT_COMMENT_GENERATION, estimatedTokens);
 
@@ -310,6 +316,7 @@ Return JSON:
     id: communication.id,
     title: parsed.title,
     content: formattedContent,
+    comments: parsed.comments,
     tokensUsed,
   };
 }
