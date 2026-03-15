@@ -1170,6 +1170,7 @@ model TeacherContent {
   status      ContentStatus @default(DRAFT)
   isPublic    Boolean       @default(false)
   publishedAt DateTime?
+  slug        String?       @unique // SEO-friendly public URL slug
 
   // Sharing (Content Collaboration Hub)
   sharedAt          DateTime?       // When first shared publicly

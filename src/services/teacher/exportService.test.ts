@@ -53,6 +53,7 @@ function makeContent(overrides: Partial<TeacherContent> = {}): TeacherContent {
     likeCount: 0,
     isFeatured: false,
     remixedFromId: null,
+    slug: null,
     templateId: null,
     tokensUsed: 0,
     aiModelUsed: null,

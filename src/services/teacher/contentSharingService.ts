@@ -2,6 +2,7 @@
 import { prisma } from '../../config/database.js';
 import { Prisma, ShareCategory, Subject, TeacherContent, TeacherContentType } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
+import { ensureSlug } from './slugService.js';
 
 // ============================================
 // TYPES
@@ -55,6 +56,7 @@ const sharedContentListSelect = {
   likeCount: true,
   isFeatured: true,
   remixedFromId: true,
+  slug: true,
   createdAt: true,
   updatedAt: true,
   teacher: {
@@ -129,6 +131,9 @@ export const contentSharingService = {
       throw new Error('Only published content can be shared');
     }
 
+    // Generate slug for public URL before sharing
+    const slug = await ensureSlug(contentId, content.title);
+
     // Update sharing fields
     const updated = await prisma.teacherContent.update({
       where: { id: contentId },
@@ -143,9 +148,10 @@ export const contentSharingService = {
       contentId,
       teacherId,
       category,
+      slug,
     });
 
-    return updated;
+    return { ...updated, slug };
   },
 
   /**
@@ -778,6 +784,100 @@ export const contentSharingService = {
       where: { id: contentId },
       data: { isFeatured },
     });
+  },
+
+  /**
+   * Get public content by slug (for public resource pages, no auth required)
+   */
+  async getContentBySlug(slug: string): Promise<SharedContentWithTeacher | null> {
+    const content = await prisma.teacherContent.findFirst({
+      where: {
+        slug,
+        isPublic: true,
+        status: 'PUBLISHED',
+      },
+      include: {
+        teacher: {
+          select: {
+            ...teacherPublicSelect,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        remixedFrom: {
+          select: {
+            id: true,
+            title: true,
+            teacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!content) {
+      return null;
+    }
+
+    return content as unknown as SharedContentWithTeacher;
+  },
+
+  /**
+   * Get lightweight metadata for a public resource (for OG tags)
+   */
+  async getContentMetaBySlug(slug: string): Promise<{
+    title: string;
+    description: string | null;
+    subject: Subject | null;
+    gradeLevel: string | null;
+    contentType: TeacherContentType;
+    teacherName: string | null;
+    slug: string;
+  } | null> {
+    const content = await prisma.teacherContent.findFirst({
+      where: {
+        slug,
+        isPublic: true,
+        status: 'PUBLISHED',
+      },
+      select: {
+        title: true,
+        description: true,
+        subject: true,
+        gradeLevel: true,
+        contentType: true,
+        slug: true,
+        teacher: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!content || !content.slug) {
+      return null;
+    }
+
+    const teacherName = [content.teacher.firstName, content.teacher.lastName]
+      .filter(Boolean)
+      .join(' ') || null;
+
+    return {
+      title: content.title,
+      description: content.description,
+      subject: content.subject,
+      gradeLevel: content.gradeLevel,
+      contentType: content.contentType,
+      teacherName,
+      slug: content.slug,
+    };
   },
 };
 

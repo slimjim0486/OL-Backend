@@ -50,6 +50,7 @@ import currencyRoutes from './routes/currency.routes.js';
 import leadsRoutes from './routes/leads.routes.js';
 import referralRoutes from './routes/referral.routes.js';
 import shareRoutes from './routes/share.routes.js';
+import publicResourceRoutes from './routes/public/resources.routes.js';
 import curriculumRoutes from './routes/curriculum.routes.js';
 import progressRoutes from './routes/progress.routes.js';
 import voiceRoutes from './routes/voice.routes.js';
@@ -245,6 +246,9 @@ app.use('/api/referrals', referralRoutes);
 
 // Share routes (shareable content)
 app.use('/api/share', shareRoutes);
+
+// Public resource routes (unauthenticated - shared teacher content)
+app.use('/api/public/resources', publicResourceRoutes);
 
 // Curriculum routes (standards mapping)
 app.use('/api/curricula', curriculumRoutes);
