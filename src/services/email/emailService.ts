@@ -459,7 +459,7 @@ Keep up the great work! Every lesson brings ${childName} closer to their learnin
    * Welcome email for new teachers (green color scheme)
    */
   teacherWelcome: (teacherName: string) => ({
-    subject: 'Welcome to Orbit Learn — Meet Ollie, Your AI Teaching Assistant',
+    subject: 'Welcome to Orbit Learn — Meet Ollie, the AI That Learns How You Teach',
     html: `
 <!DOCTYPE html>
 <html>
@@ -470,72 +470,101 @@ Keep up the great work! Every lesson brings ${childName} closer to their learnin
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <!-- Header -->
     <tr>
-      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 100px; height: 100px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Welcome to Orbit Learn</h1>
-        <p style="color: rgba(255,255,255,0.92); margin-top: 10px; font-size: 16px;">Your AI teaching assistant is ready</p>
+      <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 48px 40px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 18px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Fraunces', Georgia, serif; line-height: 1.3;">Meet Ollie</h1>
+        <p style="color: rgba(255,255,255,0.92); margin: 8px 0 0 0; font-size: 16px; line-height: 1.5;">The AI teaching assistant that learns <em>you</em></p>
       </td>
     </tr>
+
+    <!-- Body -->
     <tr>
       <td style="background-color: #ffffff; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
-        <h2 style="color: #1E2A3A; margin-top: 0; font-size: 22px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
+        <h2 style="color: #1E2A3A; margin: 0 0 20px 0; font-size: 22px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
 
-        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
-          Thanks for joining Orbit Learn. We built something a little different from the usual content generators — an AI assistant named <strong>Ollie</strong> who learns how you teach, remembers your classroom, and gets better the more you work together.
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px; margin: 0 0 24px 0;">
+          Welcome to Orbit Learn. We didn't build another content generator. We built <strong>Ollie</strong> — an AI teaching assistant that remembers your classroom, learns your teaching style, and gets better every time you work together.
         </p>
 
-        <!-- Ollie Introduction Box -->
-        <div style="background: #FAF7F2; border-radius: 12px; padding: 24px; margin: 28px 0; border-left: 4px solid #2D5A4A;">
-          <h3 style="color: #2D5A4A; margin: 0 0 12px 0; font-size: 18px; font-family: 'Fraunces', Georgia, serif;">Meet Ollie, your AI teaching assistant</h3>
-          <p style="color: #3D4F66; margin: 0; line-height: 1.6; font-size: 15px;">
-            Ollie remembers your students, your standards, and your style. From weekly lesson plans to parent emails, Ollie handles the prep so you can focus on teaching.
-          </p>
+        <!-- What Makes Ollie Different -->
+        <div style="background: linear-gradient(135deg, #FAF7F2 0%, #FDF8F3 100%); border-radius: 12px; padding: 28px; margin: 0 0 28px 0; border: 1px solid rgba(45,90,74,0.1);">
+          <h3 style="color: #2D5A4A; margin: 0 0 16px 0; font-size: 18px; font-family: 'Fraunces', Georgia, serif;">Ollie isn't just a tool. Ollie is your partner.</h3>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr>
+              <td style="padding: 8px 0; vertical-align: top; width: 28px; color: #2D5A4A; font-size: 18px;">&#10003;</td>
+              <td style="padding: 8px 0 8px 8px; color: #3D4F66; font-size: 15px; line-height: 1.5;"><strong>Remembers your students</strong> — groups, levels, IEPs, the whole picture</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; vertical-align: top; width: 28px; color: #2D5A4A; font-size: 18px;">&#10003;</td>
+              <td style="padding: 8px 0 8px 8px; color: #3D4F66; font-size: 15px; line-height: 1.5;"><strong>Learns your style</strong> — every edit teaches Ollie what you prefer</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; vertical-align: top; width: 28px; color: #2D5A4A; font-size: 18px;">&#10003;</td>
+              <td style="padding: 8px 0 8px 8px; color: #3D4F66; font-size: 15px; line-height: 1.5;"><strong>Tracks your standards</strong> — knows what you've covered and what's left</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; vertical-align: top; width: 28px; color: #2D5A4A; font-size: 18px;">&#10003;</td>
+              <td style="padding: 8px 0 8px 8px; color: #3D4F66; font-size: 15px; line-height: 1.5;"><strong>Creates anything</strong> — lessons, quizzes, sub plans, IEP goals, parent emails, and more</td>
+            </tr>
+          </table>
         </div>
 
-        <h3 style="color: #1E2A3A; font-size: 17px; font-family: 'Fraunces', Georgia, serif;">Getting started is simple:</h3>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 20px 0;">
+        <!-- Getting Started Steps -->
+        <h3 style="color: #1E2A3A; font-size: 17px; font-family: 'Fraunces', Georgia, serif; margin: 0 0 16px 0;">Get started in under 5 minutes:</h3>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px 0;">
           <tr>
-            <td style="padding: 12px 0;">
+            <td style="padding: 10px 0;">
               <table role="presentation" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="background: #2D5A4A; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">1</td>
-                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px;"><strong>Set up your classroom</strong> — Tell Ollie about your grades, subjects, and students</td>
+                  <td style="background: #2D5A4A; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 15px; vertical-align: middle; line-height: 32px;">1</td>
+                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px; line-height: 1.5;"><strong>Tell Ollie about your classroom</strong><br><span style="color: #9CA3AF; font-size: 13px;">Grades, subjects, student groups — a quick chat is all it takes</span></td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding: 12px 0;">
+            <td style="padding: 10px 0;">
               <table role="presentation" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="background: #3D7A6A; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">2</td>
-                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px;"><strong>Let Ollie plan your week</strong> — Differentiated materials, ready to review</td>
+                  <td style="background: #3D7A6A; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 15px; vertical-align: middle; line-height: 32px;">2</td>
+                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px; line-height: 1.5;"><strong>Ask Ollie to create something</strong><br><span style="color: #9CA3AF; font-size: 13px;">A lesson, a quiz, flashcards — just say what you need</span></td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding: 12px 0;">
+            <td style="padding: 10px 0;">
               <table role="presentation" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="background: #D4A853; color: #1E2A3A; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 16px; vertical-align: middle;">3</td>
-                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px;"><strong>Review, approve, teach</strong> — You stay in control of every lesson</td>
+                  <td style="background: #D4A853; color: #1E2A3A; width: 32px; height: 32px; border-radius: 50%; text-align: center; font-weight: bold; font-size: 15px; vertical-align: middle; line-height: 32px;">3</td>
+                  <td style="padding-left: 16px; color: #3D4F66; font-size: 15px; line-height: 1.5;"><strong>Watch Ollie get smarter</strong><br><span style="color: #9CA3AF; font-size: 13px;">Approve, edit, or regenerate — Ollie learns from every interaction</span></td>
                 </tr>
               </table>
             </td>
           </tr>
         </table>
 
-        <div style="text-align: center; margin: 36px 0;">
-          <a href="${config.frontendUrl}/teacher/agent/chat" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 40px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
-            Meet Ollie
+        <!-- CTA -->
+        <div style="text-align: center; margin: 0 0 32px 0;">
+          <a href="${config.frontendUrl}/teacher/agent/chat" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 44px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            Start Chatting with Ollie
           </a>
         </div>
 
-        <p style="color: #9CA3AF; font-size: 14px; border-top: 1px solid #E5E7EB; padding-top: 24px; margin-bottom: 0; text-align: center;">
-          Questions? Reply to this email — we're here to help.<br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+        <!-- Social Proof -->
+        <div style="background: #F0FAF5; border-radius: 10px; padding: 20px; margin: 0 0 28px 0; text-align: center;">
+          <p style="color: #2D5A4A; margin: 0; font-size: 14px; font-style: italic; line-height: 1.6;">
+            "I used to spend my Sundays planning. Now I tell Ollie what I need and spend that time with my family."
+          </p>
+          <p style="color: #9CA3AF; margin: 8px 0 0 0; font-size: 13px;">— 3rd Grade Teacher, Texas</p>
+        </div>
+
+        <!-- Footer -->
+        <p style="color: #9CA3AF; font-size: 14px; border-top: 1px solid #E5E7EB; padding-top: 24px; margin: 0; text-align: center; line-height: 1.6;">
+          Questions? Just reply to this email — a real person will get back to you.<br>
+          <span style="color: #3D4F66; font-weight: 500;">— The Orbit Learn Team</span>
         </p>
       </td>
     </tr>
@@ -548,19 +577,26 @@ Welcome to Orbit Learn
 
 Hi ${teacherName},
 
-Thanks for joining Orbit Learn. We built something a little different from the usual content generators — an AI assistant named Ollie who learns how you teach, remembers your classroom, and gets better the more you work together.
+Welcome to Orbit Learn. We didn't build another content generator. We built Ollie — an AI teaching assistant that remembers your classroom, learns your teaching style, and gets better every time you work together.
 
-Meet Ollie, your AI teaching assistant
-Ollie remembers your students, your standards, and your style. From weekly lesson plans to parent emails, Ollie handles the prep so you can focus on teaching.
+OLLIE ISN'T JUST A TOOL. OLLIE IS YOUR PARTNER.
 
-Getting started is simple:
-1. Set up your classroom — Tell Ollie about your grades, subjects, and students
-2. Let Ollie plan your week — Differentiated materials, ready to review
-3. Review, approve, teach — You stay in control of every lesson
+- Remembers your students — groups, levels, IEPs, the whole picture
+- Learns your style — every edit teaches Ollie what you prefer
+- Tracks your standards — knows what you've covered and what's left
+- Creates anything — lessons, quizzes, sub plans, IEP goals, parent emails, and more
 
-Meet Ollie at: ${config.frontendUrl}/teacher/agent/chat
+GET STARTED IN UNDER 5 MINUTES:
 
-Questions? Reply to this email — we're here to help.
+1. Tell Ollie about your classroom — Grades, subjects, student groups — a quick chat is all it takes
+2. Ask Ollie to create something — A lesson, a quiz, flashcards — just say what you need
+3. Watch Ollie get smarter — Approve, edit, or regenerate — Ollie learns from every interaction
+
+Start chatting with Ollie: ${config.frontendUrl}/teacher/agent/chat
+
+"I used to spend my Sundays planning. Now I tell Ollie what I need and spend that time with my family." — 3rd Grade Teacher, Texas
+
+Questions? Just reply to this email — a real person will get back to you.
 — The Orbit Learn Team
     `,
   }),
