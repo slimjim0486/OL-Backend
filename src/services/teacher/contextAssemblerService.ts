@@ -137,7 +137,7 @@ function buildIdentityContext(agent: TeacherAgent): string {
     parts.push(`Philosophy: ${truncate(agent.teachingPhilosophy, 200)}`);
   }
   if (agent.planningAutonomy) {
-    parts.push(`Planning autonomy: ${agent.planningAutonomy.toLowerCase()}`);
+    parts.push('Planning autonomy: planner');
   }
   if (agent.agentTone) parts.push(`Preferred tone: ${agent.agentTone.toLowerCase()}`);
 

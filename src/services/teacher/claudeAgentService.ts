@@ -57,10 +57,7 @@ function buildSystemPrompt(agent: {
   const grades = agent.gradesTaught?.join(', ') || 'K-8';
   const subjects = agent.subjectsTaught?.join(', ') || 'various subjects';
   const curriculum = agent.curriculumType || 'American';
-  const planningAutonomy =
-    agent.planningAutonomy === 'AUTOPILOT'
-      ? 'planner'
-      : agent.planningAutonomy?.toLowerCase() || 'coach';
+  const planningAutonomy = 'planner';
   const teacherName = (agent as any).firstName ? `The teacher's name is ${(agent as any).firstName}.` : '';
 
   return `You are Ollie, an AI teaching assistant at Orbit Learn. You are ${tone} in style.

@@ -144,6 +144,11 @@ export interface TeacherNameUpdate {
   lastName?: string;
 }
 
+function shouldNormalizeToPlanner(agent: Pick<TeacherAgent, 'planningAutonomy' | 'planningAutonomyAcknowledged'> | null | undefined): boolean {
+  if (!agent) return false;
+  return agent.planningAutonomy !== PlanningAutonomy.PLANNER || !agent.planningAutonomyAcknowledged;
+}
+
 // ============================================
 // LAYER 1: AGENT IDENTITY
 // ============================================
@@ -152,7 +157,17 @@ async function getOrCreateAgent(teacherId: string): Promise<TeacherAgent> {
   const existing = await prisma.teacherAgent.findUnique({
     where: { teacherId },
   });
-  if (existing) return existing;
+  if (existing) {
+    if (!shouldNormalizeToPlanner(existing)) return existing;
+
+    return prisma.teacherAgent.update({
+      where: { id: existing.id },
+      data: {
+        planningAutonomy: PlanningAutonomy.PLANNER,
+        planningAutonomyAcknowledged: true,
+      },
+    });
+  }
 
   // Pre-populate from Teacher record if possible
   const teacher = await prisma.teacher.findUnique({
@@ -172,6 +187,8 @@ async function getOrCreateAgent(teacherId: string): Promise<TeacherAgent> {
       curriculumType: teacher?.preferredCurriculum,
       subjectsTaught: teacher?.primarySubject ? [teacher.primarySubject] : [],
       gradesTaught: teacher?.preferredGradeRange ? [teacher.preferredGradeRange] : [],
+      planningAutonomy: PlanningAutonomy.PLANNER,
+      planningAutonomyAcknowledged: true,
     },
   });
 
@@ -186,7 +203,7 @@ async function getOrCreateAgent(teacherId: string): Promise<TeacherAgent> {
 
 async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
   if (shouldOmitTopicProgress()) {
-    return (await prisma.teacherAgent.findUnique({
+    const agent = (await prisma.teacherAgent.findUnique({
       where: { teacherId },
       include: {
         styleProfile: true,
@@ -194,6 +211,22 @@ async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
         curriculumStates: { select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS },
       },
     })) as any;
+
+    if (!shouldNormalizeToPlanner(agent)) return agent;
+
+    await prisma.teacherAgent.update({
+      where: { id: agent.id },
+      data: {
+        planningAutonomy: PlanningAutonomy.PLANNER,
+        planningAutonomyAcknowledged: true,
+      },
+    });
+
+    return {
+      ...agent,
+      planningAutonomy: PlanningAutonomy.PLANNER,
+      planningAutonomyAcknowledged: true,
+    } as any;
   }
 
   try {
@@ -206,7 +239,22 @@ async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
       },
     });
     markTopicProgressPresent();
-    return agent;
+    if (!shouldNormalizeToPlanner(agent)) return agent;
+    if (!agent) return agent;
+
+    await prisma.teacherAgent.update({
+      where: { id: agent.id },
+      data: {
+        planningAutonomy: PlanningAutonomy.PLANNER,
+        planningAutonomyAcknowledged: true,
+      },
+    });
+
+    return {
+      ...agent,
+      planningAutonomy: PlanningAutonomy.PLANNER,
+      planningAutonomyAcknowledged: true,
+    } as any;
   } catch (error: any) {
     if (!isMissingTopicProgressColumnError(error)) throw error;
     markTopicProgressMissing();
@@ -215,7 +263,7 @@ async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
       teacherId,
     });
 
-    return (await prisma.teacherAgent.findUnique({
+    const agent = (await prisma.teacherAgent.findUnique({
       where: { teacherId },
       include: {
         styleProfile: true,
@@ -223,6 +271,22 @@ async function getAgent(teacherId: string): Promise<TeacherAgent | null> {
         curriculumStates: { select: CURRICULUM_STATE_SELECT_WITHOUT_TOPIC_PROGRESS },
       },
     })) as any;
+
+    if (!shouldNormalizeToPlanner(agent)) return agent;
+
+    await prisma.teacherAgent.update({
+      where: { id: agent.id },
+      data: {
+        planningAutonomy: PlanningAutonomy.PLANNER,
+        planningAutonomyAcknowledged: true,
+      },
+    });
+
+    return {
+      ...agent,
+      planningAutonomy: PlanningAutonomy.PLANNER,
+      planningAutonomyAcknowledged: true,
+    } as any;
   }
 }
 

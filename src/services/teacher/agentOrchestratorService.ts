@@ -143,30 +143,25 @@ function toSessionTitleFromFirstPrompt(prompt: string): string {
 
 function normalizeModeArg(raw: string): PlanningAutonomy | null {
   const v = String(raw || '').trim().toLowerCase();
-  if (v === 'coach') return PlanningAutonomy.COACH;
-  if (v === 'planner') return PlanningAutonomy.PLANNER;
+  if (v === 'coach' || v === 'agent' || v === 'planner') return PlanningAutonomy.PLANNER;
   return null;
 }
 
 function resolvePlanningAutonomy(raw: PlanningAutonomy | string | null | undefined): PlanningAutonomy {
-  return raw === PlanningAutonomy.AUTOPILOT ? PlanningAutonomy.PLANNER : (raw as PlanningAutonomy) || PlanningAutonomy.COACH;
+  return PlanningAutonomy.PLANNER;
 }
 
 function describeMode(mode: PlanningAutonomy): { title: string; description: string } {
   switch (mode) {
     case PlanningAutonomy.COACH:
-      return {
-        title: 'Coach',
-        description: 'I suggest options and you decide what to do.',
-      };
     case PlanningAutonomy.PLANNER:
       return {
-        title: 'Planner',
+        title: 'Agent',
         description: 'I help structure the week in chat and draft the materials you want next.',
       };
     case PlanningAutonomy.AUTOPILOT:
       return {
-        title: 'Planner',
+        title: 'Agent',
         description: 'I help structure the week in chat and draft the materials you want next.',
       };
   }
@@ -1254,8 +1249,7 @@ async function maybeHandleSlashCommand(
       return {
         assistantContent:
           `To change planning autonomy, use:\n` +
-          `- /mode coach\n` +
-          `- /mode planner`,
+          `- /mode agent`,
         intent: 'chat',
         tokensUsed: 0,
       };

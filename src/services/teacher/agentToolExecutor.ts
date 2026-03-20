@@ -69,7 +69,7 @@ export async function executeToolCall(
             yearsExperience: agent.yearsExperience,
             teachingPhilosophy: agent.teachingPhilosophy,
             agentTone: agent.agentTone,
-            planningAutonomy: agent.planningAutonomy === 'AUTOPILOT' ? 'PLANNER' : agent.planningAutonomy,
+            planningAutonomy: 'PLANNER',
             firstName: (agent as any).firstName,
             lastName: (agent as any).lastName,
           },
