@@ -44,6 +44,7 @@ import { scheduleBrevoInactivityChecks } from './jobs/brevoInactivityChecks.js';
 import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
 import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/monthlyReviewJob.js';
 import { scheduleDownloadReminders } from './jobs/downloadReminderJob.js';
+import { scheduleContentDripDelivery } from './jobs/contentDripCronJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -67,6 +68,8 @@ import {
   shutdownDocumentAnalysisJob,
   initializeWeeklyPrepJob,
   shutdownWeeklyPrepJob,
+  initializeContentDripJob,
+  shutdownContentDripJob,
   initializeGradingBatchJob,
   shutdownGradingBatchJob,
 } from './jobs/index.js';
@@ -329,6 +332,14 @@ async function startServer(): Promise<void> {
       logger.warn('Weekly prep job initialization skipped');
     }
 
+    // Initialize content drip job queue (free onboarding content campaign)
+    try {
+      await initializeContentDripJob();
+      logger.info('Content drip job initialized');
+    } catch (error) {
+      logger.warn('Content drip job initialization skipped');
+    }
+
     // Initialize batch grading job queue (async grading)
     try {
       await initializeGradingBatchJob();
@@ -360,6 +371,10 @@ async function startServer(): Promise<void> {
       scheduleDownloadReminders();
       logger.info('Download reminders scheduled for 10:00 AM daily');
 
+      // Schedule free content drip delivery checks (every 30 minutes)
+      scheduleContentDripDelivery();
+      logger.info('Content drip delivery scheduled');
+
     });
 
     // Graceful shutdown
@@ -373,6 +388,7 @@ async function startServer(): Promise<void> {
           await shutdownExportJob();
           await shutdownDocumentAnalysisJob();
           await shutdownWeeklyPrepJob();
+          await shutdownContentDripJob();
           await shutdownGradingBatchJob();
           shutdownMonthlyReviewJob();
           await prisma.$disconnect();

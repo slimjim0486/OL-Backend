@@ -310,10 +310,23 @@ async function completeSetupStep(
   if (step === AgentSetupStatus.FULLY_SETUP) {
     updateData.onboardingComplete = true;
   }
-  return prisma.teacherAgent.update({
+  const updatedAgent = await prisma.teacherAgent.update({
     where: { teacherId },
     data: updateData,
   });
+
+  if (step === AgentSetupStatus.FULLY_SETUP) {
+    import('./contentDripService.js')
+      .then(({ contentDripService }) => contentDripService.enrollTeacher(teacherId))
+      .catch((error: any) => {
+        logger.warn('Content drip enrollment failed', {
+          teacherId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }
+
+  return updatedAgent;
 }
 
 async function resetOnboarding(

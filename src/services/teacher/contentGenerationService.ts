@@ -258,7 +258,10 @@ function validateFlashLessonOutput(
 ): FlashLessonValidation {
   // Check if high grade level (9-12) - might benefit from Pro's better reasoning
   if (gradeLevel) {
-    const gradeNum = parseInt(gradeLevel.replace(/[^0-9]/g, ''));
+    const gradeMatches = gradeLevel.match(/\d+/g) || [];
+    const gradeNum = gradeMatches.length
+      ? Math.max(...gradeMatches.map((value) => Number.parseInt(value, 10)).filter((value) => !Number.isNaN(value)))
+      : Number.NaN;
     if (!isNaN(gradeNum) && gradeNum >= FLASH_FALLBACK_THRESHOLDS.HIGH_GRADE_MIN) {
       return {
         isValid: false,
@@ -343,6 +346,7 @@ export interface GenerateLessonInput {
     flashcardCount?: number;
   };
   templateId?: string;
+  skipQuota?: boolean;
 }
 
 export interface GeneratedLesson {
@@ -384,6 +388,7 @@ export interface GenerateQuizInput {
   questionTypes?: Array<'multiple_choice' | 'true_false' | 'fill_blank' | 'short_answer'>;
   difficulty?: 'easy' | 'medium' | 'hard' | 'mixed';
   gradeLevel?: string;
+  skipQuota?: boolean;
 }
 
 export interface GeneratedQuiz {
@@ -420,6 +425,7 @@ export interface GenerateFlashcardsInput {
   cardCount?: number;
   includeHints?: boolean;
   gradeLevel?: string;
+  skipQuota?: boolean;
 }
 
 export interface GeneratedFlashcards {
@@ -531,7 +537,9 @@ export const contentGenerationService = {
     // Check quota - full lessons require more tokens
     const isFullLesson = resolvedInput.lessonType === 'full';
     const estimatedTokens = isFullLesson ? 10000 : 4000;
-    await quotaService.enforceQuota(teacherId, TokenOperation.LESSON_GENERATION, estimatedTokens);
+    if (!resolvedInput.skipQuota) {
+      await quotaService.enforceQuota(teacherId, TokenOperation.LESSON_GENERATION, estimatedTokens);
+    }
 
     logger.info('Generating lesson with Flash-first strategy', {
       teacherId,
@@ -609,13 +617,15 @@ export const contentGenerationService = {
             result = await generateWithModel('pro');
           } else {
             // Flash output is good - use it
-            await quotaService.recordUsage({
-              teacherId,
-              operation: TokenOperation.LESSON_GENERATION,
-              tokensUsed,
-              modelUsed: config.gemini.models.flash,
-              resourceType: 'lesson',
-            });
+            if (!resolvedInput.skipQuota) {
+              await quotaService.recordUsage({
+                teacherId,
+                operation: TokenOperation.LESSON_GENERATION,
+                tokensUsed,
+                modelUsed: config.gemini.models.flash,
+                resourceType: 'lesson',
+              });
+            }
 
             logger.info('Lesson generated successfully with Flash', {
               teacherId,
@@ -691,13 +701,15 @@ export const contentGenerationService = {
       const lesson = JSON.parse(extractJSON(responseText)) as Omit<GeneratedLesson, 'tokensUsed'>;
 
       // Record usage with Pro model
-      await quotaService.recordUsage({
-        teacherId,
-        operation: TokenOperation.LESSON_GENERATION,
-        tokensUsed,
-        modelUsed: config.gemini.models.pro,
-        resourceType: 'lesson',
-      });
+      if (!resolvedInput.skipQuota) {
+        await quotaService.recordUsage({
+          teacherId,
+          operation: TokenOperation.LESSON_GENERATION,
+          tokensUsed,
+          modelUsed: config.gemini.models.pro,
+          resourceType: 'lesson',
+        });
+      }
 
       logger.info('Lesson generated successfully', {
         teacherId,
@@ -757,7 +769,9 @@ export const contentGenerationService = {
   ): Promise<GeneratedQuiz> {
     // Check quota
     const estimatedTokens = 2000;
-    await quotaService.enforceQuota(teacherId, TokenOperation.QUIZ_GENERATION, estimatedTokens);
+    if (!input.skipQuota) {
+      await quotaService.enforceQuota(teacherId, TokenOperation.QUIZ_GENERATION, estimatedTokens);
+    }
 
     logger.info('Generating quiz', { teacherId, contentId, questionCount: input.questionCount });
 
@@ -790,14 +804,16 @@ export const contentGenerationService = {
         }
 
         // Record usage
-        await quotaService.recordUsage({
-          teacherId,
-          operation: TokenOperation.QUIZ_GENERATION,
-          tokensUsed: totalTokensUsed,
-          modelUsed: config.gemini.models.flash,
-          resourceType: 'quiz',
-          resourceId: contentId,
-        });
+        if (!input.skipQuota) {
+          await quotaService.recordUsage({
+            teacherId,
+            operation: TokenOperation.QUIZ_GENERATION,
+            tokensUsed: totalTokensUsed,
+            modelUsed: config.gemini.models.flash,
+            resourceType: 'quiz',
+            resourceId: contentId,
+          });
+        }
 
         // Update content if contentId provided
         if (contentId) {
@@ -847,7 +863,9 @@ export const contentGenerationService = {
   ): Promise<GeneratedFlashcards> {
     // Check quota
     const estimatedTokens = 1500;
-    await quotaService.enforceQuota(teacherId, TokenOperation.FLASHCARD_GENERATION, estimatedTokens);
+    if (!input.skipQuota) {
+      await quotaService.enforceQuota(teacherId, TokenOperation.FLASHCARD_GENERATION, estimatedTokens);
+    }
 
     logger.info('Generating flashcards', { teacherId, contentId, cardCount: input.cardCount });
 
@@ -885,14 +903,16 @@ export const contentGenerationService = {
       const flashcards = JSON.parse(extractJSON(responseText)) as Omit<GeneratedFlashcards, 'tokensUsed'>;
 
       // Record usage
-      await quotaService.recordUsage({
-        teacherId,
-        operation: TokenOperation.FLASHCARD_GENERATION,
-        tokensUsed,
-        modelUsed: config.gemini.models.flash,
-        resourceType: 'flashcards',
-        resourceId: contentId,
-      });
+      if (!input.skipQuota) {
+        await quotaService.recordUsage({
+          teacherId,
+          operation: TokenOperation.FLASHCARD_GENERATION,
+          tokensUsed,
+          modelUsed: config.gemini.models.flash,
+          resourceType: 'flashcards',
+          resourceId: contentId,
+        });
+      }
 
       // Update content if contentId provided
       if (contentId) {

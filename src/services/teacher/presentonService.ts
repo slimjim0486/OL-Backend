@@ -85,7 +85,7 @@ interface PresentonRequest {
   theme?: string;
   n_slides: number;
   language: string;
-  template: string;
+  template?: string;
   include_table_of_contents: boolean;
   include_title_slide: boolean;
   export_as: 'pptx' | 'pdf';
@@ -695,7 +695,6 @@ export async function generateLessonPPTX(
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',
-    template: 'orbit-learn-teacher',
     include_table_of_contents: false,
     include_title_slide: true,
     export_as: 'pptx',
@@ -902,7 +901,6 @@ Include a title slide, the flashcards in an easy-to-study format, and end with s
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',
-    template: 'orbit-learn-teacher',
     include_table_of_contents: false,
     include_title_slide: true,
     export_as: 'pptx',

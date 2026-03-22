@@ -34,6 +34,19 @@ export {
 export type { WeeklyPrepJobData } from './weeklyPrepJob.js';
 
 export {
+  initializeContentDripJob,
+  shutdownContentDripJob,
+  queueDripStep,
+} from './contentDripJob.js';
+
+export type { ContentDripJobData } from './contentDripJob.js';
+
+export {
+  scheduleContentDripDelivery,
+  runScheduledContentDrips,
+} from './contentDripCronJob.js';
+
+export {
   scheduleWeeklyPrepDelivery,
   runScheduledWeeklyPreps,
 } from './scheduledWeeklyPrepJob.js';

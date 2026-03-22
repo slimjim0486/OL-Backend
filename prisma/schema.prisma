@@ -1007,6 +1007,7 @@ model Teacher {
 
   // AI Assistant Agent
   agentProfile TeacherAgent?
+  dripEnrollment ContentDripEnrollment?
 
   // Communications (parent emails, report card comments)
   communications TeacherCommunication[]
@@ -2437,6 +2438,13 @@ enum TeacherContentType {
   STUDY_GUIDE
 }
 
+enum DripStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
 enum ShareCategory {
   CURRICULUM_ALIGNED
   PROJECT_BASED
@@ -2905,6 +2913,39 @@ model TeacherTriggerLog {
   @@index([teacherId])
   @@index([triggerName])
   @@index([teacherId, triggerName])
+}
+
+model ContentDripEnrollment {
+  id        String   @id @default(uuid())
+  teacherId String   @unique
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  status      DripStatus @default(ACTIVE)
+  currentStep Int        @default(0)
+  totalSteps  Int        @default(5)
+
+  // Snapshot of onboarding data at enrollment time
+  primarySubject String
+  gradeLevel     String
+  curriculumType String?
+  currentTopic   String
+  upNextTopic    String?
+
+  // Scheduling
+  nextDeliveryAt DateTime
+  lastDeliveryAt DateTime?
+  enrolledAt     DateTime @default(now())
+  completedAt    DateTime?
+
+  // Generated content tracking
+  generatedContentIds String[] @default([])
+
+  // Error tracking
+  consecutiveFailures Int    @default(0)
+  lastError           String?
+
+  @@index([status, nextDeliveryAt])
+  @@index([teacherId])
 }
 
 // ============================================

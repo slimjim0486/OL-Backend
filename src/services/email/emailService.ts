@@ -6,6 +6,155 @@ import { logger } from '../../utils/logger.js';
 // Initialize Resend client
 const resend = config.email.apiKey ? new Resend(config.email.apiKey) : null;
 
+type DripEmailStep =
+  | 'drip_day0_lesson_pdf'
+  | 'drip_day0_lesson_pptx'
+  | 'drip_day1_quiz'
+  | 'drip_day2_flashcards'
+  | 'drip_day3_worksheet';
+
+function buildDripContentTemplate(params: {
+  teacherName: string;
+  step: DripEmailStep;
+  topic: string;
+  subject: string;
+  gradeLevel: string;
+  contentTitle: string;
+  downloadUrl: string;
+}): { subject: string; html: string; text: string } {
+  const dashboardUrl = `${config.frontendUrl}/teacher/content`;
+  const safeTopic = params.topic.trim() || 'your next lesson';
+  const safeTeacherName = params.teacherName.trim() || 'there';
+  const safeSubject = params.subject.trim() || 'class';
+  const safeGradeLevel = params.gradeLevel.trim() || 'your';
+  const subjectContext = `${safeGradeLevel} ${safeSubject}`.trim();
+
+  const stepMeta: Record<DripEmailStep, {
+    subject: string;
+    eyebrow: string;
+    emphasis: string;
+    primaryLabel: string;
+    fileLabel: string;
+    accent: string;
+  }> = {
+    drip_day0_lesson_pdf: {
+      subject: `${safeTeacherName}, your ${subjectContext} lesson plan on ${safeTopic}`,
+      eyebrow: 'Day 0 free resource',
+      emphasis: 'Here is a classroom-ready PDF lesson plan you can use right away.',
+      primaryLabel: 'Download Lesson PDF',
+      fileLabel: 'PDF lesson plan',
+      accent: '#2D5A4A',
+    },
+    drip_day0_lesson_pptx: {
+      subject: `${safeTeacherName}, slides for your ${subjectContext} lesson on ${safeTopic}`,
+      eyebrow: 'Day 0 free resource',
+      emphasis: 'Here is a ready-to-use PowerPoint deck for the same topic.',
+      primaryLabel: 'Download PowerPoint',
+      fileLabel: 'PowerPoint lesson deck',
+      accent: '#3F6F94',
+    },
+    drip_day1_quiz: {
+      subject: `${safeTeacherName}, a ${subjectContext} quiz on ${safeTopic}`,
+      eyebrow: 'Day 1 free resource',
+      emphasis: 'Here is a printable quiz you can hand out immediately.',
+      primaryLabel: 'Download Quiz PDF',
+      fileLabel: 'Quiz PDF',
+      accent: '#A55C2B',
+    },
+    drip_day2_flashcards: {
+      subject: `${safeTeacherName}, ${safeTopic} flashcards for your ${subjectContext} class`,
+      eyebrow: 'Day 2 free resource',
+      emphasis: 'Here is a printable flashcard set for review and reinforcement.',
+      primaryLabel: 'Download Flashcards PDF',
+      fileLabel: 'Flashcards PDF',
+      accent: '#7A5C2E',
+    },
+    drip_day3_worksheet: {
+      subject: `${safeTeacherName}, tomorrow's ${subjectContext} worksheet on ${safeTopic}`,
+      eyebrow: 'Day 3 free resource',
+      emphasis: 'Here is a worksheet/study guide you can use for the next lesson.',
+      primaryLabel: 'Download Worksheet PDF',
+      fileLabel: 'Worksheet PDF',
+      accent: '#6F4E7C',
+    },
+  };
+
+  const meta = stepMeta[params.step];
+
+  return {
+    subject: meta.subject,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${meta.subject}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, ${meta.accent} 0%, #D4A853 100%); border-radius: 16px 16px 0 0; padding: 32px; text-align: center;">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 72px; height: 72px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.18);">
+        <p style="margin: 0 0 8px 0; color: rgba(255,255,255,0.88); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">${meta.eyebrow}</p>
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">${meta.subject}</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px; margin-top: 0;">Hi ${safeTeacherName},</p>
+        <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">${meta.emphasis}</p>
+
+        <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid ${meta.accent};">
+          <p style="color: #6B7280; margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em;">Included in this email</p>
+          <h3 style="color: #1E2A3A; margin: 0 0 6px 0; font-size: 20px; font-family: 'Fraunces', Georgia, serif;">${params.contentTitle}</h3>
+          <p style="color: #3D4F66; margin: 0; font-size: 14px;">${meta.fileLabel} for <strong>${safeTopic}</strong></p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0 18px;">
+          <a href="${params.downloadUrl}" style="display: inline-block; background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: 700; font-size: 16px; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+            ${meta.primaryLabel}
+          </a>
+        </div>
+
+        <p style="color: #6B7280; font-size: 14px; text-align: center; margin: 0 0 28px;">
+          No login required. The file opens directly from the download link above.
+        </p>
+
+        <div style="text-align: center;">
+          <a href="${dashboardUrl}" style="color: ${meta.accent}; font-size: 14px; font-weight: 600; text-decoration: none;">
+            Explore your dashboard
+          </a>
+        </div>
+
+        <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
+          You can also find this in your teacher content library.<br>
+          <span style="color: #3D4F66;">- The Orbit Learn Team</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `
+${meta.subject}
+
+Hi ${safeTeacherName},
+
+${meta.emphasis}
+
+${params.contentTitle}
+${meta.fileLabel} for ${safeTopic}
+
+Download: ${params.downloadUrl}
+Explore your dashboard: ${dashboardUrl}
+
+- The Orbit Learn Team
+    `,
+  };
+}
+
 // Email templates
 const templates = {
   /**
@@ -1688,6 +1837,24 @@ Questions? Contact us at support@orbitlearn.app
     };
   },
 
+  dripContent: (
+    teacherName: string,
+    step: DripEmailStep,
+    topic: string,
+    subject: string,
+    gradeLevel: string,
+    contentTitle: string,
+    downloadUrl: string
+  ) => buildDripContentTemplate({
+    teacherName,
+    step,
+    topic,
+    subject,
+    gradeLevel,
+    contentTitle,
+    downloadUrl,
+  }),
+
   /**
    * Teacher credit usage warning email (70% and 90% thresholds)
    */
@@ -3258,6 +3425,56 @@ Details:
       return true;
     } catch (error) {
       logger.error('Error sending suggestion email', { error, portal });
+      return false;
+    }
+  },
+
+  /**
+   * Send drip content email for the free content campaign
+   */
+  async sendDripContentEmail(
+    email: string,
+    teacherName: string,
+    step: DripEmailStep,
+    topic: string,
+    subject: string,
+    gradeLevel: string,
+    contentTitle: string,
+    downloadUrl: string
+  ): Promise<boolean> {
+    if (config.email.skipEmails || !resend) {
+      logger.info(`[Email] Skipped drip content email to ${email}`, { step, topic });
+      return true;
+    }
+
+    try {
+      const template = templates.dripContent(
+        teacherName,
+        step,
+        topic,
+        subject,
+        gradeLevel,
+        contentTitle,
+        downloadUrl
+      );
+
+      const { error } = await resend.emails.send({
+        from: `Orbit Learn <${config.email.fromEmail}>`,
+        to: email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      if (error) {
+        logger.error('Failed to send drip content email', { error, email, step });
+        return false;
+      }
+
+      logger.info(`Drip content email sent to ${email}`, { step, topic });
+      return true;
+    } catch (error) {
+      logger.error('Error sending drip content email', { error, email, step });
       return false;
     }
   },
