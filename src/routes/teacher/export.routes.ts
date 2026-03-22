@@ -352,7 +352,8 @@ router.get('/:contentId', async (req: Request, res: Response) => {
   const { contentId } = req.params;
   const teacherId = req.teacher!.id;
   const exportFormat = (req.query.format as string) || 'pdf';
-  const exportKey = `${teacherId}:${contentId}:${exportFormat}`;
+  const answerKeyOnly = req.query.answerKeyOnly === 'true';
+  const exportKey = `${teacherId}:${contentId}:${exportFormat}${answerKeyOnly ? ':answer-key' : ''}`;
 
   try {
     // Check for duplicate export request
@@ -374,6 +375,7 @@ router.get('/:contentId', async (req: Request, res: Response) => {
       includeTeacherNotes: req.query.includeTeacherNotes !== 'false',
       paperSize: (req.query.paperSize as 'letter' | 'a4') || 'letter',
       colorScheme: (req.query.colorScheme as 'color' | 'grayscale') || 'color',
+      answerKeyOnly: req.query.answerKeyOnly === 'true',
     };
 
     // Verify content exists and belongs to teacher
@@ -391,19 +393,23 @@ router.get('/:contentId', async (req: Request, res: Response) => {
       });
     }
 
-    const access = await checkDownloadAccess(
-      teacherId,
-      contentId,
-      content.contentType,
-      'pdf'
-    );
+    // Answer-key-only requests are a companion to the quiz PDF download
+    // (which already consumed the allowance), so skip access/allowance checks.
+    if (!options.answerKeyOnly) {
+      const access = await checkDownloadAccess(
+        teacherId,
+        contentId,
+        content.contentType,
+        'pdf'
+      );
 
-    if (!access.allowed) {
-      return res.status(403).json(getDownloadBlockedPayload(access));
-    }
+      if (!access.allowed) {
+        return res.status(403).json(getDownloadBlockedPayload(access));
+      }
 
-    if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contentId))) {
-      return;
+      if (!(await consumeDownloadAllowanceOrRespond(res, teacherId, contentId))) {
+        return;
+      }
     }
 
     // Generate export

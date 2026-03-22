@@ -117,6 +117,7 @@ export interface ExportOptions {
   paperSize?: 'letter' | 'a4';
   colorScheme?: 'color' | 'grayscale';
   separateAnswerKey?: boolean;
+  answerKeyOnly?: boolean;
 }
 
 // Subject colors for styling - matches the Prisma Subject enum
@@ -1178,8 +1179,9 @@ function generateQuizHTML(
   const styles = getBaseStyles(subject, options.colorScheme);
 
   // Determine if answers should be shown inline or on a separate answer key page
-  const showInlineAnswers = options.includeAnswers && !options.separateAnswerKey;
-  const showAnswerKey = options.includeAnswers && options.separateAnswerKey;
+  const isAnswerKeyOnly = options.answerKeyOnly === true;
+  const showInlineAnswers = !isAnswerKeyOnly && options.includeAnswers && !options.separateAnswerKey;
+  const showAnswerKey = isAnswerKeyOnly || (options.includeAnswers && options.separateAnswerKey);
 
   let html = `
     <!DOCTYPE html>
@@ -1287,7 +1289,7 @@ function generateQuizHTML(
         </div>
       </div>
 
-      ${showAnswerKey ? `
+      ${!isAnswerKeyOnly && showAnswerKey ? `
         <div class="name-line">
           <div class="name-line-field">
             <span>Name:</span>
@@ -1302,6 +1304,7 @@ function generateQuizHTML(
         </div>
       ` : ''}
 
+      ${!isAnswerKeyOnly ? `
       <div class="section">
         <h2 class="section-title"><span class="icon">📝</span> Questions</h2>
         ${quizData.questions.map((q, i) => `
@@ -1335,9 +1338,10 @@ function generateQuizHTML(
           </div>
         `).join('')}
       </div>
+      ` : ''}
 
       ${showAnswerKey ? `
-        <div class="page-break"></div>
+        ${!isAnswerKeyOnly ? '<div class="page-break"></div>' : ''}
         <div class="answer-key-header">
           <h1>Answer Key</h1>
           <div style="font-size: 10pt; color: #6B7280;">${quizData.title || content.title}</div>
@@ -1529,6 +1533,7 @@ export async function exportContent(
     paperSize: options.paperSize ?? 'letter',
     colorScheme: options.colorScheme ?? 'color',
     separateAnswerKey: options.separateAnswerKey ?? false,
+    answerKeyOnly: options.answerKeyOnly ?? false,
   };
 
   let html: string;
@@ -1553,7 +1558,9 @@ export async function exportContent(
     case 'QUIZ':
       const quizData = content.quizContent as unknown as QuizContent;
       html = generateQuizHTML(content, quizData || { title: content.title, questions: [] }, opts);
-      filename = `${cleanTitle} - Orbit Learn`;
+      filename = opts.answerKeyOnly
+        ? `${cleanTitle} - Answer Key - Orbit Learn`
+        : `${cleanTitle} - Orbit Learn`;
       break;
 
     case 'FLASHCARD_DECK':
