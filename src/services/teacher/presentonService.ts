@@ -6,10 +6,30 @@
 
 import { TeacherContent, Subject } from '@prisma/client';
 
+const PRESENTON_TEMPLATE = 'orbit-learn-teacher';
+const PRESENTON_GENERATE_PATH = '/api/v1/ppt/presentation/generate';
+
+function normalizePresentonBaseUrl(value: string): string {
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function resolvePresentonApiUrl(): string {
+  if (process.env.PRESENTON_API_URL) {
+    return process.env.PRESENTON_API_URL;
+  }
+
+  if (process.env.RAILWAY_SERVICE_PRESENTON_URL) {
+    return new URL(
+      PRESENTON_GENERATE_PATH,
+      normalizePresentonBaseUrl(process.env.RAILWAY_SERVICE_PRESENTON_URL)
+    ).toString();
+  }
+
+  return `https://api.presenton.ai${PRESENTON_GENERATE_PATH}`;
+}
+
 // Presenton API configuration
-const PRESENTON_API_URL =
-  process.env.PRESENTON_API_URL ||
-  'https://api.presenton.ai/api/v1/ppt/presentation/generate';
+const PRESENTON_API_URL = resolvePresentonApiUrl();
 const PRESENTON_BASE_URL =
   process.env.PRESENTON_BASE_URL || new URL(PRESENTON_API_URL).origin;
 const PRESENTON_API_KEY = process.env.PRESENTON_API_KEY; // Not needed for local self-hosted
@@ -695,6 +715,7 @@ export async function generateLessonPPTX(
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',
+    template: PRESENTON_TEMPLATE,
     include_table_of_contents: false,
     include_title_slide: true,
     export_as: 'pptx',
@@ -901,6 +922,7 @@ Include a title slide, the flashcards in an easy-to-study format, and end with s
     theme: options.theme,
     n_slides: slideCount,
     language: options.language || 'English',
+    template: PRESENTON_TEMPLATE,
     include_table_of_contents: false,
     include_title_slide: true,
     export_as: 'pptx',

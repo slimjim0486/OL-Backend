@@ -28,6 +28,7 @@ function buildDripContentTemplate(params: {
   const safeSubject = params.subject.trim() || 'class';
   const safeGradeLevel = params.gradeLevel.trim() || 'your';
   const subjectContext = `${safeGradeLevel} ${safeSubject}`.trim();
+  const isPptStep = params.step === 'drip_day0_lesson_pptx';
 
   const stepMeta: Record<DripEmailStep, {
     subject: string;
@@ -39,7 +40,7 @@ function buildDripContentTemplate(params: {
   }> = {
     drip_day0_lesson_pdf: {
       subject: `${safeTeacherName}, your ${subjectContext} lesson plan on ${safeTopic}`,
-      eyebrow: 'Day 0 free resource',
+      eyebrow: 'Free teacher resource',
       emphasis: 'Here is a classroom-ready PDF lesson plan you can use right away.',
       primaryLabel: 'Download Lesson PDF',
       fileLabel: 'PDF lesson plan',
@@ -47,15 +48,15 @@ function buildDripContentTemplate(params: {
     },
     drip_day0_lesson_pptx: {
       subject: `${safeTeacherName}, slides for your ${subjectContext} lesson on ${safeTopic}`,
-      eyebrow: 'Day 0 free resource',
-      emphasis: 'Here is a ready-to-use PowerPoint deck for the same topic.',
-      primaryLabel: 'Download PowerPoint',
-      fileLabel: 'PowerPoint lesson deck',
+      eyebrow: 'Free lesson slides',
+      emphasis: 'Here is your Orbit Learn lesson slide deck for the same topic, ready to present or edit.',
+      primaryLabel: 'Download Slide Deck',
+      fileLabel: 'PowerPoint lesson slide deck',
       accent: '#3F6F94',
     },
     drip_day1_quiz: {
       subject: `${safeTeacherName}, a ${subjectContext} quiz on ${safeTopic}`,
-      eyebrow: 'Day 1 free resource',
+      eyebrow: 'Free teacher resource',
       emphasis: 'Here is a printable quiz you can hand out immediately.',
       primaryLabel: 'Download Quiz PDF',
       fileLabel: 'Quiz PDF',
@@ -63,7 +64,7 @@ function buildDripContentTemplate(params: {
     },
     drip_day2_flashcards: {
       subject: `${safeTeacherName}, ${safeTopic} flashcards for your ${subjectContext} class`,
-      eyebrow: 'Day 2 free resource',
+      eyebrow: 'Free teacher resource',
       emphasis: 'Here is a printable flashcard set for review and reinforcement.',
       primaryLabel: 'Download Flashcards PDF',
       fileLabel: 'Flashcards PDF',
@@ -71,7 +72,7 @@ function buildDripContentTemplate(params: {
     },
     drip_day3_worksheet: {
       subject: `${safeTeacherName}, tomorrow's ${subjectContext} worksheet on ${safeTopic}`,
-      eyebrow: 'Day 3 free resource',
+      eyebrow: 'Free teacher resource',
       emphasis: 'Here is a worksheet/study guide you can use for the next lesson.',
       primaryLabel: 'Download Worksheet PDF',
       fileLabel: 'Worksheet PDF',
@@ -118,7 +119,7 @@ function buildDripContentTemplate(params: {
         </div>
 
         <p style="color: #6B7280; font-size: 14px; text-align: center; margin: 0 0 28px;">
-          No login required. The file opens directly from the download link above.
+          No login required. The file opens directly from the download link above.${isPptStep ? ' This deck uses your Orbit Learn presentation format.' : ''}
         </p>
 
         <div style="text-align: center;">
@@ -152,6 +153,26 @@ Explore your dashboard: ${dashboardUrl}
 
 - The Orbit Learn Team
     `,
+  };
+}
+
+function getTeacherExportCopy(formatName: string): {
+  subjectLabel: string;
+  description: string;
+  buttonLabel: string;
+} {
+  if (formatName === 'PowerPoint') {
+    return {
+      subjectLabel: 'PowerPoint lesson slide deck',
+      description: 'Your PowerPoint lesson slide deck is ready for download.',
+      buttonLabel: 'Download Slide Deck',
+    };
+  }
+
+  return {
+    subjectLabel: formatName,
+    description: `Your ${formatName} export is ready for download.`,
+    buttonLabel: `Download ${formatName}`,
   };
 }
 
@@ -2088,8 +2109,11 @@ View plans: ${config.frontendUrl}/teacher/billing
     formatName: string,
     downloadUrl: string,
     fileSize: string
-  ) => ({
-    subject: `Your ${formatName} is Ready — ${contentTitle}`,
+  ) => {
+    const exportCopy = getTeacherExportCopy(formatName);
+
+    return {
+    subject: `Your ${exportCopy.subjectLabel} is Ready — ${contentTitle}`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -2104,7 +2128,7 @@ View plans: ${config.frontendUrl}/teacher/billing
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
         <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">
-          Your ${formatName} is Ready
+          Your ${exportCopy.subjectLabel} is Ready
         </h1>
       </td>
     </tr>
@@ -2115,7 +2139,7 @@ View plans: ${config.frontendUrl}/teacher/billing
         </p>
 
         <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
-          Your <strong>${formatName}</strong> export is ready for download.
+          ${exportCopy.description}
         </p>
 
         <!-- File Info Box -->
@@ -2123,13 +2147,13 @@ View plans: ${config.frontendUrl}/teacher/billing
           <div style="font-size: 40px; margin-bottom: 8px;">${formatName === 'PowerPoint' ? '📊' : '📄'}</div>
           <h3 style="color: #1E2A3A; margin: 0 0 8px 0; font-size: 18px;">${contentTitle}</h3>
           <p style="color: #3D4F66; margin: 0; font-size: 14px;">
-            ${formatName} • ${fileSize}
+            ${exportCopy.subjectLabel} • ${fileSize}
           </p>
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
           <a href="${downloadUrl}" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
-            Download ${formatName}
+            ${exportCopy.buttonLabel}
           </a>
         </div>
 
@@ -2147,14 +2171,14 @@ View plans: ${config.frontendUrl}/teacher/billing
 </html>
     `,
     text: `
-Your ${formatName} is Ready
+Your ${exportCopy.subjectLabel} is Ready
 
 Hi ${teacherName},
 
-Your ${formatName} export is ready for download.
+${exportCopy.description}
 
 File: ${contentTitle}
-Format: ${formatName}
+Format: ${exportCopy.subjectLabel}
 Size: ${fileSize}
 
 Download your file: ${downloadUrl}
@@ -2163,7 +2187,8 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
 
 — The Orbit Learn Team
     `,
-  }),
+    };
+  },
 
   /**
    * Download Reminder — Stage 1: 24h nudge (content created, not downloaded)
