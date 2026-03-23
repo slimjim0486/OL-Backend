@@ -116,6 +116,119 @@ export const SUBJECT_AREA_LABELS: Record<IEPSubjectArea, string> = {
   TRANSITION_VOCATIONAL: 'Transition/Vocational Skills',
 };
 
+const VALID_DISABILITY_CATEGORIES = new Set(Object.values(DisabilityCategory));
+const VALID_SUBJECT_AREAS = new Set(Object.values(IEPSubjectArea));
+
+const DISABILITY_CATEGORY_ALIASES: Record<string, DisabilityCategory> = {
+  AUTISM: DisabilityCategory.AUTISM_SPECTRUM,
+  ASD: DisabilityCategory.AUTISM_SPECTRUM,
+  ADHD: DisabilityCategory.OTHER_HEALTH_IMPAIRMENT,
+  OHI: DisabilityCategory.OTHER_HEALTH_IMPAIRMENT,
+  SLD: DisabilityCategory.SPECIFIC_LEARNING_DISABILITY,
+  SPEECH: DisabilityCategory.SPEECH_LANGUAGE_IMPAIRMENT,
+};
+
+const SUBJECT_AREA_ALIASES: Record<string, IEPSubjectArea> = {
+  READING: IEPSubjectArea.READING_COMPREHENSION,
+  FLUENCY: IEPSubjectArea.READING_FLUENCY,
+  COMPREHENSION: IEPSubjectArea.READING_COMPREHENSION,
+  WRITING: IEPSubjectArea.WRITTEN_EXPRESSION,
+  MATH: IEPSubjectArea.MATH_CALCULATION,
+  MATH_COMPUTATION: IEPSubjectArea.MATH_CALCULATION,
+  COMPUTATION: IEPSubjectArea.MATH_CALCULATION,
+  BEHAVIOR: IEPSubjectArea.BEHAVIOR_SELF_REGULATION,
+  SELF_REGULATION: IEPSubjectArea.BEHAVIOR_SELF_REGULATION,
+  SOCIAL_EMOTIONAL: IEPSubjectArea.BEHAVIOR_SELF_REGULATION,
+  SOCIAL_EMOTIONAL_LEARNING: IEPSubjectArea.BEHAVIOR_SELF_REGULATION,
+  EXECUTIVE_SKILLS: IEPSubjectArea.EXECUTIVE_FUNCTIONING,
+};
+
+const SUBJECT_AREA_PATTERNS: Array<{ value: IEPSubjectArea; patterns: RegExp[] }> = [
+  {
+    value: IEPSubjectArea.READING_FLUENCY,
+    patterns: [
+      /\breading fluency\b/i,
+      /\bfluency\b/i,
+      /\bwpm\b/i,
+      /\bwords per minute\b/i,
+      /\bdecode(?:s|d|ing)?\b/i,
+      /\bdecoding\b/i,
+      /\bmultisyllabic\b/i,
+      /\bphonics\b/i,
+    ],
+  },
+  {
+    value: IEPSubjectArea.READING_COMPREHENSION,
+    patterns: [
+      /\breading comprehension\b/i,
+      /\bcomprehension\b/i,
+      /\bmain idea\b/i,
+      /\binference\b/i,
+      /\bretell\b/i,
+    ],
+  },
+  {
+    value: IEPSubjectArea.WRITTEN_EXPRESSION,
+    patterns: [/\bwritten expression\b/i, /\bwriting\b/i, /\bparagraph\b/i, /\bessay\b/i],
+  },
+  {
+    value: IEPSubjectArea.MATH_CALCULATION,
+    patterns: [/\bmath calculation\b/i, /\bcalculation\b/i, /\bcomputation\b/i, /\barithmetic\b/i],
+  },
+  {
+    value: IEPSubjectArea.MATH_PROBLEM_SOLVING,
+    patterns: [/\bmath problem solving\b/i, /\bword problem\b/i, /\bproblem solving\b/i],
+  },
+  {
+    value: IEPSubjectArea.SPEECH_ARTICULATION,
+    patterns: [/\barticulation\b/i, /\bspeech sound\b/i],
+  },
+  {
+    value: IEPSubjectArea.EXPRESSIVE_LANGUAGE,
+    patterns: [/\bexpressive language\b/i],
+  },
+  {
+    value: IEPSubjectArea.RECEPTIVE_LANGUAGE,
+    patterns: [/\breceptive language\b/i],
+  },
+  {
+    value: IEPSubjectArea.SOCIAL_SKILLS,
+    patterns: [/\bsocial skills?\b/i, /\bsocial interaction\b/i, /\bpeer interaction\b/i],
+  },
+  {
+    value: IEPSubjectArea.BEHAVIOR_SELF_REGULATION,
+    patterns: [
+      /\bbehavior\b/i,
+      /\bbehaviour\b/i,
+      /\bself[\s/-]?regulation\b/i,
+      /\bcoping\b/i,
+      /\bon[-\s]?task\b/i,
+      /\brequesting a break\b/i,
+      /\bfrustrat(?:ed|ing|ion)\b/i,
+    ],
+  },
+  {
+    value: IEPSubjectArea.EXECUTIVE_FUNCTIONING,
+    patterns: [/\bexecutive functioning\b/i, /\borganization\b/i, /\battention\b/i, /\bfocus\b/i],
+  },
+  {
+    value: IEPSubjectArea.FINE_MOTOR,
+    patterns: [/\bfine motor\b/i],
+  },
+  {
+    value: IEPSubjectArea.GROSS_MOTOR,
+    patterns: [/\bgross motor\b/i],
+  },
+  {
+    value: IEPSubjectArea.ADAPTIVE_LIVING_SKILLS,
+    patterns: [/\badaptive\b/i, /\bdaily living\b/i],
+  },
+  {
+    value: IEPSubjectArea.TRANSITION_VOCATIONAL,
+    patterns: [/\btransition\b/i, /\bvocational\b/i],
+  },
+];
+
 // ============================================
 // SERVICE
 // ============================================
@@ -129,17 +242,19 @@ export const iepGoalService = {
     teacherId: string,
     input: GenerateIEPGoalsInput
   ): Promise<GeneratedIEPContent> {
+    const normalizedInput = normalizeIEPGoalInput(input);
+
     // Check quota
     const estimatedTokens = 5000; // ~50 credits per IEP session
     await quotaService.enforceQuota(teacherId, TokenOperation.IEP_GOAL_GENERATION, estimatedTokens);
 
     logger.info('Generating IEP goals', {
       teacherId,
-      disabilityCategory: input.disabilityCategory,
-      subjectArea: input.subjectArea,
+      disabilityCategory: normalizedInput.disabilityCategory,
+      subjectArea: normalizedInput.subjectArea,
     });
 
-    const prompt = buildIEPGoalPrompt(input);
+    const prompt = buildIEPGoalPrompt(normalizedInput);
     const parsedResult = await generateAndParseJson({
       contextLabel: 'IEP goals',
       prompts: [
@@ -153,7 +268,7 @@ export const iepGoalService = {
           safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
           generationConfig: {
             temperature: 0.5,
-            maxOutputTokens: getIEPMaxOutputTokens(input),
+            maxOutputTokens: getIEPMaxOutputTokens(normalizedInput),
             responseMimeType: 'application/json',
           },
         });
@@ -183,25 +298,27 @@ export const iepGoalService = {
     teacherId: string,
     input: CreateIEPSessionInput
   ): Promise<IEPGoalSession> {
+    const normalizedInput = normalizeIEPGoalInput(input);
+
     // Generate the IEP content
-    const generated = await this.generateIEPGoals(teacherId, input);
+    const generated = await this.generateIEPGoals(teacherId, normalizedInput);
 
     // Create the database record
     const session = await prisma.iEPGoalSession.create({
       data: {
         teacherId,
-        studentIdentifier: input.studentIdentifier,
-        gradeLevel: input.gradeLevel,
-        disabilityCategory: input.disabilityCategory,
-        subjectArea: input.subjectArea,
-        presentLevels: input.presentLevels,
-        strengths: input.strengths,
-        challenges: input.challenges,
+        studentIdentifier: normalizedInput.studentIdentifier,
+        gradeLevel: normalizedInput.gradeLevel,
+        disabilityCategory: normalizedInput.disabilityCategory,
+        subjectArea: normalizedInput.subjectArea,
+        presentLevels: normalizedInput.presentLevels,
+        strengths: normalizedInput.strengths,
+        challenges: normalizedInput.challenges,
         generatedGoals: generated.goals as unknown as object,
         accommodations: generated.accommodations as unknown as object,
         progressMonitoring: generated.progressMonitoring as unknown as object,
-        goalStartDate: input.goalStartDate,
-        goalEndDate: input.goalEndDate,
+        goalStartDate: normalizedInput.goalStartDate,
+        goalEndDate: normalizedInput.goalEndDate,
         tokensUsed: generated.tokensUsed,
         modelUsed: config.gemini.models.flash,
       },
@@ -210,8 +327,8 @@ export const iepGoalService = {
     logger.info('IEP goal session created', {
       teacherId,
       sessionId: session.id,
-      disabilityCategory: input.disabilityCategory,
-      subjectArea: input.subjectArea,
+      disabilityCategory: normalizedInput.disabilityCategory,
+      subjectArea: normalizedInput.subjectArea,
     });
 
     return session;
@@ -490,6 +607,109 @@ IMPORTANT:
 - Include both academic/skill goals and may include behavioral components if relevant
 - Accommodations should be disability-specific, not generic
 - Progress monitoring should be feasible for classroom teachers`;
+}
+
+function normalizeIEPGoalInput<T extends {
+  disabilityCategory: unknown;
+  subjectArea: unknown;
+  presentLevels?: string;
+  strengths?: string;
+  challenges?: string;
+  previousGoals?: string;
+  additionalContext?: string;
+}>(input: T): T & { disabilityCategory: DisabilityCategory; subjectArea: IEPSubjectArea } {
+  const disabilityCategory = normalizeDisabilityCategoryInput(input.disabilityCategory);
+  if (!disabilityCategory) {
+    throw new Error('Invalid IEP disabilityCategory. Expected a valid DisabilityCategory enum value.');
+  }
+
+  const subjectContext = [
+    String(input.presentLevels || '').trim(),
+    String(input.strengths || '').trim(),
+    String(input.challenges || '').trim(),
+    String(input.previousGoals || '').trim(),
+    String(input.additionalContext || '').trim(),
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const subjectArea = normalizeSubjectAreaInput(input.subjectArea, subjectContext);
+  if (!subjectArea) {
+    throw new Error('Invalid IEP subjectArea. Expected a valid IEPSubjectArea enum value.');
+  }
+
+  return {
+    ...input,
+    disabilityCategory,
+    subjectArea,
+  };
+}
+
+function normalizeDisabilityCategoryInput(value: unknown): DisabilityCategory | undefined {
+  if (value === null || value === undefined) return undefined;
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+
+  const enumLike = normalizeEnumKey(raw);
+  if (VALID_DISABILITY_CATEGORIES.has(enumLike as DisabilityCategory)) {
+    return enumLike as DisabilityCategory;
+  }
+  if (DISABILITY_CATEGORY_ALIASES[enumLike]) {
+    return DISABILITY_CATEGORY_ALIASES[enumLike];
+  }
+
+  const normalizedRaw = normalizeLooseText(raw);
+  for (const [enumValue, label] of Object.entries(DISABILITY_LABELS)) {
+    if (normalizeLooseText(label) === normalizedRaw) {
+      return enumValue as DisabilityCategory;
+    }
+  }
+
+  return undefined;
+}
+
+function normalizeSubjectAreaInput(value: unknown, contextText = ''): IEPSubjectArea | undefined {
+  if (value === null || value === undefined) return undefined;
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+
+  const enumLike = normalizeEnumKey(raw);
+  if (VALID_SUBJECT_AREAS.has(enumLike as IEPSubjectArea)) {
+    return enumLike as IEPSubjectArea;
+  }
+  if (SUBJECT_AREA_ALIASES[enumLike]) {
+    return SUBJECT_AREA_ALIASES[enumLike];
+  }
+
+  const normalizedRaw = normalizeLooseText(raw);
+  for (const [enumValue, label] of Object.entries(SUBJECT_AREA_LABELS)) {
+    if (normalizeLooseText(label) === normalizedRaw) {
+      return enumValue as IEPSubjectArea;
+    }
+  }
+
+  const inferenceText = [raw, contextText].filter(Boolean).join('\n');
+  const patternMatch = SUBJECT_AREA_PATTERNS.find((item) =>
+    item.patterns.some((pattern) => pattern.test(inferenceText))
+  );
+  return patternMatch?.value;
+}
+
+function normalizeEnumKey(value: string): string {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_+/g, '_');
+}
+
+function normalizeLooseText(value: string): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ');
 }
 
 function getIEPMaxOutputTokens(input: GenerateIEPGoalsInput): number {

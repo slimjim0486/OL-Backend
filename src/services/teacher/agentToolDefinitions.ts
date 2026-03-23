@@ -1,6 +1,7 @@
 // Agent Tool Definitions — Claude tool schemas for the agentic loop
 // These define what Claude can call; execution is in agentToolExecutor.ts
 import type Anthropic from '@anthropic-ai/sdk';
+import { DisabilityCategory, IEPSubjectArea } from '@prisma/client';
 
 export const AGENT_TOOLS: Anthropic.Messages.Tool[] = [
   // ============================================
@@ -245,11 +246,13 @@ export const AGENT_TOOLS: Anthropic.Messages.Tool[] = [
         },
         disabilityCategory: {
           type: 'string',
-          description: 'Disability category (e.g., "SPECIFIC_LEARNING_DISABILITY", "AUTISM", "SPEECH_LANGUAGE_IMPAIRMENT")',
+          enum: Object.values(DisabilityCategory),
+          description: 'Disability category enum value',
         },
         subjectArea: {
           type: 'string',
-          description: 'Subject area for goals (e.g., "READING_COMPREHENSION", "MATH_COMPUTATION", "WRITTEN_EXPRESSION")',
+          enum: Object.values(IEPSubjectArea),
+          description: 'IEP subject area enum value',
         },
         presentLevels: {
           type: 'string',
