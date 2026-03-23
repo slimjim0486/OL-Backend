@@ -169,7 +169,7 @@ router.get('/downloads', async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const offset = (page - 1) * limit;
 
-    const [exports, total] = await Promise.all([
+    const [exports, total, dripEnrollment] = await Promise.all([
       prisma.teacherExport.findMany({
         where: { teacherId },
         orderBy: { createdAt: 'desc' },
@@ -187,7 +187,13 @@ router.get('/downloads', async (req: Request, res: Response) => {
         },
       }),
       prisma.teacherExport.count({ where: { teacherId } }),
+      prisma.contentDripEnrollment.findUnique({
+        where: { teacherId },
+        select: { generatedContentIds: true },
+      }),
     ]);
+
+    const dripContentIds = new Set(dripEnrollment?.generatedContentIds || []);
 
     return res.json({
       success: true,
@@ -206,6 +212,8 @@ router.get('/downloads', async (req: Request, res: Response) => {
           status: exp.status,
           errorMessage: exp.errorMessage,
           emailSent: exp.emailSent,
+          isSystemGenerated: dripContentIds.has(exp.contentId),
+          notificationEligible: !dripContentIds.has(exp.contentId),
           createdAt: exp.createdAt,
           completedAt: exp.completedAt,
         })),
@@ -235,22 +243,28 @@ router.get('/downloads/:exportId', async (req: Request, res: Response) => {
     const teacherId = req.teacher!.id;
     const { exportId } = req.params;
 
-    const exportRecord = await prisma.teacherExport.findFirst({
-      where: {
-        id: exportId,
-        teacherId,
-      },
-      include: {
-        content: {
-          select: {
-            id: true,
-            title: true,
-            contentType: true,
-            subject: true,
+    const [exportRecord, dripEnrollment] = await Promise.all([
+      prisma.teacherExport.findFirst({
+        where: {
+          id: exportId,
+          teacherId,
+        },
+        include: {
+          content: {
+            select: {
+              id: true,
+              title: true,
+              contentType: true,
+              subject: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.contentDripEnrollment.findUnique({
+        where: { teacherId },
+        select: { generatedContentIds: true },
+      }),
+    ]);
 
     if (!exportRecord) {
       return res.status(404).json({
@@ -258,6 +272,8 @@ router.get('/downloads/:exportId', async (req: Request, res: Response) => {
         error: 'Export not found',
       });
     }
+
+    const dripContentIds = new Set(dripEnrollment?.generatedContentIds || []);
 
     return res.json({
       success: true,
@@ -275,6 +291,8 @@ router.get('/downloads/:exportId', async (req: Request, res: Response) => {
         status: exportRecord.status,
         errorMessage: exportRecord.errorMessage,
         emailSent: exportRecord.emailSent,
+        isSystemGenerated: dripContentIds.has(exportRecord.contentId),
+        notificationEligible: !dripContentIds.has(exportRecord.contentId),
         createdAt: exportRecord.createdAt,
         completedAt: exportRecord.completedAt,
       },
