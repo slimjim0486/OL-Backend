@@ -1370,6 +1370,7 @@ async function processMessage(
   // 1. Load agent — auto-create if needed, chat works with or without full setup
   let agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) {
+    logger.info('Auto-creating agent for teacher without setup', { teacherId });
     agent = await agentMemoryService.getOrCreateAgent(teacherId);
   }
 
