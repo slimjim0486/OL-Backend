@@ -1367,13 +1367,10 @@ async function processMessage(
   sessionId: string,
   message: string
 ): Promise<AgentResponse> {
-  // 1. Load agent, verify setup
-  const agent = await agentMemoryService.getAgent(teacherId);
+  // 1. Load agent — auto-create if needed, chat works with or without full setup
+  let agent = await agentMemoryService.getAgent(teacherId);
   if (!agent) {
-    throw new Error('Agent not initialized. Please complete setup first.');
-  }
-  if (!agent.onboardingComplete) {
-    throw new Error('Please complete onboarding before using chat.');
+    agent = await agentMemoryService.getOrCreateAgent(teacherId);
   }
 
   // 2. Verify session belongs to this agent
