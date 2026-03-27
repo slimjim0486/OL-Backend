@@ -164,18 +164,7 @@ router.post('/stripe-consent', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Stripe webhook for teacher subscriptions
- * POST /api/webhooks/stripe-subscription
- *
- * Handles:
- * - checkout.session.completed (subscription or credit pack purchase)
- * - customer.subscription.created
- * - customer.subscription.updated
- * - customer.subscription.deleted
- * - invoice.payment_failed
- */
-router.post('/stripe-subscription', async (req: Request, res: Response) => {
+async function handleTeacherStripeWebhook(req: Request, res: Response) {
   logger.info('Teacher subscription webhook endpoint hit');
 
   const signature = req.headers['stripe-signature'] as string;
@@ -386,7 +375,25 @@ router.post('/stripe-subscription', async (req: Request, res: Response) => {
     logger.error('Error processing Stripe subscription webhook', { error, eventType: event.type });
     res.status(200).json({ received: true, error: 'Processing error logged' });
   }
-});
+}
+
+/**
+ * Stripe webhook for teacher subscriptions
+ * POST /api/webhooks/stripe-teacher
+ * POST /api/webhooks/stripe-subscription
+ *
+ * Handles:
+ * - checkout.session.completed (subscription or credit pack purchase)
+ * - customer.subscription.created
+ * - customer.subscription.updated
+ * - customer.subscription.deleted
+ * - invoice.payment_failed
+ *
+ * `stripe-teacher` is the canonical path and matches the Stripe endpoint in production.
+ * `stripe-subscription` remains as a backward-compatible alias.
+ */
+router.post('/stripe-teacher', handleTeacherStripeWebhook);
+router.post('/stripe-subscription', handleTeacherStripeWebhook);
 
 /**
  * Stripe webhook for family/parent subscriptions

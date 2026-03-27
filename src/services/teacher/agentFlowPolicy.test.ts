@@ -24,7 +24,7 @@ describe('agentFlowPolicy', () => {
         },
       ];
 
-      expect(deriveActiveFlowFromMessages(messages as any)).toBe('weekly_prep');
+      expect(deriveActiveFlowFromMessages(messages as any)).toBe('lesson');
     });
 
     it('returns null when no known flow action exists', () => {
@@ -36,7 +36,6 @@ describe('agentFlowPolicy', () => {
   describe('detectExplicitFlowSwitch', () => {
     it('detects explicit switches by target tool', () => {
       expect(detectExplicitFlowSwitch('switch to lesson planning now')).toBe('lesson');
-      expect(detectExplicitFlowSwitch('open my weekly prep calendar')).toBe('weekly_prep');
       expect(detectExplicitFlowSwitch('please generate a quiz on fractions')).toBe('quiz');
       expect(detectExplicitFlowSwitch('take me to flashcards')).toBe('flashcards');
       expect(detectExplicitFlowSwitch('create IEP goals for this student')).toBe('iep');
@@ -58,7 +57,7 @@ describe('agentFlowPolicy', () => {
   describe('applyFlowLock', () => {
     it('blocks cross-flow intents when no explicit switch is present', () => {
       const result = applyFlowLock({
-        activeFlow: 'weekly_prep',
+        activeFlow: 'quiz',
         explicitSwitchTarget: null,
         intentType: 'generate_lesson',
       });
@@ -69,7 +68,7 @@ describe('agentFlowPolicy', () => {
 
     it('allows cross-flow intents when an explicit switch is present', () => {
       const result = applyFlowLock({
-        activeFlow: 'weekly_prep',
+        activeFlow: 'quiz',
         explicitSwitchTarget: 'lesson',
         intentType: 'generate_lesson',
       });

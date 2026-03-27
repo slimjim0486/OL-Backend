@@ -54,6 +54,27 @@ const batchExportSchema = z.object({
   options: exportOptionsSchema.optional(),
 });
 
+const directDownloadConsumeSchema = z.object({
+  exportKind: z.enum(['pdf', 'pptx', 'drive', 'batch']).optional(),
+  sourceType: z.string().max(100).optional(),
+  sourceId: z.string().max(255).optional(),
+});
+
+function getDownloadAccessResponseData(access: Awaited<ReturnType<typeof getDownloadAccess>>) {
+  const teacherPlan = SUBSCRIPTION_PRODUCTS.BASIC;
+  const proPlan = SUBSCRIPTION_PRODUCTS.PROFESSIONAL;
+
+  return {
+    ...access,
+    prices: {
+      subscription_monthly: Math.round(teacherPlan.priceMonthly * 100),
+      subscription_annual: Math.round(teacherPlan.priceAnnual * 100),
+      pro_subscription_monthly: Math.round(proPlan.priceMonthly * 100),
+      pro_subscription_annual: Math.round(proPlan.priceAnnual * 100),
+    },
+  };
+}
+
 function getDownloadBlockedPayload(access: {
   requiredProduct: string;
   priceCents: number;
@@ -129,28 +150,101 @@ router.get('/access/:contentId', async (req: Request, res: Response) => {
     }
 
     const access = await getDownloadAccess(teacherId, contentId);
-    const teacherPlan = SUBSCRIPTION_PRODUCTS.BASIC;
-    const proPlan = SUBSCRIPTION_PRODUCTS.PROFESSIONAL;
 
     return res.json({
       success: true,
-      data: {
-        ...access,
-        prices: {
-          // Subscription pricing for upgrade/paywall UI.
-          subscription_monthly: Math.round(teacherPlan.priceMonthly * 100),
-          subscription_annual: Math.round(teacherPlan.priceAnnual * 100),
-          // Teacher Pro pricing (existing feature paywalls still consume these keys).
-          pro_subscription_monthly: Math.round(proPlan.priceMonthly * 100),
-          pro_subscription_annual: Math.round(proPlan.priceAnnual * 100),
-        },
-      },
+      data: getDownloadAccessResponseData(access),
     });
   } catch (error) {
     console.error('Access check error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to check download access',
+    });
+  }
+});
+
+/**
+ * Check generic direct-download access for flows that do not export TeacherContent
+ * GET /api/teacher/export/access
+ */
+router.get('/access', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const sourceId = typeof req.query.sourceId === 'string' && req.query.sourceId.trim()
+      ? req.query.sourceId.trim()
+      : teacherId;
+    const access = await getDownloadAccess(teacherId, sourceId);
+
+    return res.json({
+      success: true,
+      data: getDownloadAccessResponseData(access),
+    });
+  } catch (error) {
+    console.error('Direct access check error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check download access',
+    });
+  }
+});
+
+/**
+ * Consume generic direct-download allowance for flows that bypass TeacherContent exports
+ * POST /api/teacher/export/consume
+ */
+router.post('/consume', async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.teacher!.id;
+    const { sourceId } = directDownloadConsumeSchema.parse(req.body || {});
+    const access = await getDownloadAccess(teacherId, sourceId || teacherId);
+
+    if (!access.canDownload) {
+      return res.status(403).json(getDownloadBlockedPayload({
+        requiredProduct: 'SUBSCRIPTION',
+        priceCents: Math.round(SUBSCRIPTION_PRODUCTS.BASIC.priceMonthly * 100),
+        freeMonthlyLimit: access.freeMonthlyLimit,
+        freeDownloadsUsed: access.freeDownloadsUsed,
+        freeDownloadsRemaining: access.freeDownloadsRemaining,
+        freeDownloadsResetAt: access.freeDownloadsResetAt,
+      }));
+    }
+
+    const result = await consumeFreeDownloadAllowance(teacherId);
+
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors,
+      });
+    }
+
+    if (error?.name === 'ForbiddenError') {
+      const teacherId = req.teacher!.id;
+      const sourceId = typeof req.body?.sourceId === 'string' && req.body.sourceId.trim()
+        ? req.body.sourceId.trim()
+        : teacherId;
+      const latestAccess = await getDownloadAccess(teacherId, sourceId);
+      return res.status(403).json(getDownloadBlockedPayload({
+        requiredProduct: 'SUBSCRIPTION',
+        priceCents: Math.round(SUBSCRIPTION_PRODUCTS.BASIC.priceMonthly * 100),
+        freeMonthlyLimit: latestAccess.freeMonthlyLimit,
+        freeDownloadsUsed: latestAccess.freeDownloadsUsed,
+        freeDownloadsRemaining: latestAccess.freeDownloadsRemaining,
+        freeDownloadsResetAt: latestAccess.freeDownloadsResetAt,
+      }));
+    }
+
+    console.error('Direct download consume error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to reserve download allowance',
     });
   }
 });

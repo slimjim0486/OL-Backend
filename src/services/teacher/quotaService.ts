@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { PaymentRequiredError } from '../../middleware/errorHandler.js';
 import { emailService } from '../email/emailService.js';
 import { trackCreditUsage } from '../brevo/brevoTrackingService.js';
+import { getDownloadAccess } from './downloadAccessService.js';
 
 // =============================================================================
 // TOKEN COSTS (Updated December 2025 - Google Gemini API Pricing)
@@ -545,29 +546,43 @@ export const quotaService = {
     const isOrgMember = !!teacher.organization;
 
     if (DOWNLOAD_PRICING_MODEL) {
-      const now = new Date();
+      const downloadAccess = await getDownloadAccess(teacherId, teacherId);
+      const monthlyLimit = downloadAccess.isSubscriber ? 0 : downloadAccess.freeMonthlyLimit;
+      const used = downloadAccess.isSubscriber ? 0 : downloadAccess.freeDownloadsUsed;
+      const remaining = downloadAccess.isSubscriber ? 0 : downloadAccess.freeDownloadsRemaining;
+      const percentUsed = monthlyLimit > 0
+        ? Math.min(100, Math.round((used / monthlyLimit) * 100))
+        : 0;
+
       return {
         pricingModel: 'DOWNLOADS',
-        isUnlimited: true,
+        isUnlimited: downloadAccess.isSubscriber,
         isOrgMember,
         organizationName: teacher.organization?.name || null,
         subscriptionTier: isOrgMember
           ? teacher.organization!.subscriptionTier
           : teacher.subscriptionTier,
         quota: {
-          monthlyLimit: '0',
-          used: '0',
-          remaining: '0',
-          percentUsed: 0,
-          resetDate: now,
+          monthlyLimit: monthlyLimit.toString(),
+          used: used.toString(),
+          remaining: remaining.toString(),
+          percentUsed,
+          resetDate: downloadAccess.freeDownloadsResetAt,
         },
         credits: {
-          subscription: 0,
+          subscription: monthlyLimit,
           rollover: 0,
           bonus: 0,
-          total: 0,
-          used: 0,
-          remaining: 0,
+          total: monthlyLimit,
+          used,
+          remaining,
+        },
+        downloads: {
+          monthlyLimit,
+          used,
+          remaining,
+          resetDate: downloadAccess.freeDownloadsResetAt,
+          isSubscriber: downloadAccess.isSubscriber,
         },
         trial: {
           isActive: false,

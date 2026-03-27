@@ -165,7 +165,7 @@ app.use(requestLogger);
 
 // Stripe webhooks need raw body for signature verification
 // Must be registered BEFORE express.json() middleware
-// Mount once at /api/webhooks - the router handles /stripe-consent, /stripe-subscription, /stripe-family
+// Mount once at /api/webhooks - the router handles /stripe-consent, /stripe-teacher, /stripe-subscription, /stripe-family
 app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
 
 // Body parsing (for all other routes)

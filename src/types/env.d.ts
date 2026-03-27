@@ -47,6 +47,9 @@ declare namespace NodeJS {
     // Stripe
     STRIPE_SECRET_KEY?: string;
     STRIPE_WEBHOOK_SECRET?: string;
+    STRIPE_WEBHOOK_SECRET_CC?: string;
+    STRIPE_WEBHOOK_SECRET_TEACHER?: string;
+    STRIPE_WEBHOOK_SECRET_FAMILY?: string;
 
     // Logging
     LOG_LEVEL?: string;
