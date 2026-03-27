@@ -274,7 +274,7 @@ router.post('/setup/complete', async (req: Request, res: Response, next: NextFun
 // Scheduling Preferences
 // ============================================================================
 
-router.get('/scheduling', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/scheduling', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const agent = await agentMemoryService.getAgent(teacherId);
@@ -291,6 +291,7 @@ router.get('/scheduling', async (req: Request, res: Response, next: NextFunction
 
 router.patch(
   '/scheduling',
+  requireTeacherUnlimited,
   validateBody(schedulingSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -308,7 +309,7 @@ router.patch(
 );
 
 // Autopilot status (next run + last scheduled generation)
-router.get('/autopilot/status', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/autopilot/status', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const agent = await agentMemoryService.getAgent(teacherId);
@@ -543,6 +544,7 @@ router.get('/memory', async (req: Request, res: Response, next: NextFunction) =>
 
 router.post(
   '/chat/sessions',
+  requireTeacherUnlimited,
   validateBody(createSessionSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -555,7 +557,7 @@ router.post(
   }
 );
 
-router.get('/chat/sessions', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/chat/sessions', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const page = parseInt(req.query.page as string) || 1;
@@ -567,7 +569,7 @@ router.get('/chat/sessions', async (req: Request, res: Response, next: NextFunct
   }
 });
 
-router.get('/chat/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/chat/sessions/:id', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const session = await agentOrchestratorService.getSession(req.params.id, teacherId);
@@ -578,7 +580,7 @@ router.get('/chat/sessions/:id', async (req: Request, res: Response, next: NextF
   }
 });
 
-router.delete('/chat/sessions/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/chat/sessions/:id', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     await agentOrchestratorService.deleteSession(req.params.id, teacherId);
@@ -591,6 +593,7 @@ router.delete('/chat/sessions/:id', async (req: Request, res: Response, next: Ne
 // Send message to chat session
 router.post(
   '/chat/sessions/:id/messages',
+  requireTeacherUnlimited,
   validateBody(sendMessageSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -613,6 +616,7 @@ router.post(
 // Review an uploaded lesson (rubric report) and post the result into the chat session
 router.post(
   '/chat/sessions/:id/review-lesson',
+  requireTeacherUnlimited,
   validateBody(lessonReviewSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -720,6 +724,7 @@ router.post(
 
 router.post(
   '/feedback',
+  requireTeacherUnlimited,
   validateBody(feedbackSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -804,7 +809,7 @@ router.post(
 // Suggestions
 // ============================================================================
 
-router.get('/suggestions', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/suggestions', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const suggestions = await proactiveSuggestionService.getSuggestions(teacherId);
@@ -836,6 +841,7 @@ const materialRegenerateSchema = z.object({
 // Create / queue weekly prep
 router.post(
   '/weekly-prep',
+  requireTeacherUnlimited,
   validateBody(weeklyPrepCreateSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -854,7 +860,7 @@ router.post(
 );
 
 // List weekly preps
-router.get('/weekly-prep', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/weekly-prep', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const page = parseInt(req.query.page as string) || 1;
@@ -867,7 +873,7 @@ router.get('/weekly-prep', async (req: Request, res: Response, next: NextFunctio
 });
 
 // Get weekly prep with all materials
-router.get('/weekly-prep/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/weekly-prep/:id', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const prep = await weeklyPrepService.getWeeklyPrep(req.params.id, teacherId);
@@ -878,7 +884,7 @@ router.get('/weekly-prep/:id', async (req: Request, res: Response, next: NextFun
 });
 
 // Lightweight progress poll
-router.get('/weekly-prep/:id/progress', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/weekly-prep/:id/progress', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const progress = await weeklyPrepService.getWeeklyPrepProgress(req.params.id, teacherId);
@@ -891,6 +897,7 @@ router.get('/weekly-prep/:id/progress', async (req: Request, res: Response, next
 // Approve single material
 router.post(
   '/weekly-prep/:id/materials/:materialId/approve',
+  requireTeacherUnlimited,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const teacherId = (req as any).teacher.id;
@@ -903,7 +910,7 @@ router.post(
 );
 
 // Bulk approve all materials
-router.post('/weekly-prep/:id/approve-all', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/weekly-prep/:id/approve-all', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const count = await weeklyPrepService.approveAllMaterials(req.params.id, teacherId);
@@ -914,7 +921,7 @@ router.post('/weekly-prep/:id/approve-all', async (req: Request, res: Response, 
 });
 
 // Finalize weekly prep (mark complete when no items remain pending review)
-router.post('/weekly-prep/:id/finalize', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/weekly-prep/:id/finalize', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const result = await weeklyPrepService.finalizeWeeklyPrep(req.params.id, teacherId);
@@ -944,6 +951,7 @@ router.post('/weekly-prep/:id/finalize', async (req: Request, res: Response, nex
 // Update material (edit)
 router.patch(
   '/weekly-prep/:id/materials/:materialId',
+  requireTeacherUnlimited,
   validateBody(materialUpdateSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -960,6 +968,7 @@ router.patch(
 // Regenerate material
 router.post(
   '/weekly-prep/:id/materials/:materialId/regenerate',
+  requireTeacherUnlimited,
   validateBody(materialRegenerateSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -990,7 +999,7 @@ router.post(
 // Standards Coverage
 // ============================================================================
 
-router.get('/standards/overview', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/standards/overview', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const overview = await standardsAnalysisService.getOverviewStats(teacherId);
@@ -1000,7 +1009,7 @@ router.get('/standards/overview', async (req: Request, res: Response, next: Next
   }
 });
 
-router.get('/standards/coverage', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/standards/coverage', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const reports = await standardsAnalysisService.getFullCoverageReport(teacherId);
@@ -1010,7 +1019,7 @@ router.get('/standards/coverage', async (req: Request, res: Response, next: Next
   }
 });
 
-router.get('/standards/coverage/:subject', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/standards/coverage/:subject', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const report = await standardsAnalysisService.getCoverageBySubject(teacherId, req.params.subject);
@@ -1021,7 +1030,7 @@ router.get('/standards/coverage/:subject', async (req: Request, res: Response, n
   }
 });
 
-router.post('/standards/suggest-actions', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/standards/suggest-actions', requireTeacherUnlimited, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const { subject, gapStandardIds } = req.body;
