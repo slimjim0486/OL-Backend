@@ -1416,6 +1416,142 @@ Sections: ${lessonResult.sections.map(s => s.title).join(', ')}
   },
 
   /**
+   * Adjust a single quiz question's difficulty (make it easier or harder)
+   */
+  async adjustQuestionDifficulty(
+    teacherId: string,
+    content: { quizContent?: unknown; lessonContent?: unknown; subject?: string | null; gradeLevel?: string | null },
+    input: { questionIndex: number; currentDifficulty: string; targetDifficulty: 'easier' | 'harder'; question: string; options?: string[]; correctAnswer: string }
+  ): Promise<{ question: string; options?: string[]; correctAnswer: string; explanation?: string; difficulty: string; points?: number }> {
+    const model = genAI.getGenerativeModel({
+      model: config.gemini.models.flash,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2000, responseMimeType: 'application/json' },
+      safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+    });
+
+    const newDifficulty = input.targetDifficulty === 'easier'
+      ? (input.currentDifficulty === 'hard' ? 'medium' : 'easy')
+      : (input.currentDifficulty === 'easy' ? 'medium' : 'hard');
+
+    const prompt = `You are rewriting a quiz question to make it ${input.targetDifficulty}.
+
+Subject: ${content.subject || 'General'} | Grade: ${content.gradeLevel || 'General'}
+
+CURRENT QUESTION (difficulty: ${input.currentDifficulty}):
+${input.question}
+${input.options?.length ? `Options: ${input.options.join(' | ')}` : ''}
+Correct Answer: ${input.correctAnswer}
+
+Rewrite this question at ${newDifficulty} difficulty. ${input.targetDifficulty === 'easier'
+  ? 'Use simpler vocabulary, more obvious clues, fewer distractors, or break the concept into smaller steps.'
+  : 'Use more complex vocabulary, require deeper reasoning, add plausible distractors, or combine multiple concepts.'}
+
+Keep the same topic/concept but adjust the cognitive demand.
+
+Return JSON:
+{
+  "question": "The rewritten question text",
+  ${input.options?.length ? '"options": ["A) ...", "B) ...", "C) ...", "D) ..."],' : ''}
+  "correctAnswer": "The correct answer",
+  "explanation": "Why this is correct",
+  "difficulty": "${newDifficulty}",
+  "points": ${newDifficulty === 'easy' ? 1 : newDifficulty === 'medium' ? 2 : 3}
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseCheck = checkGeminiResponse(result);
+    if (responseCheck.isBlocked || responseCheck.isEmpty) {
+      throw new Error('Unable to adjust this question. Please try again.');
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(extractJSON(responseCheck.responseText));
+    } catch {
+      throw new Error('Failed to adjust question. Please try again.');
+    }
+
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount || 500;
+    await quotaService.recordUsage({
+      teacherId, operation: TokenOperation.LESSON_GENERATION, tokensUsed,
+      modelUsed: config.gemini.models.flash, resourceType: 'quiz_question',
+    });
+
+    return parsed;
+  },
+
+  /**
+   * Generate additional quiz questions for an existing quiz
+   */
+  async addQuizQuestions(
+    teacherId: string,
+    content: { quizContent?: unknown; lessonContent?: unknown; subject?: string | null; gradeLevel?: string | null; title?: string },
+    input: { count?: number; difficulty?: string }
+  ): Promise<{ questions: Array<{ question: string; type: string; options?: string[]; correctAnswer: string; explanation?: string; difficulty: string; points?: number }> }> {
+    const model = genAI.getGenerativeModel({
+      model: config.gemini.models.flash,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 6000, responseMimeType: 'application/json' },
+      safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+    });
+
+    const quizContent = content.quizContent as Record<string, unknown> | undefined;
+    const lessonContent = content.lessonContent as Record<string, unknown> | undefined;
+    const existingQuestions = (quizContent?.questions || []) as Array<{ question: string }>;
+    const existingList = existingQuestions.map((q, i) => `${i + 1}. ${q.question}`).join('\n');
+    const count = input.count || 3;
+
+    const prompt = `You are adding ${count} NEW quiz questions to an existing assessment.
+
+Subject: ${content.subject || 'General'} | Grade: ${content.gradeLevel || 'General'}
+Lesson topic: ${(lessonContent?.title as string) || content.title || 'General'}
+${input.difficulty ? `Target difficulty: ${input.difficulty}` : 'Mix of easy, medium, and hard questions'}
+
+EXISTING QUESTIONS (do NOT repeat these):
+${existingList || 'None yet'}
+
+Generate ${count} NEW questions that:
+- Cover different aspects of the topic than the existing questions
+- Are age-appropriate and standards-aligned
+- Include a mix of question types (multiple_choice, true_false, short_answer)
+
+Return JSON:
+{
+  "questions": [
+    {
+      "question": "Question text",
+      "type": "multiple_choice",
+      "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+      "correctAnswer": "A) ...",
+      "explanation": "Why this is correct",
+      "difficulty": "medium",
+      "points": 2
+    }
+  ]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseCheck = checkGeminiResponse(result);
+    if (responseCheck.isBlocked || responseCheck.isEmpty) {
+      throw new Error('Unable to generate additional questions. Please try again.');
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(extractJSON(responseCheck.responseText));
+    } catch {
+      throw new Error('Failed to generate questions. Please try again.');
+    }
+
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount || 1500;
+    await quotaService.recordUsage({
+      teacherId, operation: TokenOperation.LESSON_GENERATION, tokensUsed,
+      modelUsed: config.gemini.models.flash, resourceType: 'quiz_questions',
+    });
+
+    return parsed;
+  },
+
+  /**
    * Regenerate a single section of a lesson using AI
    */
   async regenerateSection(

@@ -555,6 +555,74 @@ router.get(
 );
 
 // ============================================
+// QUIZ QUESTION EDITING
+// ============================================
+
+const adjustQuestionDifficultySchema = z.object({
+  questionIndex: z.number().int().min(0).max(100),
+  currentDifficulty: z.string().max(20),
+  targetDifficulty: z.enum(['easier', 'harder']),
+  question: z.string().max(5000),
+  options: z.array(z.string()).optional(),
+  correctAnswer: z.string().max(2000),
+});
+
+const addQuizQuestionsSchema = z.object({
+  count: z.number().int().min(1).max(10).default(3),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'mixed']).optional(),
+});
+
+/**
+ * POST /api/teacher/content/:id/adjust-question
+ * Adjust a single quiz question's difficulty up or down
+ */
+router.post(
+  '/:id/adjust-question',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(adjustQuestionDifficultySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = req.teacher!.id;
+      const content = await contentService.getContentById(req.params.id, teacherId);
+      if (!content) {
+        res.status(404).json({ success: false, error: 'Content not found' });
+        return;
+      }
+      const result = await contentGenerationService.adjustQuestionDifficulty(teacherId, content, req.body);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/content/:id/add-quiz-questions
+ * Generate additional quiz questions for an existing quiz
+ */
+router.post(
+  '/:id/add-quiz-questions',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(addQuizQuestionsSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = req.teacher!.id;
+      const content = await contentService.getContentById(req.params.id, teacherId);
+      if (!content) {
+        res.status(404).json({ success: false, error: 'Content not found' });
+        return;
+      }
+      const result = await contentGenerationService.addQuizQuestions(teacherId, content, req.body);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
 // SECTION-LEVEL EDITING
 // ============================================
 
