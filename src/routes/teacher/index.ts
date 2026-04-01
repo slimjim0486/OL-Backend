@@ -18,7 +18,6 @@ import sampleContentRoutes from './sampleContent.routes.js';
 import activityRoutes from './activity.routes.js';
 import gamesRoutes from './games.routes.js';
 import sharingRoutes from './sharing.routes.js';
-import selectionRoutes from './selection.routes.js';
 import agentRoutes from './agent.routes.js';
 import communicationRoutes from './communication.routes.js';
 import organizationRoutes from './organization.routes.js';
@@ -44,7 +43,6 @@ router.use('/samples', sampleContentRoutes);  // Public sample content
 router.use('/activities', activityRoutes);    // Activity feed for notifications
 router.use('/games', gamesRoutes);
 router.use('/sharing', sharingRoutes);        // Content sharing hub
-router.use('/selection', selectionRoutes);
 router.use('/agent', agentRoutes);
 router.use('/communications', communicationRoutes);
 router.use('/organizations', organizationRoutes);

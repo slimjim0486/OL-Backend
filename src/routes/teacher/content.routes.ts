@@ -17,6 +17,7 @@ import {
 import { prisma } from '../../config/database.js';
 import { queueDocumentAnalysisJob } from '../../jobs/index.js';
 import { DISABILITY_LABELS, SUBJECT_AREA_LABELS } from '../../services/teacher/iepGoalService.js';
+import { standardsSuggestionService } from '../../services/teacher/standardsSuggestionService.js';
 
 const router = Router();
 
@@ -521,6 +522,114 @@ router.get(
   }
 );
 
+// ============================================
+// STANDARDS SUGGESTIONS
+// ============================================
+
+const suggestedStandardsQuerySchema = z.object({
+  subject: z.nativeEnum(Subject),
+  gradeLevel: z.string().max(20),
+});
+
+/**
+ * GET /api/teacher/content/standards/suggestions
+ * Get suggested standards for a given subject + grade based on teacher's CurriculumState
+ */
+router.get(
+  '/standards/suggestions',
+  authenticateTeacher,
+  requireTeacher,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = suggestedStandardsQuerySchema.parse(req.query);
+      const result = await standardsSuggestionService.getSuggestedStandards(
+        req.teacher!.id,
+        parsed.subject,
+        parsed.gradeLevel
+      );
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================
+// SECTION-LEVEL EDITING
+// ============================================
+
+const regenerateSectionSchema = z.object({
+  sectionIndex: z.number().int().min(0).max(50),
+  instruction: z.string().min(1).max(2000),
+  currentContent: z.string().max(50000),
+  currentTitle: z.string().max(500),
+});
+
+const addSectionSchema = z.object({
+  title: z.string().max(500).optional(),
+  instruction: z.string().max(2000).optional(),
+  position: z.number().int().min(0).max(50).optional(),
+  useAI: z.boolean().optional().default(false),
+});
+
+/**
+ * POST /api/teacher/content/:id/regenerate-section
+ * Regenerate a single section of a lesson using AI
+ */
+router.post(
+  '/:id/regenerate-section',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(regenerateSectionSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = req.teacher!.id;
+      const content = await contentService.getContentById(req.params.id, teacherId);
+      if (!content) {
+        res.status(404).json({ success: false, error: 'Content not found' });
+        return;
+      }
+      if (content.contentType !== 'LESSON') {
+        res.status(400).json({ success: false, error: 'Section editing is only supported for lessons' });
+        return;
+      }
+      const result = await contentGenerationService.regenerateSection(teacherId, content, req.body);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/teacher/content/:id/add-section
+ * Add a new section to a lesson (blank or AI-generated)
+ */
+router.post(
+  '/:id/add-section',
+  authenticateTeacher,
+  requireTeacher,
+  validateInput(addSectionSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const teacherId = req.teacher!.id;
+      const content = await contentService.getContentById(req.params.id, teacherId);
+      if (!content) {
+        res.status(404).json({ success: false, error: 'Content not found' });
+        return;
+      }
+      if (content.contentType !== 'LESSON') {
+        res.status(400).json({ success: false, error: 'Section editing is only supported for lessons' });
+        return;
+      }
+      const result = await contentGenerationService.addSection(teacherId, content, req.body);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 /**
  * POST /api/teacher/content/:id/approve-weekly-prep
  * Approve the linked weekly prep material (if present) and publish content
@@ -763,6 +872,11 @@ const templateStructureSchema = z.object({
   flashcardCount: z.number().optional(),
 }).optional();
 
+const targetStandardsSchema = z.array(z.object({
+  notation: z.string().max(100),
+  description: z.string().max(500),
+})).max(10).optional();
+
 const generateLessonSchema = z.object({
   topic: z.string().min(1, 'Topic is required').max(500),
   subject: z.nativeEnum(Subject).optional(),
@@ -774,6 +888,7 @@ const generateLessonSchema = z.object({
   includeActivities: z.boolean().optional(),
   includeAssessment: z.boolean().optional(),
   additionalContext: z.string().max(7000, 'Additional context must be 7000 characters or less').optional(),
+  targetStandards: targetStandardsSchema,
   // Template support
   templateStructure: templateStructureSchema,
   templateId: z.string().uuid().optional(),
@@ -791,6 +906,7 @@ const generateFullLessonSchema = z.object({
   includeActivities: z.boolean().optional().default(true),
   includeAssessment: z.boolean().optional().default(true),
   additionalContext: z.string().max(7000, 'Additional context must be 7000 characters or less').optional(),
+  targetStandards: targetStandardsSchema,
   // Split generation options
   includeQuiz: z.boolean().optional().default(true),
   includeFlashcards: z.boolean().optional().default(true),

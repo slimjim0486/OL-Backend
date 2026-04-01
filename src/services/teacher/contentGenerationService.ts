@@ -329,6 +329,11 @@ export interface GenerateLessonInput {
   includeActivities?: boolean;
   includeAssessment?: boolean;
   additionalContext?: string; // Extra notes from teacher
+  // Standards alignment
+  targetStandards?: Array<{
+    notation: string;
+    description: string;
+  }>;
   // Template support
   templateStructure?: {
     sections: Array<{
@@ -374,6 +379,13 @@ export interface GeneratedLesson {
     }>;
   };
   teacherNotes?: string;
+  // Standards alignment
+  standardsCovered?: Array<{
+    notation: string;
+    description: string;
+    alignmentStrength: number;
+    isPrimary: boolean;
+  }>;
   tokensUsed: number;
   // Model tracking for Flash-first optimization
   modelUsed?: 'flash' | 'pro';
@@ -1402,6 +1414,202 @@ Sections: ${lessonResult.sections.map(s => s.title).join(', ')}
       throw error;
     }
   },
+
+  /**
+   * Regenerate a single section of a lesson using AI
+   */
+  async regenerateSection(
+    teacherId: string,
+    content: { lessonContent?: unknown; title?: string; description?: string | null; subject?: string | null; gradeLevel?: string | null },
+    input: { sectionIndex: number; instruction: string; currentContent: string; currentTitle: string }
+  ): Promise<{ title: string; content: string; duration?: number; activities?: unknown[]; teachingTips?: string[]; realWorldConnections?: string[] }> {
+    const model = genAI.getGenerativeModel({
+      model: config.gemini.models.flash,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 4000,
+        responseMimeType: 'application/json',
+      },
+      safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+    });
+
+    // Assemble teacher context for personalization
+    let styleContext = '';
+    try {
+      const context = await contextAssemblerService.assembleContext(teacherId, 'CONTENT_GENERATION', {
+        subject: content.subject as Subject || undefined,
+      });
+      styleContext = context.styleContext || '';
+    } catch {
+      // Non-fatal - proceed without style context
+    }
+
+    const lessonContent = content.lessonContent as Record<string, unknown> | undefined;
+    const lessonTitle = (lessonContent?.title as string) || content.title || '';
+    const lessonSummary = (lessonContent?.summary as string) || content.description || '';
+
+    const prompt = `You are an expert teacher revising a section of a lesson plan.
+
+LESSON CONTEXT:
+- Lesson title: ${lessonTitle}
+- Lesson summary: ${lessonSummary}
+- Subject: ${content.subject || 'General'}
+- Grade level: ${content.gradeLevel || 'General'}
+${styleContext ? `\nTEACHER STYLE PREFERENCES:\n${styleContext}` : ''}
+
+CURRENT SECTION (Section ${input.sectionIndex + 1}):
+Title: ${input.currentTitle}
+Content: ${input.currentContent}
+
+TEACHER'S INSTRUCTION FOR REVISION:
+${input.instruction}
+
+Regenerate this section following the teacher's instruction. Keep it consistent with the overall lesson. Make the content detailed and engaging.
+
+Return JSON:
+{
+  "title": "Section title",
+  "content": "Detailed section content (200-400 words)...",
+  "duration": 10,
+  "activities": [{"name": "Activity name", "description": "Description", "materials": [], "discussionQuestions": []}],
+  "teachingTips": ["Tip for the teacher"],
+  "realWorldConnections": ["Real-world connection"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseCheck = checkGeminiResponse(result);
+    if (responseCheck.isBlocked || responseCheck.isEmpty) {
+      throw new Error('Unable to regenerate this section. Please try different instructions.');
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(extractJSON(responseCheck.responseText));
+    } catch (parseErr) {
+      logger.error('Failed to parse regenerated section JSON', {
+        teacherId,
+        sectionIndex: input.sectionIndex,
+        responsePreview: responseCheck.responseText.substring(0, 300),
+      });
+      throw new Error('Failed to regenerate section. Please try again.');
+    }
+
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount || 1000;
+    await quotaService.recordUsage({
+      teacherId,
+      operation: TokenOperation.LESSON_GENERATION,
+      tokensUsed,
+      modelUsed: config.gemini.models.flash,
+      resourceType: 'lesson_section',
+    });
+
+    logger.info('Section regenerated successfully', {
+      teacherId,
+      sectionIndex: input.sectionIndex,
+      tokensUsed,
+    });
+
+    return parsed;
+  },
+
+  /**
+   * Add a new section to a lesson, optionally using AI
+   */
+  async addSection(
+    teacherId: string,
+    content: { lessonContent?: unknown; title?: string; description?: string | null; subject?: string | null; gradeLevel?: string | null },
+    input: { title?: string; instruction?: string; position?: number; useAI?: boolean }
+  ): Promise<{ title: string; content: string; duration?: number; activities?: unknown[]; teachingTips?: string[]; realWorldConnections?: string[] }> {
+    if (!input.useAI) {
+      return {
+        title: input.title || 'New Section',
+        content: '',
+        activities: [],
+        teachingTips: [],
+        realWorldConnections: [],
+      };
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: config.gemini.models.flash,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 4000,
+        responseMimeType: 'application/json',
+      },
+      safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+    });
+
+    // Assemble teacher context for personalization
+    let styleContext = '';
+    try {
+      const context = await contextAssemblerService.assembleContext(teacherId, 'CONTENT_GENERATION', {
+        subject: content.subject as Subject || undefined,
+      });
+      styleContext = context.styleContext || '';
+    } catch {
+      // Non-fatal - proceed without style context
+    }
+
+    const lessonContent = content.lessonContent as Record<string, unknown> | undefined;
+    const sections = (lessonContent?.sections || []) as Array<{ title: string }>;
+    const existingSections = sections.map((s, i) => `${i + 1}. ${s.title}`).join('\n');
+
+    const prompt = `You are an expert teacher adding a new section to a lesson plan.
+
+LESSON: ${(lessonContent?.title as string) || content.title || 'Untitled'}
+Subject: ${content.subject || 'General'} | Grade: ${content.gradeLevel || 'General'}
+Summary: ${(lessonContent?.summary as string) || content.description || ''}
+${styleContext ? `\nTEACHER STYLE PREFERENCES:\n${styleContext}` : ''}
+
+EXISTING SECTIONS:
+${existingSections || 'No existing sections'}
+
+${input.title ? `NEW SECTION TITLE: ${input.title}` : ''}
+${input.instruction ? `TEACHER'S INSTRUCTION: ${input.instruction}` : 'Create a logical next section that extends and complements the lesson.'}
+
+Generate a detailed, engaging section that fits naturally with the existing lesson flow.
+
+Return JSON:
+{
+  "title": "Section title",
+  "content": "Detailed section content (200-400 words)...",
+  "duration": 10,
+  "activities": [{"name": "Activity name", "description": "Description", "materials": [], "discussionQuestions": []}],
+  "teachingTips": ["Tip for the teacher"],
+  "realWorldConnections": ["Real-world connection"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseCheck = checkGeminiResponse(result);
+    if (responseCheck.isBlocked || responseCheck.isEmpty) {
+      throw new Error('Unable to generate this section. Please try different instructions.');
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(extractJSON(responseCheck.responseText));
+    } catch (parseErr) {
+      logger.error('Failed to parse AI-generated section JSON', {
+        teacherId,
+        responsePreview: responseCheck.responseText.substring(0, 300),
+      });
+      throw new Error('Failed to generate section. Please try again.');
+    }
+
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount || 800;
+    await quotaService.recordUsage({
+      teacherId,
+      operation: TokenOperation.LESSON_GENERATION,
+      tokensUsed,
+      modelUsed: config.gemini.models.flash,
+      resourceType: 'lesson_section',
+    });
+
+    logger.info('Section added with AI', { teacherId, tokensUsed });
+
+    return parsed;
+  },
 };
 
 // ============================================
@@ -1833,6 +2041,11 @@ ${curriculumName ? `- Curriculum/Standards: ${curriculumName} - Align learning o
 ${input.objectives ? `- Specific Objectives: ${input.objectives.join(', ')}` : ''}
 ${input.includeActivities ? '- Include hands-on activities' : ''}
 ${input.includeAssessment ? '- Include assessment questions' : ''}
+${input.targetStandards?.length ? `
+TARGET STANDARDS (you MUST explicitly address these in the lesson content):
+${input.targetStandards.map((s, i) => `${i + 1}. ${s.notation}: ${s.description}`).join('\n')}
+
+Align the lesson objectives and content sections to cover these standards. In the response JSON, include a "standardsCovered" array indicating which standards are addressed.` : ''}
 ${input.additionalContext ? `\nADDITIONAL TEACHER NOTES:\n${input.additionalContext}` : ''}
 ${input.templateStructure ? `
 **IMPORTANT - USE THIS TEMPLATE STRUCTURE:**
@@ -1880,7 +2093,10 @@ Return JSON with this structure:
       }
     ]
   },
-  "teacherNotes": "Implementation tips and suggestions"
+  "teacherNotes": "Implementation tips and suggestions"${input.targetStandards?.length ? `,
+  "standardsCovered": [
+    {"notation": "STANDARD.CODE", "description": "What this standard covers", "alignmentStrength": 0.9, "isPrimary": true}
+  ]` : ''}
 }`;
 }
 
@@ -1918,6 +2134,11 @@ ${curriculumName ? `- Curriculum/Standards: ${curriculumName} - Align all conten
 ${input.objectives ? `- Specific Objectives: ${input.objectives.join(', ')}` : ''}
 ${input.includeActivities ? '- Include detailed hands-on activities with step-by-step instructions' : ''}
 ${input.includeAssessment ? '- Include comprehensive assessment questions with answer key' : ''}
+${input.targetStandards?.length ? `
+TARGET STANDARDS (you MUST explicitly address these in the lesson content):
+${input.targetStandards.map((s, i) => `${i + 1}. ${s.notation}: ${s.description}`).join('\n')}
+
+Align the lesson objectives and content sections to cover these standards. In the response JSON, include a "standardsCovered" array indicating which standards are addressed.` : ''}
 ${input.additionalContext ? `\nADDITIONAL TEACHER NOTES:\n${input.additionalContext}` : ''}
 ${input.templateStructure ? `
 **CRITICAL - YOU MUST USE THIS EXACT TEMPLATE STRUCTURE:**
@@ -2043,7 +2264,10 @@ Return JSON with this structure:
   "teacherNotes": "Detailed implementation notes including: common misconceptions, differentiation strategies, extension activities for advanced learners, support strategies for struggling students, cross-curricular connections",
   "additionalResources": ["Book/website recommendation 1", "Book/website recommendation 2"],
   "prerequisites": ["What students should already know"],
-  "nextSteps": "What to teach next and how this connects"
+  "nextSteps": "What to teach next and how this connects"${input.targetStandards?.length ? `,
+  "standardsCovered": [
+    {"notation": "STANDARD.CODE", "description": "What this standard covers", "alignmentStrength": 0.9, "isPrimary": true}
+  ]` : ''}
 }
 
 IMPORTANT:

@@ -139,7 +139,7 @@ function buildIdentityContext(agent: TeacherAgent): string {
   if (agent.planningAutonomy) {
     parts.push('Planning autonomy: planner');
   }
-  if (agent.agentTone) parts.push(`Preferred tone: ${agent.agentTone.toLowerCase()}`);
+  if (agent.agentTone) parts.push(`Preferred content voice/tone: ${agent.agentTone.toLowerCase()} — apply this to all generated lesson text`);
 
   return parts.join('\n') || 'No teacher identity set up yet.';
 }
@@ -176,7 +176,7 @@ function buildClassroomContext(
     const lines: string[] = [`Classroom: ${cr.name}`];
     if (cr.gradeLevel) lines.push(`  Grade: ${cr.gradeLevel}`);
     if (cr.subject) lines.push(`  Subject: ${cr.subject}`);
-    if (cr.studentCount) lines.push(`  Students: ${cr.studentCount}`);
+    if (cr.studentCount) lines.push(`  Students: ${cr.studentCount} — consider this for activity groupings`);
 
     const groups = cr.studentGroups as any[];
     if (Array.isArray(groups) && groups.length) {
@@ -406,7 +406,7 @@ function buildSystemPrompt(
       `If the teacher message is short/ambiguous (examples: "sure", "no thanks", "2", "checklist"), treat it as a reply to the recent conversation. Infer what they likely mean based on context. If it's still ambiguous, ask ONE clarifying question and offer 2-3 concrete options they can pick from.`
     );
   } else if (taskType === 'CONTENT_GENERATION' || taskType === 'QUIZ_GENERATION' || taskType === 'FLASHCARD_GENERATION') {
-    sections.push(`You are generating educational content. Use the teacher's classroom context and curriculum state to create personalized, relevant content.`);
+    sections.push(`You are generating educational content. Use the teacher's classroom context, curriculum state, and style preferences to create personalized, relevant content that matches their teaching voice and classroom needs.`);
   } else if (taskType === 'WEEKLY_PREP') {
     sections.push(`You are generating a comprehensive weekly prep package. Plan materials for ALL subjects the teacher teaches, across all 5 school days (Mon-Fri). Consider the full curriculum state, pacing, student groups, and identified gaps. Create a progressive week where concepts build from Monday through Friday.`);
   } else if (taskType === 'PLANNING') {
@@ -423,7 +423,10 @@ function buildSystemPrompt(
     sections.push(`=== CURRICULUM STATE ===\n${curriculum}`);
   }
   if (style) {
-    sections.push(`=== STYLE PREFERENCES ===\n${style}`);
+    const styleLabel = (taskType === 'CONTENT_GENERATION' || taskType === 'QUIZ_GENERATION' || taskType === 'FLASHCARD_GENERATION')
+      ? '=== CONTENT STYLE (IMPORTANT — Apply to all generated content) ==='
+      : '=== STYLE PREFERENCES ===';
+    sections.push(`${styleLabel}\n${style}`);
   }
   if (history) {
     sections.push(`=== ${history}`);
