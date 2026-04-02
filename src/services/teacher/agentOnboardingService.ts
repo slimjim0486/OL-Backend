@@ -49,7 +49,9 @@ Tell me about yourself — what school do you teach at, and what grades and subj
 
   classroom: `Great, thanks for sharing that! Now let me learn about your classroom.
 
-How many students do you have? Do you use any grouping system (like leveled groups, table groups, etc.)? Any important things I should know about your classroom setup?`,
+How many students do you have? Do you use any grouping system (like leveled groups, table groups, etc.)?
+
+Also, if you'd like — tell me about your classroom management: How do you get students' attention? How long do you usually lecture before switching activities? Any routines or strategies that work well for you?`,
 
   curriculum: `Perfect! One last thing — what are you teaching right now?
 
@@ -340,9 +342,20 @@ async function extractStructuredData(
     "studentCount": "number or null",
     "gradeLevel": "string or null",
     "subject": "subject or null",
-    "studentGroups": [{"name": "group name", "level": "advanced|on-level|below-level|mixed", "count": "number or null", "notes": "string or null"}]
+    "studentGroups": [{"name": "group name", "level": "advanced|on-level|below-level|mixed", "count": "number or null", "notes": "string or null"}],
+    "managementProfile": {
+      "attentionSignals": ["attention-getting signals mentioned, e.g. 'clap pattern', 'call and response'"],
+      "transitionStrategies": ["transition strategies mentioned"],
+      "behaviorExpectations": ["classroom rules or expectations mentioned"],
+      "routines": {"entry": "string or null", "exit": "string or null", "bathroom": "string or null", "lineUp": "string or null", "transitions": "string or null"},
+      "pacingPreferences": {"maxLectureMinutes": "number or null", "movementBreakFrequency": "number or null", "preferredActivityLength": "number or null"},
+      "challengeAreas": ["behavior challenges mentioned"],
+      "successStrategies": ["strategies that work well for them"],
+      "accommodations": ["accommodations or special supports mentioned"]
+    }
   }]
-}`,
+}
+Note: managementProfile fields are optional. Only include fields the teacher actually mentioned. Use empty arrays [] for array fields not mentioned, and null for scalar fields not mentioned. Omit the entire managementProfile key if the teacher said nothing about classroom management.`,
 
     curriculum: `Extract from the teacher's message:
 {
@@ -448,6 +461,18 @@ async function populateMemoryLayer(
             ? incomingName
             : matched?.name || singleFallback?.name || incomingName || 'My Classroom';
 
+        // Build management profile from extracted data (only if non-empty)
+        let managementProfile: Record<string, any> | undefined;
+        if (classroom.managementProfile && typeof classroom.managementProfile === 'object') {
+          const mp = classroom.managementProfile;
+          const hasData = Object.values(mp).some((v: any) => {
+            if (Array.isArray(v)) return v.length > 0;
+            if (v && typeof v === 'object') return Object.values(v).some((inner: any) => inner != null);
+            return v != null;
+          });
+          if (hasData) managementProfile = mp;
+        }
+
         await agentMemoryService.upsertClassroomContext(agentId, {
           ...(resolvedId ? { id: resolvedId } : {}),
           name: resolvedName,
@@ -457,6 +482,7 @@ async function populateMemoryLayer(
             : undefined,
           studentCount: classroom.studentCount,
           studentGroups: classroom.studentGroups || [],
+          managementProfile,
         });
       }
       break;
