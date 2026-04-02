@@ -5,6 +5,7 @@ import { contentGenerationService } from './contentGenerationService.js';
 import { subPlanService } from './subPlanService.js';
 import { iepGoalService } from './iepGoalService.js';
 import { communicationService } from './communicationService.js';
+import { classroomManagementService } from './classroomManagementService.js';
 import { contextAssemblerService, TaskType } from './contextAssemblerService.js';
 import { agentMemoryService } from './agentMemoryService.js';
 import { logger } from '../../utils/logger.js';
@@ -413,6 +414,60 @@ function mapToSubject(subjectStr?: string): Subject | undefined {
 }
 
 // ============================================
+// BEHAVIOR STRATEGY WITH CONTEXT
+// ============================================
+
+async function generateBehaviorStrategyWithContext(
+  teacherId: string,
+  intent: TaskIntent,
+  sessionId?: string
+): Promise<BridgeResult> {
+  const context = await contextAssemblerService.assembleContext(
+    teacherId,
+    'CLASSROOM_MANAGEMENT' as TaskType,
+    { subject: intent.extractedParams.subject }
+  );
+
+  const additionalContext = contextAssemblerService.buildAdditionalContextString(context);
+
+  const result = await classroomManagementService.generateStrategies(teacherId, {
+    challengeType: intent.extractedParams.challengeType || intent.extractedParams.topic,
+    context: intent.extractedParams.context,
+    gradeLevel: intent.extractedParams.gradeLevel,
+    subject: intent.extractedParams.subject,
+    urgency: intent.extractedParams.urgency,
+  }, additionalContext);
+
+  // Record interaction
+  let interactionId: string | undefined;
+  const agent = await agentMemoryService.getAgent(teacherId);
+  if (agent) {
+    const interaction = await agentMemoryService.recordInteraction(agent.id, {
+      type: AgentInteractionType.CONTENT_GENERATION,
+      summary: `Generated behavior strategies: ${result.title}`,
+      input: intent.extractedParams.challengeType || intent.extractedParams.topic || 'classroom management',
+      outputType: 'behavior_strategy',
+      tokensUsed: result.tokensUsed,
+      modelUsed: result.modelUsed,
+    });
+    interactionId = interaction?.id;
+  }
+
+  const strategyCount =
+    result.immediateStrategies.length +
+    result.preventiveApproaches.length +
+    result.longTermSystems.length;
+
+  return {
+    content: result,
+    preview: `Here are ${strategyCount} strategies for "${result.title}"`,
+    tokensUsed: result.tokensUsed,
+    contentType: 'behavior_strategy',
+    interactionId,
+  };
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -424,4 +479,5 @@ export const agentContentBridge = {
   generateIEPWithContext,
   generateParentEmailWithContext,
   generateReportCommentsWithContext,
+  generateBehaviorStrategyWithContext,
 };

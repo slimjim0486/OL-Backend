@@ -22,6 +22,8 @@ export type IntentType =
   | 'update_curriculum'
   | 'weekly_prep'
   | 'export'
+  | 'behavior_strategy'
+  | 'update_management_profile'
   | 'unknown';
 
 export interface TaskIntent {
@@ -49,6 +51,8 @@ const CLASSIFICATION_PROMPT = `You are an intent classifier for a teacher AI ass
 - update_curriculum: Update curriculum progress or pacing (keywords: pacing, standards, covered, taught today)
 - weekly_prep: Help with weekly planning in chat (keywords: plan my week, this week, next week, planner, calendar, schedule, upcoming, weekly prep)
 - export: Export or download content (keywords: download, export, PDF, PowerPoint)
+- behavior_strategy: Classroom management help, behavior strategies, discipline approaches, transition help, attention techniques (keywords: behavior, management, disruptive, off-task, attention, transitions, classroom control, discipline, routines, fidgety, chatty, won't listen, acting out, misbehaving, defiant, refocusing, engagement strategies)
+- update_management_profile: Teacher is TELLING you about their classroom routines, management systems, or preferences to SAVE — not asking for help. Distinguish from behavior_strategy: if they're describing what they DO (saving info), it's update_management_profile. If they're asking for HELP with a problem, it's behavior_strategy. (keywords: "I use", "my routine is", "in my class we", "save this", "remember that I", "my attention signal is", "my bathroom policy is")
 
 Respond with ONLY a JSON object:
 {
@@ -78,6 +82,13 @@ For generate_iep requests, always try to extract:
 - studentName or studentIdentifier if provided
 - additionalContext when useful
 
+For behavior_strategy requests, always try to extract:
+- challengeType: The specific behavior challenge (e.g., "transitions", "off-task", "disruptive", "chatty", "defiant")
+- context: When/where the issue occurs (e.g., "after recess", "during independent work", "morning routine")
+- gradeLevel
+- subject
+- urgency: whether this is an immediate crisis or long-term strategy request
+
 For generate_sub_plan requests, always try to extract:
 - subject
 - gradeLevel
@@ -100,6 +111,8 @@ const VALID_INTENTS: Set<IntentType> = new Set([
   'update_curriculum',
   'weekly_prep',
   'export',
+  'behavior_strategy',
+  'update_management_profile',
   'unknown',
 ]);
 
@@ -709,6 +722,17 @@ function ruleBasedIntent(
       };
     }
 
+    // Behavior / classroom management heuristic
+    const hasBehaviorKeyword = /\b(?:behavio(?:r|ur)|class(?:room)?\s*management|disruptive|off[- ]task|won'?t listen|acting out|misbehav|defiant|chatty|fidgety|transition(?:s|ing)|attention signal|refocus|discipline|routines?|engagement strateg)/i.test(normalized);
+    if (hasBehaviorKeyword && !hasCompetingContentKeyword) {
+      return {
+        type: 'behavior_strategy',
+        confidence: 0.76,
+        extractedParams: extractBasicParams(trimmed),
+        reasoning: 'Matched classroom management/behavior heuristic',
+      };
+    }
+
     const likelyLessonRequest =
       hasLikelyLessonKeyword &&
       !hasCompetingContentKeyword &&
@@ -754,6 +778,9 @@ function ruleBasedIntent(
   }
   if (isBrief && /\b(?:report card|progress report|report comments|student comments)\b/i.test(trimmed)) {
     return { type: 'generate_report_comments', confidence: 0.68, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief report comments keyword heuristic' };
+  }
+  if (isBrief && /\b(?:behavio(?:r|ur)|management|disruptive|off[- ]task|transition)\b/i.test(trimmed)) {
+    return { type: 'behavior_strategy', confidence: 0.68, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief behavior/management keyword heuristic' };
   }
   if (isBrief && /\b(?:pacing|standards|covered|taught today|curriculum)\b/i.test(trimmed)) {
     return { type: 'update_curriculum', confidence: 0.62, extractedParams: extractBasicParams(trimmed), reasoning: 'Matched brief curriculum update keyword heuristic' };

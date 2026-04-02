@@ -2202,6 +2202,15 @@ Create a structured lesson plan with:
 6. Assessment questions (if requested)
 7. Teacher notes for implementation`}
 
+CLASSROOM MANAGEMENT INTEGRATION:
+When classroom management context is provided in ADDITIONAL TEACHER NOTES, weave these into the lesson:
+- Include transition cues between activity sections (use the teacher's own attention signals if provided)
+- Respect the teacher's max lecture duration — break longer instruction into shorter chunks with engagement checkpoints
+- Add movement/brain break suggestions when activities exceed the teacher's stated movement break frequency
+- For independent work sections, include brief monitoring/circulation strategies
+- Include "early finisher" directions where appropriate
+- Reference the teacher's known successful strategies in implementation notes
+
 Return JSON with this structure:
 {
   "title": "Lesson title",
@@ -2340,6 +2349,15 @@ Create a COMPREHENSIVE lesson that includes:
    - Differentiation strategies
    - Additional resources
 `}
+
+CLASSROOM MANAGEMENT INTEGRATION:
+When classroom management context is provided in ADDITIONAL TEACHER NOTES, weave these into the lesson:
+- Include transition cues between activity sections (use the teacher's own attention signals if provided)
+- Respect the teacher's max lecture duration — break longer instruction into shorter chunks with engagement checkpoints
+- Add movement/brain break suggestions when activities exceed the teacher's stated movement break frequency
+- For independent work sections, include brief monitoring/circulation strategies
+- Include "early finisher" directions where appropriate
+- Reference the teacher's known successful strategies in teacher notes
 
 Return JSON with this structure:
 {

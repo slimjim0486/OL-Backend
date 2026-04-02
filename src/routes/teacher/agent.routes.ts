@@ -163,6 +163,7 @@ const classroomSchema = z.object({
   studentGroups: z.any().optional(),
   schedule: z.any().optional(),
   resources: z.any().optional(),
+  managementProfile: z.any().optional(),
 });
 
 const curriculumUpdateSchema = z.object({

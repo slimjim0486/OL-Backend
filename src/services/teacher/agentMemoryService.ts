@@ -92,6 +92,7 @@ export interface ClassroomContextInput {
   studentGroups?: any;
   schedule?: any;
   resources?: any;
+  managementProfile?: any;
   isActive?: boolean;
 }
 
@@ -487,8 +488,9 @@ async function upsertClassroomContext(
         studentGroups: data.studentGroups ?? [],
         schedule: data.schedule ?? {},
         resources: data.resources ?? {},
+        ...(data.managementProfile !== undefined ? { managementProfile: data.managementProfile } : {}),
         isActive: data.isActive ?? true,
-      },
+      } as any,
     });
   }
   return prisma.classroomContext.create({
@@ -501,13 +503,46 @@ async function upsertClassroomContext(
       studentGroups: data.studentGroups ?? [],
       schedule: data.schedule ?? {},
       resources: data.resources ?? {},
-    },
+      managementProfile: data.managementProfile ?? {},
+    } as any,
   });
 }
 
 async function deleteClassroomContext(agentId: string, classroomId: string): Promise<void> {
   await prisma.classroomContext.deleteMany({
     where: { id: classroomId, agentId },
+  });
+}
+
+async function updateManagementProfile(
+  agentId: string,
+  classroomId: string,
+  managementProfile: Record<string, any>
+): Promise<ClassroomContext | null> {
+  const existing = await prisma.classroomContext.findFirst({
+    where: { id: classroomId, agentId },
+  });
+  if (!existing) return null;
+
+  // Merge with existing profile so partial updates don't wipe data
+  const currentProfile = (existing as any).managementProfile as Record<string, any> || {};
+  const merged = { ...currentProfile };
+  for (const [key, value] of Object.entries(managementProfile)) {
+    if (Array.isArray(value) && Array.isArray(merged[key])) {
+      // For arrays, deduplicate by merging
+      const combined = [...merged[key], ...value];
+      merged[key] = [...new Set(combined)];
+    } else if (value && typeof value === 'object' && !Array.isArray(value) && merged[key] && typeof merged[key] === 'object') {
+      // For objects, deep merge one level
+      merged[key] = { ...merged[key], ...value };
+    } else {
+      merged[key] = value;
+    }
+  }
+
+  return prisma.classroomContext.update({
+    where: { id: classroomId },
+    data: { managementProfile: merged } as any,
   });
 }
 
@@ -835,6 +870,7 @@ export const agentMemoryService = {
   getClassroomContexts,
   upsertClassroomContext,
   deleteClassroomContext,
+  updateManagementProfile,
   // Layer 4: Curriculum
   getCurriculumStates,
   getCurriculumState,

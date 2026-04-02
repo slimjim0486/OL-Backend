@@ -2983,6 +2983,9 @@ model TeacherAgent {
   // Agent personality
   agentTone AgentTone @default(FRIENDLY)
 
+  // Classroom management approach (teacher-wide preference)
+  managementApproach String? @db.Text // "positive reinforcement", "structured/routine-heavy", "relationship-based", etc.
+
   // Relations
   styleProfile     TeacherStyleProfile?
   classrooms       ClassroomContext[]
@@ -3053,6 +3056,13 @@ model ClassroomContext {
   // Available resources
   // Structure: { hasSmartboard: true, hasTablets: false, textbooks: ["Go Math Grade 3"] }
   resources Json @default("{}")
+
+  // Classroom management profile (JSON for flexibility)
+  // Structure: { attentionSignals: [...], transitionStrategies: [...], behaviorExpectations: [...],
+  //   routines: { entry, exit, bathroom, lineUp, transitions },
+  //   pacingPreferences: { maxLectureMinutes, movementBreakFrequency, preferredActivityLength },
+  //   challengeAreas: [...], successStrategies: [...], accommodations: [...] }
+  managementProfile Json @default("{}")
 
   isActive Boolean @default(true)
 

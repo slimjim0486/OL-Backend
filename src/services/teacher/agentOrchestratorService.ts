@@ -1706,6 +1706,100 @@ async function processMessage(
       }
       intent = { type: 'chat', confidence: 1, extractedParams: {} };
 
+    // ── BEHAVIOR STRATEGY / CLASSROOM MANAGEMENT ──
+    } else if (intent.type === 'behavior_strategy' && intent.confidence >= 0.6) {
+      try {
+        const bridgeResult = await agentContentBridge.generateBehaviorStrategyWithContext(
+          teacherId,
+          { type: 'behavior_strategy', confidence: intent.confidence, extractedParams: { ...intent.extractedParams, topic: intent.extractedParams.challengeType || intent.extractedParams.topic || message } },
+          sessionId
+        );
+        actionResult = { type: 'behavior_strategy', content: bridgeResult.content, preview: bridgeResult.preview, interactionId: bridgeResult.interactionId };
+        assistantContent = bridgeResult.preview;
+        totalTokens = bridgeResult.tokensUsed;
+        bridgeHandledInteraction = true;
+      } catch (err) {
+        logger.error('In-chat behavior strategy generation failed', { error: err, teacherId });
+        assistantContent = `I ran into an issue generating classroom management strategies. Could you try rephrasing your request?`;
+      }
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
+    // ── UPDATE MANAGEMENT PROFILE (conversational) ──
+    } else if (intent.type === 'update_management_profile' && intent.confidence >= 0.6) {
+      assistantContent = `I'd love to save your classroom management preferences! Please set up your agent profile first so I can remember your routines.`;
+      try {
+        const agent = await agentMemoryService.getAgent(teacherId);
+        if (agent) {
+          const classrooms = await agentMemoryService.getClassroomContexts(agent.id);
+          const targetClassroom = classrooms[0]; // Default to first classroom
+          if (targetClassroom) {
+            // Use Gemini to extract structured management profile from natural language
+            const extractionPrompt = `Extract classroom management information from this teacher's message. Return ONLY the fields that are explicitly mentioned — do NOT invent data.
+
+Teacher said: "${message}"
+
+Return JSON with only the fields mentioned (omit fields not discussed):
+{
+  "attentionSignals": ["signal 1", "signal 2"],
+  "transitionStrategies": ["strategy 1"],
+  "behaviorExpectations": ["expectation 1"],
+  "routines": { "entry": "...", "exit": "...", "bathroom": "...", "lineUp": "...", "transitions": "..." },
+  "pacingPreferences": { "maxLectureMinutes": 10, "movementBreakFrequency": 20, "preferredActivityLength": 15 },
+  "challengeAreas": ["challenge 1"],
+  "successStrategies": ["strategy 1"],
+  "accommodations": ["accommodation 1"]
+}
+
+Only include keys where the teacher provided clear information. Return {} if nothing extractable.`;
+
+            const model = genAI.getGenerativeModel({
+              model: config.gemini.models.flash,
+              safetySettings: TEACHER_CONTENT_SAFETY_SETTINGS,
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 1000,
+                responseMimeType: 'application/json',
+              },
+            });
+            const extractionResult = await model.generateContent(extractionPrompt);
+            const extractionText = extractionResult.response.text();
+            totalTokens = extractionResult.response.usageMetadata?.totalTokenCount || 0;
+
+            let extractedProfile: Record<string, any> = {};
+            try {
+              extractedProfile = JSON.parse(extractionText);
+            } catch {
+              extractedProfile = {};
+            }
+
+            if (Object.keys(extractedProfile).length > 0) {
+              await agentMemoryService.updateManagementProfile(
+                agent.id,
+                targetClassroom.id,
+                extractedProfile
+              );
+
+              const savedFields = Object.keys(extractedProfile).filter(k => {
+                const v = extractedProfile[k];
+                if (Array.isArray(v)) return v.length > 0;
+                if (typeof v === 'object' && v !== null) return Object.values(v).some(val => val);
+                return !!v;
+              });
+              const fieldNames = savedFields.map(k => k.replace(/([A-Z])/g, ' $1').toLowerCase().trim()).join(', ');
+              assistantContent = `Got it! I've saved your ${fieldNames} to ${targetClassroom.name}. I'll use this to make your lessons and materials management-aware from now on. Want to tell me more about your classroom routines?`;
+            } else {
+              assistantContent = `I'd love to learn about your classroom management approach! You can tell me about things like:\n- Your attention signals (clap patterns, call-and-response)\n- Transition routines\n- Behavior expectations\n- How long you like to lecture before switching activities\n- What challenges you're working on\n\nJust describe how your classroom works and I'll remember it.`;
+            }
+          } else {
+            assistantContent = `I'd love to save your classroom management preferences, but I need a classroom set up first. Would you like to set one up?`;
+          }
+        }
+      } catch (err) {
+        logger.error('Management profile update failed', { error: err, teacherId });
+        assistantContent = `I had trouble saving that. Could you try telling me again?`;
+      }
+      intent = { type: 'chat', confidence: 1, extractedParams: {} };
+
     // ── CALENDAR / WEEKLY PREP ──
     } else if (intent.type === 'open_calendar' && intent.confidence >= 0.6) {
       const weeklyPlanningResponse = await generateWeeklyPlanningChatResponse(

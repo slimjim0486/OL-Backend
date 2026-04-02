@@ -25,7 +25,8 @@ export type TaskType =
   | 'IEP'
   | 'WEEKLY_PREP'
   | 'PARENT_COMMUNICATION'
-  | 'REPORT_COMMENTS';
+  | 'REPORT_COMMENTS'
+  | 'CLASSROOM_MANAGEMENT';
 
 export interface AssembledContext {
   systemPrompt: string;
@@ -45,7 +46,7 @@ interface AssemblyOptions {
 // Character limits per section (to stay within token budget)
 const SECTION_LIMITS = {
   identity: 800,
-  classroom: 1200,
+  classroom: 1800,
   curriculum: 1000,
   style: 600,
   history: 1500,
@@ -140,6 +141,7 @@ function buildIdentityContext(agent: TeacherAgent): string {
     parts.push('Planning autonomy: planner');
   }
   if (agent.agentTone) parts.push(`Preferred content voice/tone: ${agent.agentTone.toLowerCase()} — apply this to all generated lesson text`);
+  if ((agent as any).managementApproach) parts.push(`Classroom management approach: ${(agent as any).managementApproach}`);
 
   return parts.join('\n') || 'No teacher identity set up yet.';
 }
@@ -184,6 +186,42 @@ function buildClassroomContext(
         .map((g: any) => `${g.name || 'Group'}(${g.level || 'mixed'}, ${g.count || '?'} students)`)
         .join(', ');
       lines.push(`  Groups: ${groupSummary}`);
+    }
+
+    // Classroom management profile
+    const mgmt = (cr as any).managementProfile as Record<string, any> | null;
+    if (mgmt && typeof mgmt === 'object' && Object.keys(mgmt).length > 0) {
+      lines.push('  Management:');
+      if (Array.isArray(mgmt.attentionSignals) && mgmt.attentionSignals.length) {
+        lines.push(`    Attention signals: ${mgmt.attentionSignals.join(', ')}`);
+      }
+      if (Array.isArray(mgmt.transitionStrategies) && mgmt.transitionStrategies.length) {
+        lines.push(`    Transition strategies: ${mgmt.transitionStrategies.join(', ')}`);
+      }
+      if (mgmt.pacingPreferences) {
+        const pacing = mgmt.pacingPreferences;
+        const pacingParts: string[] = [];
+        if (pacing.maxLectureMinutes) pacingParts.push(`max lecture ${pacing.maxLectureMinutes} min`);
+        if (pacing.movementBreakFrequency) pacingParts.push(`movement breaks every ${pacing.movementBreakFrequency} min`);
+        if (pacing.preferredActivityLength) pacingParts.push(`activities ~${pacing.preferredActivityLength} min`);
+        if (pacingParts.length) lines.push(`    Pacing: ${pacingParts.join(', ')}`);
+      }
+      if (Array.isArray(mgmt.challengeAreas) && mgmt.challengeAreas.length) {
+        lines.push(`    Challenges: ${mgmt.challengeAreas.join(', ')}`);
+      }
+      if (Array.isArray(mgmt.successStrategies) && mgmt.successStrategies.length) {
+        lines.push(`    Strategies that work: ${mgmt.successStrategies.join(', ')}`);
+      }
+      if (Array.isArray(mgmt.accommodations) && mgmt.accommodations.length) {
+        lines.push(`    Accommodations: ${mgmt.accommodations.join(', ')}`);
+      }
+      if (mgmt.routines && typeof mgmt.routines === 'object') {
+        const routineEntries = Object.entries(mgmt.routines).filter(([, v]) => v);
+        if (routineEntries.length) {
+          const routineSummary = routineEntries.map(([k, v]) => `${k}: ${v}`).join('; ');
+          lines.push(`    Routines: ${routineSummary}`);
+        }
+      }
     }
 
     parts.push(lines.join('\n'));
