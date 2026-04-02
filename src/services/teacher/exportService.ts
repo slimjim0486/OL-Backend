@@ -143,8 +143,163 @@ const subjectColors: Record<Subject, { primary: string; secondary: string; accen
   OTHER: { primary: '#6B7280', secondary: '#F3F4F6', accent: '#4B5563' },
 };
 
+// ─── SVG Icon System ──────────────────────────────────────────────────────────
+// Replaces emoji icons with consistent, print-safe, CSS-colorable inline SVGs.
+function getIcon(name: string, color: string = 'currentColor'): string {
+  const icons: Record<string, string> = {
+    target: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="${color}" stroke-width="1.5"/><circle cx="8" cy="8" r="3.5" stroke="${color}" stroke-width="1.5"/><circle cx="8" cy="8" r="1" fill="${color}"/></svg>`,
+    book: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M2 2.5C2 2.5 3.5 1.5 5.5 1.5C7.5 1.5 8 2.5 8 2.5V13.5C8 13.5 7 12.5 5.5 12.5C4 12.5 2 13.5 2 13.5V2.5Z" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2.5C8 2.5 8.5 1.5 10.5 1.5C12.5 1.5 14 2.5 14 2.5V13.5C14 13.5 13 12.5 10.5 12.5C9 12.5 8 13.5 8 13.5" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    pencil: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 3.5L12.5 6.5" stroke="${color}" stroke-width="1.5"/></svg>`,
+    question: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="${color}" stroke-width="1.5"/><path d="M5.8 6C5.8 4.78 6.78 3.8 8 3.8C9.22 3.8 10.2 4.78 10.2 6C10.2 7.22 9.22 8.2 8 8.2V9.5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r="0.75" fill="${color}"/></svg>`,
+    check: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="${color}" stroke-width="1.5"/><path d="M5 8L7 10.5L11 5.5" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    lightbulb: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M6 13H10M6.5 14.5H9.5M8 1C5.24 1 3 3.24 3 6C3 8.05 4.23 9.81 6 10.58V12H10V10.58C11.77 9.81 13 8.05 13 6C13 3.24 10.76 1 8 1Z" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    clock: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="${color}" stroke-width="1.5"/><path d="M8 4V8L10.5 10.5" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    tools: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M6.5 6.5L2 11L5 14L9.5 9.5M14.5 1.5L9 7M11 1.5H14.5V5" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    star: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L9.8 5.7L14.3 6.1L10.9 9.1L11.9 13.5L8 11.3L4.1 13.5L5.1 9.1L1.7 6.1L6.2 5.7L8 1.5Z" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    list: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M5.5 3H14M5.5 8H14M5.5 13H14" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="2.5" cy="3" r="1" fill="${color}"/><circle cx="2.5" cy="8" r="1" fill="${color}"/><circle cx="2.5" cy="13" r="1" fill="${color}"/></svg>`,
+    notepad: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="14" rx="1.5" stroke="${color}" stroke-width="1.5"/><path d="M6 5H10M6 8H10M6 11H8" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    globe: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="${color}" stroke-width="1.5"/><path d="M1.5 8H14.5M8 1.5C6 4 6 12 8 14.5M8 1.5C10 4 10 12 8 14.5" stroke="${color}" stroke-width="1.5"/></svg>`,
+    home: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M2.5 7.5L8 2L13.5 7.5M4 9V14H6.5V10.5H9.5V14H12V9" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    compass: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="${color}" stroke-width="1.5"/><path d="M10.5 5.5L9 9L5.5 10.5L7 7L10.5 5.5Z" fill="${color}" opacity="0.2" stroke="${color}" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+    rocket: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C8 1.5 4.5 4 4.5 9L6.5 11H9.5L11.5 9C11.5 4 8 1.5 8 1.5ZM6.5 11L4.5 14M9.5 11L11.5 14" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="6.5" r="1" fill="${color}"/></svg>`,
+    cards: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="9" height="11" rx="1.5" stroke="${color}" stroke-width="1.5"/><path d="M5.5 3.5V2C5.5 1.45 5.95 1 6.5 1H13.5C14.05 1 14.5 1.45 14.5 2V10.5C14.5 11.05 14.05 11.5 13.5 11.5H10.5" stroke="${color}" stroke-width="1.5"/></svg>`,
+    link: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M6.5 9.5L9.5 6.5M4.5 7.5L3 9C1.9 10.1 1.9 11.9 3 13C4.1 14.1 5.9 14.1 7 13L8.5 11.5M8.5 4.5L10 3C11.1 1.9 12.9 1.9 14 3C15.1 4.1 15.1 5.9 14 7L12.5 8.5" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    steps: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M2 13H6V9H10V5H14" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="2" cy="13" r="1.2" fill="${color}"/><circle cx="6" cy="9" r="1.2" fill="${color}"/><circle cx="10" cy="5" r="1.2" fill="${color}"/></svg>`,
+    pin: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L11 5.5L9.5 9L10.5 14.5L8 11.5L5.5 14.5L6.5 9L5 5.5L8 1.5Z" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    arrow: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    quiz: `<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="${color}" stroke-width="1.5"/><path d="M5 5H11M5 8H9M5 11H7" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="11" r="2.5" fill="white" stroke="${color}" stroke-width="1.5"/><path d="M11 11L12 12L13.5 10" stroke="${color}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  };
+  return icons[name] || '';
+}
+
+// ─── Orbit Learn Logo (Inline SVG) ──────────────────────────────────────────
+function getOrbitLogo(size: number = 22, color: string = '#2D5A4A'): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none">
+    <circle cx="16" cy="16" r="14" stroke="${color}" stroke-width="2.5"/>
+    <circle cx="16" cy="16" r="5" fill="${color}"/>
+    <ellipse cx="16" cy="16" rx="14" ry="7" stroke="${color}" stroke-width="1.5" stroke-dasharray="3 2" transform="rotate(-25 16 16)"/>
+  </svg>`;
+}
+
+// ─── Subject-Specific Header Background Patterns (CSS only) ─────────────────
+function getSubjectPattern(subject: Subject, colorScheme: string): string {
+  if (colorScheme === 'grayscale') return '';
+  const color = subjectColors[subject]?.primary || '#6B7280';
+
+  const patterns: Partial<Record<Subject, string>> = {
+    MATH: `background-image:
+      linear-gradient(${color}08 1px, transparent 1px),
+      linear-gradient(90deg, ${color}08 1px, transparent 1px);
+    background-size: 20px 20px;`,
+    SCIENCE: `background-image: radial-gradient(circle, ${color}0A 1px, transparent 1px);
+    background-size: 16px 16px;`,
+    ENGLISH: `background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 19px, ${color}06 19px, ${color}06 20px);`,
+    READING: `background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 19px, ${color}06 19px, ${color}06 20px);`,
+    HISTORY: `background-image:
+      linear-gradient(45deg, ${color}05 25%, transparent 25%),
+      linear-gradient(-45deg, ${color}05 25%, transparent 25%);
+    background-size: 30px 30px;`,
+    SOCIAL_STUDIES: `background-image:
+      linear-gradient(45deg, ${color}05 25%, transparent 25%),
+      linear-gradient(-45deg, ${color}05 25%, transparent 25%);
+    background-size: 30px 30px;`,
+    ART: `background-image: radial-gradient(circle at 50% 50%, ${color}08 0%, transparent 60%);
+    background-size: 24px 24px;`,
+    MUSIC: `background-image: radial-gradient(circle at 50% 50%, ${color}08 0%, transparent 60%);
+    background-size: 24px 24px;`,
+    COMPUTER_SCIENCE: `background-image:
+      linear-gradient(${color}06 1px, transparent 1px),
+      linear-gradient(90deg, ${color}06 1px, transparent 1px);
+    background-size: 14px 14px;`,
+  };
+
+  return patterns[subject] || `background-image:
+    linear-gradient(135deg, ${color}04 25%, transparent 25%),
+    linear-gradient(225deg, ${color}04 25%, transparent 25%);
+  background-size: 24px 24px;`;
+}
+
+// ─── Section Divider ────────────────────────────────────────────────────────
+function getSectionDivider(color: string): string {
+  return `<div class="section-divider"><span>·</span><span>·</span><span>·</span></div>`;
+}
+
+// ─── Branded Header HTML ────────────────────────────────────────────────────
+function getBrandedHeader(
+  title: string,
+  subject: Subject,
+  gradeLevel: string,
+  contentType: string,
+  date: string,
+  colors: { primary: string; secondary: string; accent: string },
+  colorScheme: string
+): string {
+  const logoColor = colorScheme === 'grayscale' ? '#374151' : '#2D5A4A';
+  const subjectLabel = (subject || 'OTHER').replace(/_/g, ' ');
+  return `
+    <div class="branded-header">
+      <div class="header-top">
+        <div class="header-brand">
+          ${getOrbitLogo(20, logoColor)}
+          <span class="brand-name">Orbit Learn</span>
+        </div>
+        <div class="header-badges">
+          <span class="badge badge-subject">${escapeHtml(subjectLabel)}</span>
+          ${gradeLevel ? `<span class="badge badge-grade">Grade ${escapeHtml(gradeLevel)}</span>` : ''}
+        </div>
+      </div>
+      <h1 class="header-title">${escapeHtml(title)}</h1>
+      <div class="header-meta">
+        <span>${escapeHtml(contentType)}</span>
+        <span class="header-meta-dot">·</span>
+        <span>${escapeHtml(date)}</span>
+      </div>
+      <div class="header-accent-bar"></div>
+    </div>
+  `;
+}
+
+// ─── Name/Date Line for Student Materials ───────────────────────────────────
+function getNameDateLine(): string {
+  return `
+    <div class="name-date-line">
+      <div class="name-date-field">
+        <span class="name-date-label">Name</span>
+        <div class="name-date-rule"></div>
+      </div>
+      <div class="name-date-field name-date-short">
+        <span class="name-date-label">Date</span>
+        <div class="name-date-rule"></div>
+      </div>
+      <div class="name-date-field name-date-score">
+        <span class="name-date-label">Score</span>
+        <div class="name-date-rule"></div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Puppeteer Footer Template ──────────────────────────────────────────────
+function getFooterTemplate(primaryColor: string, colorScheme: string): string {
+  const barColor = colorScheme === 'grayscale' ? '#9CA3AF' : primaryColor;
+  return `
+    <div style="width: 100%; padding: 0 0.5in; font-size: 8px; font-family: 'Outfit', -apple-system, sans-serif;">
+      <div style="height: 1px; background: linear-gradient(90deg, ${barColor}40, ${barColor}, ${barColor}40); margin-bottom: 6px;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; color: #9CA3AF;">
+        <span style="display: flex; align-items: center; gap: 4px;">
+          <svg width="10" height="10" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="${barColor}" stroke-width="3"/><circle cx="16" cy="16" r="5" fill="${barColor}"/></svg>
+          Made with Orbit Learn
+        </span>
+        <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+      </div>
+    </div>
+  `;
+}
+
 /**
- * Generate base CSS styles for exports
+ * Generate base CSS styles for exports — Canva-quality branded design
  */
 function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'color'): string {
   const colors = colorScheme === 'color' ? subjectColors[subject] : {
@@ -153,8 +308,33 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
     accent: '#1F2937',
   };
 
+  const paperBg = colorScheme === 'color' ? '#FEFDFB' : '#FFFFFF';
+  const subjectPatternCSS = getSubjectPattern(subject, colorScheme);
+
   return `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap');
+
+    :root {
+      --color-primary: ${colors.primary};
+      --color-secondary: ${colors.secondary};
+      --color-accent: ${colors.accent};
+      --color-text: #1E2A3A;
+      --color-text-light: #4B5563;
+      --color-text-muted: #6B7280;
+      --color-border: #E5E7EB;
+      --color-surface: #FFFFFF;
+      --color-paper: ${paperBg};
+      --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
+      --font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+    }
 
     * {
       box-sizing: border-box;
@@ -163,126 +343,294 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: var(--font-body);
       font-size: 11pt;
       line-height: 1.6;
-      color: #1F2937;
-      padding: 0.5in;
+      color: var(--color-text);
+      background-color: var(--color-paper);
+      padding: 0;
     }
 
-    .header {
-      text-align: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 3px solid ${colors.primary};
+    /* ── Branded Header ─────────────────────────────────────────────── */
+    .branded-header {
+      margin-bottom: var(--space-lg);
+      padding: var(--space-md) var(--space-lg);
+      position: relative;
+      ${subjectPatternCSS}
     }
 
-    .header h1 {
-      font-size: 24pt;
-      font-weight: 700;
-      color: ${colors.primary};
-      margin-bottom: 8px;
-    }
-
-    .header .meta {
+    .header-top {
       display: flex;
-      justify-content: center;
-      gap: 24px;
-      font-size: 10pt;
-      color: #6B7280;
-    }
-
-    .header .meta span {
-      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 4px;
+      margin-bottom: var(--space-md);
     }
 
-    .badge {
-      display: inline-block;
-      padding: 4px 12px;
-      background: ${colors.secondary};
-      color: ${colors.accent};
-      border-radius: 16px;
-      font-size: 9pt;
-      font-weight: 600;
-    }
-
-    .section {
-      margin-bottom: 24px;
-      page-break-inside: avoid;
-    }
-
-    .section-title {
-      font-size: 14pt;
-      font-weight: 600;
-      color: ${colors.primary};
-      margin-bottom: 12px;
-      padding-bottom: 6px;
-      border-bottom: 2px solid ${colors.secondary};
+    .header-brand {
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .section-title .icon {
-      font-size: 16pt;
+    .brand-name {
+      font-family: var(--font-heading);
+      font-size: 11pt;
+      font-weight: 600;
+      color: ${colorScheme === 'grayscale' ? '#374151' : '#2D5A4A'};
+      letter-spacing: -0.02em;
     }
 
+    .header-badges {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-title {
+      font-family: var(--font-heading);
+      font-size: 22pt;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 8px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10pt;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-md);
+    }
+
+    .header-meta-dot {
+      color: var(--color-border);
+    }
+
+    .header-accent-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      border-radius: 2px;
+    }
+
+    /* ── Legacy Header (for quiz answer key, etc.) ───────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-md);
+      border-bottom: 3px solid var(--color-primary);
+    }
+
+    .header h1 {
+      font-family: var(--font-heading);
+      font-size: 22pt;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .header .meta {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-lg);
+      font-size: 10pt;
+      color: var(--color-text-muted);
+    }
+
+    .header .meta span {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    /* ── Badges ──────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 4px 14px;
+      background: var(--color-secondary);
+      color: var(--color-accent);
+      border-radius: 20px;
+      font-size: 9pt;
+      font-weight: 600;
+      border: 1px solid ${colors.primary}20;
+      letter-spacing: 0.01em;
+    }
+
+    .badge-subject {
+      font-family: var(--font-heading);
+      font-weight: 600;
+    }
+
+    .badge-grade {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-light);
+    }
+
+    /* ── Name/Date Line ──────────────────────────────────────────── */
+    .name-date-line {
+      display: flex;
+      gap: var(--space-lg);
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-md);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .name-date-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .name-date-field.name-date-short { flex: 0.6; }
+    .name-date-field.name-date-score { flex: 0.4; }
+
+    .name-date-label {
+      font-family: var(--font-body);
+      font-weight: 500;
+      color: var(--color-text-light);
+      font-size: 10pt;
+      white-space: nowrap;
+    }
+
+    .name-date-rule {
+      flex: 1;
+      border-bottom: 1.5px solid #9CA3AF;
+      min-width: 40px;
+    }
+
+    /* ── Section Divider ─────────────────────────────────────────── */
+    .section-divider {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: var(--space-lg) 0;
+      color: var(--color-primary);
+      opacity: 0.35;
+      font-size: 14pt;
+      letter-spacing: 8px;
+    }
+
+    /* ── Sections ────────────────────────────────────────────────── */
+    .section {
+      margin-bottom: var(--space-lg);
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 13pt;
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: 14px;
+      padding: 8px 0 8px 14px;
+      border-left: 4px solid var(--color-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-title .icon {
+      display: inline-flex;
+      flex-shrink: 0;
+    }
+
+    /* ── Objectives List ─────────────────────────────────────────── */
     .objectives-list {
       list-style: none;
       padding: 0;
+      counter-reset: objectives;
     }
 
     .objectives-list li {
-      padding: 8px 12px;
+      padding: 10px 14px 10px 44px;
       margin-bottom: 8px;
-      background: ${colors.secondary};
-      border-left: 4px solid ${colors.primary};
-      border-radius: 0 8px 8px 0;
+      background: var(--color-secondary);
+      border-radius: var(--radius-md);
+      position: relative;
+      color: var(--color-text);
+      line-height: 1.5;
     }
 
+    .objectives-list li::before {
+      counter-increment: objectives;
+      content: counter(objectives);
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      width: 22px;
+      height: 22px;
+      background: var(--color-primary);
+      color: white;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Lesson Section Cards ────────────────────────────────────── */
     .lesson-section {
-      background: #FFFFFF;
-      border: 1px solid #E5E7EB;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
+      background: var(--color-paper);
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+      padding: var(--space-md) 20px;
+      margin-bottom: var(--space-md);
     }
 
     .lesson-section h3 {
+      font-family: var(--font-heading);
       font-size: 12pt;
       font-weight: 600;
-      color: ${colors.accent};
-      margin-bottom: 8px;
+      color: var(--color-accent);
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
     .lesson-section .duration {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-body);
       font-size: 9pt;
-      color: #6B7280;
+      color: var(--color-text-muted);
       font-weight: 400;
+      background: var(--color-secondary);
+      padding: 2px 10px;
+      border-radius: 12px;
     }
 
     .lesson-section .content {
-      color: #374151;
+      color: var(--color-text-light);
       margin-bottom: 12px;
+      line-height: 1.7;
     }
 
+    /* ── Activities ──────────────────────────────────────────────── */
     .activities {
-      background: ${colors.secondary};
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 8px;
+      background: var(--color-secondary);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-top: 10px;
     }
 
     .activities h4 {
+      font-family: var(--font-heading);
       font-size: 10pt;
       font-weight: 600;
-      color: ${colors.accent};
+      color: var(--color-accent);
       margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .activities ul {
@@ -290,10 +638,12 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
     }
 
     .activities li {
-      margin-bottom: 4px;
-      color: #4B5563;
+      margin-bottom: 6px;
+      color: var(--color-text-light);
+      line-height: 1.5;
     }
 
+    /* ── Vocabulary Grid ─────────────────────────────────────────── */
     .vocabulary-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -301,37 +651,44 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
     }
 
     .vocabulary-card {
-      background: #FFFFFF;
-      border: 1px solid #E5E7EB;
-      border-radius: 8px;
-      padding: 12px;
+      background: var(--color-secondary);
+      border: 1px solid ${colors.primary}15;
+      border-radius: var(--radius-md);
+      padding: 14px;
     }
 
     .vocabulary-card .term {
+      font-family: var(--font-heading);
       font-weight: 600;
-      color: ${colors.primary};
+      color: var(--color-primary);
       margin-bottom: 4px;
+      font-size: 11pt;
     }
 
     .vocabulary-card .definition {
       font-size: 10pt;
-      color: #4B5563;
+      color: var(--color-text-light);
+      line-height: 1.5;
     }
 
     .vocabulary-card .example {
       font-size: 9pt;
-      color: #6B7280;
+      color: var(--color-text-muted);
       font-style: italic;
-      margin-top: 4px;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--color-border);
     }
 
+    /* ── Question Cards ──────────────────────────────────────────── */
     .question-card {
-      background: #FFFFFF;
-      border: 1px solid #E5E7EB;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      margin-bottom: var(--space-md);
       page-break-inside: avoid;
+      box-shadow: 0 1px 3px rgba(30,42,58,0.04);
     }
 
     .question-card .number {
@@ -340,27 +697,32 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
       justify-content: center;
       width: 28px;
       height: 28px;
-      background: ${colors.primary};
+      background: var(--color-primary);
       color: white;
       border-radius: 50%;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 10pt;
-      margin-right: 8px;
+      margin-right: 10px;
+      flex-shrink: 0;
     }
 
     .question-card .question-text {
       font-weight: 500;
-      color: #1F2937;
+      color: var(--color-text);
       margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      line-height: 1.5;
     }
 
     .question-card .meta-row {
       display: flex;
-      gap: 12px;
-      margin-bottom: 8px;
+      gap: 10px;
+      margin-bottom: 10px;
       font-size: 9pt;
     }
 
+    /* ── Options List ────────────────────────────────────────────── */
     .options-list {
       list-style: none;
       padding: 0;
@@ -368,14 +730,15 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
     }
 
     .options-list li {
-      padding: 8px 12px;
+      padding: 10px 14px;
       margin-bottom: 6px;
       background: #F9FAFB;
-      border: 1px solid #E5E7EB;
-      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      transition: background 0.15s;
     }
 
     .options-list li.correct {
@@ -387,12 +750,13 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
-      background: #E5E7EB;
+      width: 26px;
+      height: 26px;
+      background: var(--color-border);
       border-radius: 50%;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 9pt;
+      flex-shrink: 0;
     }
 
     .correct .option-letter {
@@ -400,11 +764,12 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
       color: white;
     }
 
+    /* ── Answer Section ──────────────────────────────────────────── */
     .answer-section {
       margin-top: 12px;
-      padding: 12px;
+      padding: 12px 14px;
       background: #ECFDF5;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       border-left: 4px solid #10B981;
     }
 
@@ -413,67 +778,99 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
       color: #047857;
       font-size: 9pt;
       margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .answer-section .answer {
       color: #065F46;
+      font-weight: 500;
     }
 
     .answer-section .explanation {
       margin-top: 8px;
       font-size: 10pt;
-      color: #4B5563;
+      color: var(--color-text-light);
+      line-height: 1.5;
     }
 
+    /* ── Flashcards ──────────────────────────────────────────────── */
     .flashcard {
-      background: #FFFFFF;
-      border: 2px solid ${colors.primary};
-      border-radius: 12px;
+      background: var(--color-surface);
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-lg);
       padding: 20px;
-      margin-bottom: 16px;
+      margin-bottom: var(--space-md);
       page-break-inside: avoid;
+      position: relative;
+    }
+
+    .flashcard::before {
+      content: attr(data-card-number);
+      position: absolute;
+      top: -1px;
+      left: 20px;
+      background: var(--color-primary);
+      color: white;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 2px 12px 4px;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      font-family: var(--font-body);
     }
 
     .flashcard .front {
+      font-family: var(--font-heading);
       font-size: 12pt;
       font-weight: 600;
-      color: ${colors.primary};
+      color: var(--color-primary);
+      padding-top: 8px;
       padding-bottom: 12px;
       margin-bottom: 12px;
-      border-bottom: 1px dashed #E5E7EB;
+      border-bottom: 1px dashed var(--color-border);
     }
 
     .flashcard .back {
-      color: #374151;
+      color: var(--color-text-light);
+      line-height: 1.6;
     }
 
     .flashcard .hint {
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 9pt;
-      color: #6B7280;
+      color: var(--color-text-muted);
       font-style: italic;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .flashcard .category {
-      margin-top: 8px;
+      margin-top: 10px;
       display: inline-block;
-      padding: 2px 8px;
-      background: ${colors.secondary};
-      color: ${colors.accent};
+      padding: 3px 10px;
+      background: var(--color-secondary);
+      color: var(--color-accent);
       border-radius: 12px;
       font-size: 8pt;
+      font-weight: 500;
+      border: 1px solid ${colors.primary}15;
     }
 
+    /* ── Teacher Notes ───────────────────────────────────────────── */
     .teacher-notes {
-      background: #FEF3C7;
-      border: 1px solid #F59E0B;
-      border-radius: 12px;
-      padding: 16px;
-      margin-top: 24px;
+      background: #FEF9EE;
+      border: 1px solid #F5D77A;
+      border-left: 4px solid #D4A853;
+      border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+      padding: 18px;
+      margin-top: var(--space-lg);
     }
 
     .teacher-notes h3 {
-      color: #D97706;
+      font-family: var(--font-heading);
+      color: #92400E;
       font-size: 12pt;
       margin-bottom: 8px;
       display: flex;
@@ -482,29 +879,37 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
     }
 
     .teacher-notes .content {
-      color: #92400E;
+      color: #78350F;
       font-size: 10pt;
+      line-height: 1.6;
     }
 
+    /* ── Summary Box ─────────────────────────────────────────────── */
     .summary-box {
-      background: ${colors.secondary};
-      border-radius: 12px;
-      padding: 16px;
+      background: var(--color-secondary);
+      border-radius: var(--radius-lg);
+      padding: 18px;
       margin-bottom: 20px;
+      border: 1px solid ${colors.primary}10;
     }
 
     .summary-box p {
-      color: #374151;
+      color: var(--color-text);
       line-height: 1.7;
     }
 
+    /* ── Footer (in-body fallback for HTML exports) ──────────────── */
     .footer {
-      margin-top: 32px;
-      padding-top: 16px;
-      border-top: 1px solid #E5E7EB;
+      margin-top: var(--space-xl);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--color-border);
       text-align: center;
       font-size: 9pt;
       color: #9CA3AF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
     .page-break {
@@ -514,7 +919,11 @@ function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'c
     @media print {
       body {
         padding: 0;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
       }
+
+      p, li { orphans: 3; widows: 3; }
 
       .section {
         page-break-inside: avoid;
@@ -636,6 +1045,9 @@ function generateWeeklyTemplateHTML(
       break;
   }
 
+  const colorScheme = options.colorScheme || 'color';
+  const colorsObj = colorScheme === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+
   let html = `
     <!DOCTYPE html>
     <html>
@@ -645,9 +1057,9 @@ function generateWeeklyTemplateHTML(
       <style>
         ${styles}
         .weekly-shell {
-          background: #FFFFFF;
-          border: 1px solid #E5E7EB;
-          border-radius: 14px;
+          background: var(--color-surface);
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-lg);
           padding: 20px;
         }
         .weekly-meta {
@@ -662,35 +1074,39 @@ function generateWeeklyTemplateHTML(
         }
         .weekly-list li {
           margin-bottom: 10px;
+          line-height: 1.5;
         }
         .weekly-card {
-          border: 1px solid #E5E7EB;
-          border-radius: 10px;
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-md);
           background: #F9FAFB;
-          padding: 12px 14px;
+          padding: 14px 16px;
           margin-bottom: 10px;
         }
         .weekly-answer {
           margin-top: 8px;
-          padding: 8px 10px;
+          padding: 10px 12px;
           background: #ECFDF5;
           border-left: 3px solid #10B981;
-          border-radius: 6px;
+          border-radius: var(--radius-sm);
           font-size: 10pt;
           color: #065F46;
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
         }
       </style>
     </head>
     <body>
-      <div class="header">
-        <h1>${escapeHtml(lessonData.title || content.title)}</h1>
-        <div class="meta">
-          <span class="badge">${(content.subject || 'OTHER').replace('_', ' ')}</span>
-          <span>${templateLabel}</span>
-          <span>Grade: ${escapeHtml(content.gradeLevel || '')}</span>
-          <span>Created: ${createdDate}</span>
-        </div>
-      </div>
+      ${getBrandedHeader(
+        lessonData.title || content.title,
+        subject,
+        content.gradeLevel || '',
+        templateLabel,
+        createdDate,
+        colorsObj,
+        colorScheme,
+      )}
       <div class="weekly-shell">
         <div class="weekly-meta">
           ${metadataPills.join('')}
@@ -705,12 +1121,12 @@ function generateWeeklyTemplateHTML(
     html += `
       ${instructions ? `
         <div class="section">
-          <h2 class="section-title"><span class="icon">🧭</span> Instructions</h2>
+          <h2 class="section-title"><span class="icon">${getIcon('compass', 'var(--color-primary)')}</span> Instructions</h2>
           <p>${textToHtml(instructions)}</p>
         </div>
       ` : ''}
       <div class="section">
-        <h2 class="section-title"><span class="icon">❓</span> Questions</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('question', 'var(--color-primary)')}</span> Questions</h2>
         ${questions.length > 0 ? `
           <ol class="weekly-list">
             ${questions.map((item, i) => {
@@ -744,13 +1160,13 @@ function generateWeeklyTemplateHTML(
     html += `
       ${instructions ? `
         <div class="section">
-          <h2 class="section-title"><span class="icon">🧭</span> Instructions</h2>
+          <h2 class="section-title"><span class="icon">${getIcon('compass', 'var(--color-primary)')}</span> Instructions</h2>
           <p>${textToHtml(instructions)}</p>
         </div>
       ` : ''}
 
       <div class="section">
-        <h2 class="section-title"><span class="icon">✏️</span> Problems</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('pencil', 'var(--color-primary)')}</span> Problems</h2>
         ${problems.length > 0 ? `
           ${problems.map((item, i) => {
             const p = asRecord(item);
@@ -782,7 +1198,7 @@ function generateWeeklyTemplateHTML(
       if (parentNote) {
         html += `
           <div class="section">
-            <h2 class="section-title"><span class="icon">🏠</span> Parent Note</h2>
+            <h2 class="section-title"><span class="icon">${getIcon('home', 'var(--color-primary)')}</span> Parent Note</h2>
             <p>${textToHtml(parentNote)}</p>
           </div>
         `;
@@ -802,25 +1218,25 @@ function generateWeeklyTemplateHTML(
     html += `
       ${objective ? `
         <div class="section">
-          <h2 class="section-title"><span class="icon">🎯</span> Activity Overview</h2>
+          <h2 class="section-title"><span class="icon">${getIcon('target', 'var(--color-primary)')}</span> Activity Overview</h2>
           <p>${textToHtml(objective)}</p>
         </div>
       ` : ''}
       <div class="section">
-        <h2 class="section-title"><span class="icon">🧰</span> Materials</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('tools', 'var(--color-primary)')}</span> Materials</h2>
         ${(materials.length > 0 || materialFallback.length > 0)
           ? `<ul class="weekly-list">${(materials.length > 0 ? materials : materialFallback).map((line) => `<li>${textToHtml(line)}</li>`).join('')}</ul>`
           : '<p>No materials listed.</p>'}
       </div>
       <div class="section">
-        <h2 class="section-title"><span class="icon">🪜</span> Step-by-Step Instructions</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('steps', 'var(--color-primary)')}</span> Step-by-Step Instructions</h2>
         ${(instructions.length > 0 || instructionFallback.length > 0)
           ? `<ol class="weekly-list">${(instructions.length > 0 ? instructions : instructionFallback).map((line) => `<li>${textToHtml(line)}</li>`).join('')}</ol>`
           : '<p>No instructions provided.</p>'}
       </div>
       ${extensions ? `
         <div class="section">
-          <h2 class="section-title"><span class="icon">🚀</span> Extensions</h2>
+          <h2 class="section-title"><span class="icon">${getIcon('rocket', 'var(--color-primary)')}</span> Extensions</h2>
           <p>${textToHtml(extensions)}</p>
         </div>
       ` : ''}
@@ -830,7 +1246,7 @@ function generateWeeklyTemplateHTML(
   if (options.includeTeacherNotes && lessonData.teacherNotes) {
     html += `
       <div class="teacher-notes">
-        <h3>📋 Teacher Notes</h3>
+        <h3>${getIcon('notepad', '#92400E')} Teacher Notes</h3>
         <div class="content">${textToHtml(lessonData.teacherNotes)}</div>
       </div>
     `;
@@ -839,7 +1255,7 @@ function generateWeeklyTemplateHTML(
   html += `
       </div>
       <div class="footer">
-        Generated by Orbit Learn • ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -863,31 +1279,34 @@ function generateLessonHTML(
 
   const subject = (content.subject || 'OTHER') as Subject;
   const styles = getBaseStyles(subject, options.colorScheme);
+  const cs = options.colorScheme || 'color';
+  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
 
   let html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>${lessonData.title || content.title}</title>
+      <title>${escapeHtml(lessonData.title || content.title)}</title>
       <style>${styles}</style>
     </head>
     <body>
-      <div class="header">
-        <h1>${lessonData.title || content.title}</h1>
-        <div class="meta">
-          <span class="badge">${(content.subject || 'OTHER').replace('_', ' ')}</span>
-          <span>Grade: ${content.gradeLevel}</span>
-          <span>Created: ${new Date(content.createdAt).toLocaleDateString()}</span>
-        </div>
-      </div>
+      ${getBrandedHeader(
+        lessonData.title || content.title,
+        subject,
+        content.gradeLevel || '',
+        'Lesson Plan',
+        new Date(content.createdAt).toLocaleDateString(),
+        cols,
+        cs,
+      )}
   `;
 
   // Summary
   if (lessonData.summary) {
     html += `
       <div class="summary-box">
-        <p>${lessonData.summary}</p>
+        <p>${escapeHtml(lessonData.summary)}</p>
       </div>
     `;
   }
@@ -896,7 +1315,7 @@ function generateLessonHTML(
   if (lessonData.objectives && lessonData.objectives.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">🎯</span> Learning Objectives</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('target', 'var(--color-primary)')}</span> Learning Objectives</h2>
         <ul class="objectives-list">
           ${lessonData.objectives.map(obj => `<li>${obj}</li>`).join('')}
         </ul>
@@ -908,17 +1327,17 @@ function generateLessonHTML(
   if (lessonData.sections && lessonData.sections.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">📚</span> Lesson Content</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('book', 'var(--color-primary)')}</span> Lesson Content</h2>
         ${lessonData.sections.map((section, i) => `
           <div class="lesson-section">
             <h3>
               ${i + 1}. ${section.title}
-              ${section.duration ? `<span class="duration">⏱ ${section.duration} min</span>` : ''}
+              ${section.duration ? `<span class="duration">${getIcon('clock', 'var(--color-text-muted)')} ${section.duration} min</span>` : ''}
             </h3>
             <div class="content">${section.content}</div>
             ${section.activities && section.activities.length > 0 ? `
               <div class="activities">
-                <h4>📝 Activities</h4>
+                <h4>${getIcon('list', 'var(--color-accent)')} Activities</h4>
                 ${section.activities.map(act => {
                   if (typeof act === 'string') {
                     return `<ul><li>${act}</li></ul>`;
@@ -929,7 +1348,7 @@ function generateLessonHTML(
                     <div class="activity-item" style="margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px;">
                       ${actObj.name ? `<div style="font-weight: 600; margin-bottom: 4px;">${actObj.name}</div>` : ''}
                       ${actObj.description ? `<div style="margin-bottom: 8px;">${actObj.description}</div>` : ''}
-                      ${actObj.duration ? `<div style="font-size: 9pt; color: #6B7280;">⏱ ${actObj.duration} min</div>` : ''}
+                      ${actObj.duration ? `<div style="font-size: 9pt; color: #6B7280; display: flex; align-items: center; gap: 4px;">${getIcon('clock', '#6B7280')} ${actObj.duration} min</div>` : ''}
                       ${actObj.materials && actObj.materials.length > 0 ? `
                         <div style="margin-top: 8px;">
                           <div style="font-size: 9pt; font-weight: 500; color: #4B5563;">Materials:</div>
@@ -961,7 +1380,7 @@ function generateLessonHTML(
   if (lessonData.vocabulary && lessonData.vocabulary.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">📖</span> Vocabulary</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('star', 'var(--color-primary)')}</span> Vocabulary</h2>
         <div class="vocabulary-grid">
           ${lessonData.vocabulary.map(vocab => `
             <div class="vocabulary-card">
@@ -979,7 +1398,7 @@ function generateLessonHTML(
   if (lessonData.assessment?.questions && lessonData.assessment.questions.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">✅</span> Assessment Questions</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('check', 'var(--color-primary)')}</span> Assessment Questions</h2>
         ${lessonData.assessment.questions.map((q, i) => `
           <div class="question-card">
             <div class="question-text">
@@ -1013,14 +1432,14 @@ function generateLessonHTML(
   if (lessonData.practiceExercises && lessonData.practiceExercises.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">✏️</span> Practice Exercises</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('pencil', 'var(--color-primary)')}</span> Practice Exercises</h2>
         ${lessonData.practiceExercises.map((ex, i) => `
           <div class="question-card">
             <div class="question-text">
               <span class="number">${i + 1}</span>
               ${ex.question}
             </div>
-            ${ex.hint ? `<div style="font-size: 10pt; color: #6B7280; margin-top: 8px;">💡 Hint: ${ex.hint}</div>` : ''}
+            ${ex.hint ? `<div style="font-size: 10pt; color: #6B7280; margin-top: 8px;">${getIcon('lightbulb', '#6B7280')} Hint: ${ex.hint}</div>` : ''}
             ${options.includeAnswers && ex.answer ? `
               <div class="answer-section">
                 <div class="label">Answer:</div>
@@ -1037,7 +1456,7 @@ function generateLessonHTML(
   if (lessonData.summaryPoints && lessonData.summaryPoints.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">📌</span> Key Takeaways</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('pin', 'var(--color-primary)')}</span> Key Takeaways</h2>
         <ul class="objectives-list">
           ${lessonData.summaryPoints.map(point => `<li>${point}</li>`).join('')}
         </ul>
@@ -1049,7 +1468,7 @@ function generateLessonHTML(
   if (lessonData.reviewQuestions && lessonData.reviewQuestions.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">❓</span> Review Questions</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('question', 'var(--color-primary)')}</span> Review Questions</h2>
         <ol style="padding-left: 20px;">
           ${lessonData.reviewQuestions.map(q => `<li style="margin-bottom: 12px;">${q}</li>`).join('')}
         </ol>
@@ -1063,7 +1482,7 @@ function generateLessonHTML(
       <div class="section" style="background: #F9FAFB; border-radius: 12px; padding: 16px; margin-top: 20px;">
         ${lessonData.prerequisites && lessonData.prerequisites.length > 0 ? `
           <div style="margin-bottom: 12px;">
-            <h3 style="font-size: 11pt; color: #4B5563; margin-bottom: 8px;">📚 Prerequisites</h3>
+            <h3 style="font-size: 11pt; color: #4B5563; margin-bottom: 8px;">Prerequisites</h3>
             <ul style="margin-left: 16px; color: #6B7280; font-size: 10pt;">
               ${lessonData.prerequisites.map(p => `<li>${p}</li>`).join('')}
             </ul>
@@ -1071,7 +1490,7 @@ function generateLessonHTML(
         ` : ''}
         ${lessonData.nextSteps ? `
           <div>
-            <h3 style="font-size: 11pt; color: #4B5563; margin-bottom: 8px;">➡️ What's Next</h3>
+            <h3 style="font-size: 11pt; color: #4B5563; margin-bottom: 8px;">What's Next</h3>
             <p style="color: #6B7280; font-size: 10pt;">${lessonData.nextSteps}</p>
           </div>
         ` : ''}
@@ -1083,7 +1502,7 @@ function generateLessonHTML(
   if (lessonData.additionalResources && lessonData.additionalResources.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">🔗</span> Additional Resources</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('link', 'var(--color-primary)')}</span> Additional Resources</h2>
         <ul style="padding-left: 20px;">
           ${lessonData.additionalResources.map(r => `<li style="margin-bottom: 8px;">${r}</li>`).join('')}
         </ul>
@@ -1095,8 +1514,8 @@ function generateLessonHTML(
   if (options.includeTeacherNotes && lessonData.teacherNotes) {
     html += `
       <div class="teacher-notes">
-        <h3>📋 Teacher Notes</h3>
-        <div class="content">${lessonData.teacherNotes}</div>
+        <h3>${getIcon('notepad', '#92400E')} Teacher Notes</h3>
+        <div class="content">${escapeHtml(lessonData.teacherNotes)}</div>
       </div>
     `;
   }
@@ -1106,7 +1525,7 @@ function generateLessonHTML(
   if (quizContent && quizContent.questions && quizContent.questions.length > 0) {
     html += `
       <div class="section page-break">
-        <h2 class="section-title"><span class="icon">📝</span> Quiz (${quizContent.questions.length} questions)</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('quiz', 'var(--color-primary)')}</span> Quiz (${quizContent.questions.length} questions)</h2>
         ${quizContent.questions.map((q, i) => `
           <div class="question-card">
             <div class="question-text">
@@ -1141,14 +1560,14 @@ function generateLessonHTML(
   if (flashcardContent && flashcardContent.cards && flashcardContent.cards.length > 0) {
     html += `
       <div class="section page-break">
-        <h2 class="section-title"><span class="icon">🃏</span> Flashcards (${flashcardContent.cards.length} cards)</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('cards', 'var(--color-primary)')}</span> Flashcards (${flashcardContent.cards.length} cards)</h2>
         ${flashcardContent.cards.map((card, i) => `
-          <div class="flashcard">
+          <div class="flashcard" data-card-number="Card ${i + 1}">
             <div class="front">
-              <strong>Card ${i + 1}:</strong> ${card.front}
+              ${card.front}
             </div>
             <div class="back">${card.back}</div>
-            ${card.hint ? `<div class="hint">💡 Hint: ${card.hint}</div>` : ''}
+            ${card.hint ? `<div class="hint">${getIcon('lightbulb', '#6B7280')} Hint: ${card.hint}</div>` : ''}
             ${card.category ? `<span class="category">${card.category}</span>` : ''}
           </div>
         `).join('')}
@@ -1158,7 +1577,7 @@ function generateLessonHTML(
 
   html += `
       <div class="footer">
-        Generated by Orbit Learn • ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1177,50 +1596,69 @@ function generateQuizHTML(
 ): string {
   const subject = (content.subject || 'OTHER') as Subject;
   const styles = getBaseStyles(subject, options.colorScheme);
+  const cs = options.colorScheme || 'color';
+  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
 
   // Determine if answers should be shown inline or on a separate answer key page
   const isAnswerKeyOnly = options.answerKeyOnly === true;
   const showInlineAnswers = !isAnswerKeyOnly && options.includeAnswers && !options.separateAnswerKey;
   const showAnswerKey = isAnswerKeyOnly || (options.includeAnswers && options.separateAnswerKey);
 
+  const metaParts: string[] = [];
+  if (quizData.totalPoints) metaParts.push(`Total Points: ${quizData.totalPoints}`);
+  if (quizData.estimatedTime) metaParts.push(`${quizData.estimatedTime} min`);
+
   let html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>${quizData.title || content.title} - Quiz</title>
+      <title>${escapeHtml(quizData.title || content.title)} - Quiz</title>
       <style>
         ${styles}
 
-        /* Additional styles for answer key */
+        /* Answer key styles */
         .answer-key-header {
           text-align: center;
-          margin-bottom: 24px;
-          padding-bottom: 16px;
-          border-bottom: 3px solid #10B981;
+          margin-bottom: var(--space-lg);
+          padding: var(--space-md);
+          background: #ECFDF5;
+          border-radius: var(--radius-lg);
+          border: 2px solid #10B981;
         }
 
         .answer-key-header h1 {
-          font-size: 20pt;
+          font-family: var(--font-heading);
+          font-size: 18pt;
           font-weight: 700;
-          color: #10B981;
-          margin-bottom: 8px;
+          color: #047857;
+          margin-bottom: 4px;
+          letter-spacing: -0.01em;
+        }
+
+        .answer-key-header .subtitle {
+          font-size: 10pt;
+          color: var(--color-text-muted);
         }
 
         .answer-key-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
+          gap: 12px;
         }
 
         .answer-key-item {
           background: #F9FAFB;
-          border: 1px solid #E5E7EB;
-          border-radius: 8px;
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-md);
           padding: 12px 16px;
           display: flex;
           align-items: flex-start;
           gap: 12px;
+        }
+
+        .answer-key-item:nth-child(odd) {
+          background: #FAFAFA;
         }
 
         .answer-key-item .q-number {
@@ -1232,7 +1670,7 @@ function generateQuizHTML(
           background: #10B981;
           color: white;
           border-radius: 50%;
-          font-weight: 600;
+          font-weight: 700;
           font-size: 10pt;
           flex-shrink: 0;
         }
@@ -1249,64 +1687,27 @@ function generateQuizHTML(
 
         .answer-key-item .explanation-text {
           font-size: 9pt;
-          color: #6B7280;
+          color: var(--color-text-muted);
           line-height: 1.4;
-        }
-
-        .name-line {
-          margin-bottom: 20px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #E5E7EB;
-        }
-
-        .name-line-field {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
-        }
-
-        .name-line-field span {
-          font-weight: 500;
-          color: #4B5563;
-        }
-
-        .name-line-field .line {
-          flex: 1;
-          border-bottom: 1px solid #9CA3AF;
-          height: 1px;
         }
       </style>
     </head>
     <body>
-      <div class="header">
-        <h1>${quizData.title || content.title}</h1>
-        <div class="meta">
-          <span class="badge">${(content.subject || 'OTHER').replace('_', ' ')}</span>
-          <span>Grade: ${content.gradeLevel}</span>
-          ${quizData.totalPoints ? `<span>Total Points: ${quizData.totalPoints}</span>` : ''}
-          ${quizData.estimatedTime ? `<span>⏱ ${quizData.estimatedTime} min</span>` : ''}
-        </div>
-      </div>
+      ${getBrandedHeader(
+        quizData.title || content.title,
+        subject,
+        content.gradeLevel || '',
+        `Quiz · ${quizData.questions.length} questions${metaParts.length ? ' · ' + metaParts.join(' · ') : ''}`,
+        new Date(content.createdAt).toLocaleDateString(),
+        cols,
+        cs,
+      )}
 
-      ${!isAnswerKeyOnly && showAnswerKey ? `
-        <div class="name-line">
-          <div class="name-line-field">
-            <span>Name:</span>
-            <div class="line"></div>
-          </div>
-          <div class="name-line-field">
-            <span>Date:</span>
-            <div class="line" style="max-width: 200px;"></div>
-            <span style="margin-left: 24px;">Score:</span>
-            <div class="line" style="max-width: 100px;"></div>
-          </div>
-        </div>
-      ` : ''}
+      ${!isAnswerKeyOnly && showAnswerKey ? getNameDateLine() : ''}
 
       ${!isAnswerKeyOnly ? `
       <div class="section">
-        <h2 class="section-title"><span class="icon">📝</span> Questions</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('quiz', 'var(--color-primary)')}</span> Questions</h2>
         ${quizData.questions.map((q, i) => `
           <div class="question-card">
             <div class="question-text">
@@ -1343,8 +1744,8 @@ function generateQuizHTML(
       ${showAnswerKey ? `
         ${!isAnswerKeyOnly ? '<div class="page-break"></div>' : ''}
         <div class="answer-key-header">
-          <h1>Answer Key</h1>
-          <div style="font-size: 10pt; color: #6B7280;">${quizData.title || content.title}</div>
+          <h1>${getIcon('check', '#047857')} Answer Key</h1>
+          <div class="subtitle">${escapeHtml(quizData.title || content.title)}</div>
         </div>
 
         <div class="answer-key-grid">
@@ -1352,8 +1753,8 @@ function generateQuizHTML(
             <div class="answer-key-item">
               <span class="q-number">${i + 1}</span>
               <div class="answer-content">
-                <div class="answer-text">${q.correctAnswer}</div>
-                ${q.explanation ? `<div class="explanation-text">${q.explanation}</div>` : ''}
+                <div class="answer-text">${escapeHtml(q.correctAnswer)}</div>
+                ${q.explanation ? `<div class="explanation-text">${escapeHtml(q.explanation)}</div>` : ''}
               </div>
             </div>
           `).join('')}
@@ -1361,7 +1762,7 @@ function generateQuizHTML(
       ` : ''}
 
       <div class="footer">
-        Generated by Orbit Learn • ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1380,41 +1781,44 @@ function generateFlashcardHTML(
 ): string {
   const subject = (content.subject || 'OTHER') as Subject;
   const styles = getBaseStyles(subject, options.colorScheme);
+  const cs = options.colorScheme || 'color';
+  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
 
   let html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>${flashcardData.title || content.title} - Flashcards</title>
+      <title>${escapeHtml(flashcardData.title || content.title)} - Flashcards</title>
       <style>${styles}</style>
     </head>
     <body>
-      <div class="header">
-        <h1>${flashcardData.title || content.title}</h1>
-        <div class="meta">
-          <span class="badge">${(content.subject || 'OTHER').replace('_', ' ')}</span>
-          <span>Grade: ${content.gradeLevel}</span>
-          <span>${flashcardData.cards.length} Cards</span>
-        </div>
-      </div>
+      ${getBrandedHeader(
+        flashcardData.title || content.title,
+        subject,
+        content.gradeLevel || '',
+        'Flashcards · ' + flashcardData.cards.length + ' cards',
+        new Date(content.createdAt).toLocaleDateString(),
+        cols,
+        cs,
+      )}
 
       <div class="section">
-        <h2 class="section-title"><span class="icon">🃏</span> Flashcards</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('cards', 'var(--color-primary)')}</span> Flashcards</h2>
         ${flashcardData.cards.map((card, i) => `
-          <div class="flashcard">
+          <div class="flashcard" data-card-number="Card ${i + 1}">
             <div class="front">
-              <strong>Card ${i + 1}:</strong> ${card.front}
+              ${escapeHtml(card.front)}
             </div>
-            <div class="back">${card.back}</div>
-            ${card.hint ? `<div class="hint">💡 Hint: ${card.hint}</div>` : ''}
-            ${card.category ? `<span class="category">${card.category}</span>` : ''}
+            <div class="back">${escapeHtml(card.back)}</div>
+            ${card.hint ? `<div class="hint">${getIcon('lightbulb', '#6B7280')} Hint: ${escapeHtml(card.hint)}</div>` : ''}
+            ${card.category ? `<span class="category">${escapeHtml(card.category)}</span>` : ''}
           </div>
         `).join('')}
       </div>
 
       <div class="footer">
-        Generated by Orbit Learn • ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1433,31 +1837,34 @@ function generateStudyGuideHTML(
 ): string {
   const subject = (content.subject || 'OTHER') as Subject;
   const styles = getBaseStyles(subject, options.colorScheme);
+  const cs = options.colorScheme || 'color';
+  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
 
   let html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>${guideData.title || content.title} - Study Guide</title>
+      <title>${escapeHtml(guideData.title || content.title)} - Study Guide</title>
       <style>${styles}</style>
     </head>
     <body>
-      <div class="header">
-        <h1>${guideData.title || content.title}</h1>
-        <div class="meta">
-          <span class="badge">${(content.subject || 'OTHER').replace('_', ' ')}</span>
-          <span>Grade: ${content.gradeLevel}</span>
-          <span class="badge">Study Guide</span>
-        </div>
-      </div>
+      ${getBrandedHeader(
+        guideData.title || content.title,
+        subject,
+        content.gradeLevel || '',
+        'Study Guide',
+        new Date(content.createdAt).toLocaleDateString(),
+        cols,
+        cs,
+      )}
   `;
 
   // Summary
   if (guideData.summary) {
     html += `
       <div class="summary-box">
-        <p>${guideData.summary}</p>
+        <p>${escapeHtml(guideData.summary)}</p>
       </div>
     `;
   }
@@ -1466,12 +1873,12 @@ function generateStudyGuideHTML(
   if (guideData.outline && guideData.outline.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">📋</span> Outline</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('list', 'var(--color-primary)')}</span> Outline</h2>
         ${guideData.outline.map((section, i) => `
           <div class="lesson-section">
-            <h3>${i + 1}. ${section.section}</h3>
+            <h3>${i + 1}. ${escapeHtml(section.section)}</h3>
             <ul>
-              ${section.points.map(point => `<li>${point}</li>`).join('')}
+              ${section.points.map(point => `<li>${escapeHtml(point)}</li>`).join('')}
             </ul>
           </div>
         `).join('')}
@@ -1483,12 +1890,12 @@ function generateStudyGuideHTML(
   if (guideData.keyTerms && guideData.keyTerms.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">📖</span> Key Terms</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('star', 'var(--color-primary)')}</span> Key Terms</h2>
         <div class="vocabulary-grid">
           ${guideData.keyTerms.map(term => `
             <div class="vocabulary-card">
-              <div class="term">${term.term}</div>
-              <div class="definition">${term.definition}</div>
+              <div class="term">${escapeHtml(term.term)}</div>
+              <div class="definition">${escapeHtml(term.definition)}</div>
             </div>
           `).join('')}
         </div>
@@ -1500,9 +1907,9 @@ function generateStudyGuideHTML(
   if (guideData.reviewQuestions && guideData.reviewQuestions.length > 0) {
     html += `
       <div class="section">
-        <h2 class="section-title"><span class="icon">❓</span> Review Questions</h2>
+        <h2 class="section-title"><span class="icon">${getIcon('question', 'var(--color-primary)')}</span> Review Questions</h2>
         <ol>
-          ${guideData.reviewQuestions.map(q => `<li style="margin-bottom: 12px;">${q}</li>`).join('')}
+          ${guideData.reviewQuestions.map(q => `<li style="margin-bottom: 12px;">${escapeHtml(q)}</li>`).join('')}
         </ol>
       </div>
     `;
@@ -1510,7 +1917,7 @@ function generateStudyGuideHTML(
 
   html += `
       <div class="footer">
-        Generated by Orbit Learn • ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1597,6 +2004,9 @@ export async function exportContent(
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
+  const subject = (content.subject || 'OTHER') as Subject;
+  const pdfColors = (opts.colorScheme === 'color') ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -1604,10 +2014,13 @@ export async function exportContent(
     const pdfBuffer = await page.pdf({
       format: opts.paperSize === 'a4' ? 'A4' : 'Letter',
       printBackground: true,
+      displayHeaderFooter: true,
+      headerTemplate: '<div></div>',
+      footerTemplate: getFooterTemplate(pdfColors.primary, opts.colorScheme || 'color'),
       margin: {
         top: '0.5in',
         right: '0.5in',
-        bottom: '0.5in',
+        bottom: '0.75in',
         left: '0.5in',
       },
     });
@@ -1669,10 +2082,13 @@ export async function exportMultipleContent(
     const pdfBuffer = await page.pdf({
       format: options.paperSize === 'a4' ? 'A4' : 'Letter',
       printBackground: true,
+      displayHeaderFooter: true,
+      headerTemplate: '<div></div>',
+      footerTemplate: getFooterTemplate('#6B7280', options.colorScheme || 'color'),
       margin: {
         top: '0.5in',
         right: '0.5in',
-        bottom: '0.5in',
+        bottom: '0.75in',
         left: '0.5in',
       },
     });
