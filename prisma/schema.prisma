@@ -1024,6 +1024,7 @@ model Teacher {
   teacherMaterials      TeacherMaterial[]
   nudges                TeacherNudge[]
   preferenceProfile     TeacherPreferenceProfile?
+  materialImportJobs    MaterialImportJob[]
 
   @@index([email])
   @@index([organizationId])
@@ -3749,9 +3750,17 @@ model TeacherMaterial {
   usedInClass Boolean @default(false)
   notes       String? @db.Text
 
+  // Outcome tracking (lightweight feedback loop)
+  outcomeRating   OutcomeRating?
+  outcomeNotes    String?        @db.Text
+  outcomeRatedAt  DateTime?
+
   // Usage tracking
   timesDownloaded Int @default(0)
   timesShared     Int @default(0)
+
+  // Parent bridge
+  sharedUpdate SharedParentUpdate?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3759,6 +3768,12 @@ model TeacherMaterial {
   @@index([teacherId, createdAt(sort: Desc)])
   @@index([teacherId, subject])
   @@index([teacherId, type])
+}
+
+enum OutcomeRating {
+  WORKED
+  NEEDED_TWEAKS
+  DIDNT_WORK
 }
 
 enum NudgeType {
@@ -3822,4 +3837,52 @@ model TeacherPreferenceProfile {
   confidenceScores Json?
 
   lastUpdatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// TEACHER INTELLIGENCE — FUTURE PHASE MODELS
+// ============================================================
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model MaterialImportJob {
+  id        String @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  totalFiles Int
+  processed  Int @default(0)
+  succeeded  Int @default(0)
+  failed     Int @default(0)
+  status     ImportStatus @default(PENDING)
+  errors     Json? // [{ fileName, error }]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, status])
+}
+
+model SharedParentUpdate {
+  id         String @id @default(cuid())
+  materialId String @unique
+  material   TeacherMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  teacherId  String
+
+  shortcode String @unique // 8-char random code
+  isActive  Boolean @default(true)
+
+  // Analytics
+  viewCount     Int @default(0)
+  ctaClickCount Int @default(0)
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@index([shortcode])
 }

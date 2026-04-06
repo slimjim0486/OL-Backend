@@ -25,6 +25,7 @@ import voiceRoutes from './voice.routes.js';
 import streamRoutes from './stream.routes.js';
 import materialsRoutes from './materials.routes.js';
 import eventsRoutes from './events.routes.js';
+import graphRoutes from './graph.routes.js';
 const router = Router();
 
 // Mount teacher routes
@@ -55,5 +56,6 @@ router.use('/voice', voiceRoutes);
 router.use('/stream', streamRoutes);
 router.use('/materials', materialsRoutes);
 router.use('/events', eventsRoutes);
+router.use('/graph', graphRoutes);
 
 export default router;

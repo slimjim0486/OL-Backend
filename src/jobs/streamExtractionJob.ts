@@ -8,6 +8,7 @@ import { logger } from '../utils/logger.js';
 import { prisma } from '../config/database.js';
 import { streamExtractionService } from '../services/teacher/streamExtractionService.js';
 import { sseService } from '../services/teacher/sseService.js';
+import { teachingGraphService } from '../services/teacher/teachingGraphService.js';
 import { TokenOperation } from '@prisma/client';
 
 const QUEUE_NAME = 'stream-extract';
@@ -123,6 +124,14 @@ async function processStreamExtractionJob(
         modelUsed: 'gemini-3-flash-preview',
       },
     });
+
+    // Update teaching graph with extracted tags
+    try {
+      await teachingGraphService.processStreamEntry(teacherId, entryId);
+    } catch (graphErr) {
+      logger.error('Failed to update graph from stream entry', { entryId, error: (graphErr as Error).message });
+      // Non-fatal: graph update failure shouldn't block extraction success
+    }
 
     // Send SSE event to teacher
     sseService.sendEvent(teacherId, {
