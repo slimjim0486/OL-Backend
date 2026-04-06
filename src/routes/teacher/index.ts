@@ -22,6 +22,9 @@ import agentRoutes from './agent.routes.js';
 import communicationRoutes from './communication.routes.js';
 import organizationRoutes from './organization.routes.js';
 import voiceRoutes from './voice.routes.js';
+import streamRoutes from './stream.routes.js';
+import materialsRoutes from './materials.routes.js';
+import eventsRoutes from './events.routes.js';
 const router = Router();
 
 // Mount teacher routes
@@ -47,5 +50,10 @@ router.use('/agent', agentRoutes);
 router.use('/communications', communicationRoutes);
 router.use('/organizations', organizationRoutes);
 router.use('/voice', voiceRoutes);
+
+// Teacher Intelligence Platform
+router.use('/stream', streamRoutes);
+router.use('/materials', materialsRoutes);
+router.use('/events', eventsRoutes);
 
 export default router;

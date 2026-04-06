@@ -1018,6 +1018,13 @@ model Teacher {
   // DTC Package Purchases
   packagePurchases PackagePurchase[]
 
+  // Teacher Intelligence Platform
+  streamEntries         TeacherStreamEntry[]
+  graphNodes            TeachingGraphNode[]
+  teacherMaterials      TeacherMaterial[]
+  nudges                TeacherNudge[]
+  preferenceProfile     TeacherPreferenceProfile?
+
   @@index([email])
   @@index([organizationId])
   @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
@@ -2496,6 +2503,10 @@ enum TokenOperation {
   PARENT_EMAIL_GENERATION // Parent communication emails
   REPORT_COMMENT_GENERATION // Report card comments
   REVIEW_SUMMARY_GENERATION // Monthly/yearly review summaries
+  STREAM_EXTRACTION // Teacher Intelligence: stream entry tag extraction
+  GRAPH_ANALYSIS // Teacher Intelligence: graph analysis
+  PREFERENCE_ANALYSIS // Teacher Intelligence: preference analysis
+  NUDGE_GENERATION // Teacher Intelligence: nudge generation
 }
 
 enum DailyGameType {
@@ -3587,4 +3598,228 @@ model PackageMaterial {
 
   @@index([purchaseId, status])
   @@index([weekId, sortOrder])
+}
+
+// ============================================================
+// TEACHER INTELLIGENCE PLATFORM
+// ============================================================
+
+model TeacherStreamEntry {
+  id        String @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Raw input
+  content String @db.Text
+
+  // AI-extracted metadata
+  extractedTags    Json?   // { subjects: [], topics: [], standards: [], signals: [] }
+  extractionStatus String  @default("pending") // pending, processing, completed, failed
+
+  // Teacher corrections to tags (training signal)
+  tagCorrections Json? // { dismissed: [], added: [], corrected: [] }
+
+  // Links to other entities (built by graph engine)
+  linkedMaterialIds String[]
+  linkedStandardIds String[]
+  linkedEntryIds    String[]
+
+  // Metadata
+  pinned   Boolean @default(false)
+  archived Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, createdAt(sort: Desc)])
+  @@index([teacherId, pinned])
+  @@index([teacherId, archived])
+}
+
+enum GraphNodeType {
+  TOPIC
+  STANDARD
+  MATERIAL
+  STREAM_ENTRY
+  STUDENT_GROUP
+}
+
+enum NodeStatus {
+  UNTOUCHED
+  MENTIONED
+  COVERED
+  DEEP
+}
+
+model TeachingGraphNode {
+  id        String @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Node identity
+  type       GraphNodeType
+  label      String
+  externalId String? // e.g., LearningStandard.id or TeacherMaterial.id
+
+  // Visual properties (calculated)
+  weight        Float      @default(0)
+  status        NodeStatus @default(UNTOUCHED)
+  lastTouchedAt DateTime?
+
+  // Connections
+  edges         TeachingGraphEdge[] @relation("sourceEdges")
+  incomingEdges TeachingGraphEdge[] @relation("targetEdges")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teacherId, type, label])
+  @@index([teacherId])
+  @@index([teacherId, type])
+}
+
+enum EdgeType {
+  MENTIONS
+  PREREQUISITE
+  RELATED
+  GENERATED_FROM
+  ASSESSED_BY
+}
+
+model TeachingGraphEdge {
+  id        String @id @default(cuid())
+  teacherId String
+
+  sourceId String
+  source   TeachingGraphNode @relation("sourceEdges", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId String
+  target   TeachingGraphNode @relation("targetEdges", fields: [targetId], references: [id], onDelete: Cascade)
+
+  // Edge properties
+  type   EdgeType
+  weight Float   @default(1)
+  isGap  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([sourceId, targetId, type])
+  @@index([teacherId])
+}
+
+enum IntelligenceMaterialType {
+  WORKSHEET
+  QUIZ
+  FLASHCARDS
+  INFOGRAPHIC
+  SUMMARY
+  RETEACH_ACTIVITY
+  PARENT_UPDATE
+  SUB_PLAN
+  LESSON_PLAN
+  AUDIO_UPDATE
+}
+
+model TeacherMaterial {
+  id        String @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Content
+  title   String
+  type    IntelligenceMaterialType
+  content Json
+  pdfUrl  String?
+
+  // Auto-tags (from generation context)
+  subject    String
+  topics     String[]
+  standards  String[]
+  gradeLevel String
+  curriculum String
+
+  // Source tracking
+  sourceStreamEntryId String?
+  sourceGraphNodeId   String?
+
+  // Teacher interaction
+  approved    Boolean @default(false)
+  edited      Boolean @default(false)
+  editDiff    Json?
+  rating      Int?
+  usedInClass Boolean @default(false)
+  notes       String? @db.Text
+
+  // Usage tracking
+  timesDownloaded Int @default(0)
+  timesShared     Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, createdAt(sort: Desc)])
+  @@index([teacherId, subject])
+  @@index([teacherId, type])
+}
+
+enum NudgeType {
+  CURRICULUM_GAP
+  PREFERENCE_LEARNED
+  PACING_AHEAD
+  PACING_BEHIND
+  RETEACH_SUGGESTION
+  COLLECTIVE_INSIGHT
+}
+
+model TeacherNudge {
+  id        String @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  type     NudgeType
+  content  String @db.Text
+  priority Int    @default(0)
+
+  // Context
+  relatedTopicId    String?
+  relatedStandardId String?
+
+  // State
+  shown     Boolean @default(false)
+  dismissed Boolean @default(false)
+  actedOn   Boolean @default(false)
+
+  showAfter DateTime  @default(now())
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([teacherId, shown, dismissed])
+}
+
+model TeacherPreferenceProfile {
+  id        String @id @default(cuid())
+  teacherId String @unique
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Learned preferences
+  vocabularyLevel     String?
+  preferredFormats    String[]
+  difficultyBias      String?
+  averageLessonLength String?
+
+  // Teaching rhythm patterns
+  weeklyPattern Json?
+  topicDuration Json?
+
+  // Edit patterns
+  commonEdits Json?
+
+  // Derived from stream analysis
+  reflectionFrequency String?
+  planningHorizon     String?
+
+  // Confidence scores for each preference dimension
+  confidenceScores Json?
+
+  lastUpdatedAt DateTime @updatedAt
 }

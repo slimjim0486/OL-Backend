@@ -65,3 +65,13 @@ export {
 } from './gradingBatchJob.js';
 
 export type { GradingBatchJobData } from './gradingBatchJob.js';
+
+// Teacher Intelligence Platform
+export {
+  initializeStreamExtractionJob,
+  shutdownStreamExtractionJob,
+  queueStreamExtraction,
+  getStreamExtractionQueueStatus,
+} from './streamExtractionJob.js';
+
+export type { StreamExtractionJobData } from './streamExtractionJob.js';

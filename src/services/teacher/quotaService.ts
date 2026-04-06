@@ -66,6 +66,10 @@ const OPERATION_ESTIMATES: Record<TokenOperation, number> = {
   PARENT_EMAIL_GENERATION: 2000,  // ~800 input + ~1.2K output (parent email)
   REPORT_COMMENT_GENERATION: 3000, // ~1K input + ~2K output (report card comments)
   REVIEW_SUMMARY_GENERATION: 5000, // ~2K input + ~3K output (monthly/yearly review)
+  STREAM_EXTRACTION: 500,           // ~200 input + ~300 output (tag extraction via Flash)
+  GRAPH_ANALYSIS: 500,              // ~200 input + ~300 output (graph analysis)
+  PREFERENCE_ANALYSIS: 500,         // ~200 input + ~300 output (preference analysis)
+  NUDGE_GENERATION: 500,            // ~200 input + ~300 output (nudge generation)
 };
 
 // =============================================================================
