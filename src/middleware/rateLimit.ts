@@ -104,3 +104,31 @@ export const emailRateLimit = rateLimit({
     next(new RateLimitError('Too many email requests, please try again later'));
   },
 });
+
+// Rate limit for stream entry creation (triggers AI extraction)
+export const streamRateLimit = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 20, // 20 entries per minute
+  message: { success: false, error: 'Too many stream entries, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  keyGenerator: (req) => getStandardKey(req),
+  handler: (_req, _res, next) => {
+    next(new RateLimitError('Too many stream entries, please slow down'));
+  },
+});
+
+// Rate limit for AI material generation (expensive Gemini calls)
+export const generationRateLimit = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // 5 generations per minute
+  message: { success: false, error: 'Generation limit reached, please wait a moment' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  keyGenerator: (req) => getStandardKey(req),
+  handler: (_req, _res, next) => {
+    next(new RateLimitError('Generation limit reached, please wait a moment'));
+  },
+});

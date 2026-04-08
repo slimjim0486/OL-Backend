@@ -26,6 +26,12 @@ import streamRoutes from './stream.routes.js';
 import materialsRoutes from './materials.routes.js';
 import eventsRoutes from './events.routes.js';
 import graphRoutes from './graph.routes.js';
+import nudgeRoutes from './nudges.routes.js';
+import importRoutes from './import.routes.js';
+import parentBridgeRoutes from './parentBridge.routes.js';
+import preferencesRoutes from './preferences.routes.js';
+import studentsRoutes from './students.routes.js';
+import canvasRoutes from './canvas.routes.js';
 const router = Router();
 
 // Mount teacher routes
@@ -57,5 +63,14 @@ router.use('/stream', streamRoutes);
 router.use('/materials', materialsRoutes);
 router.use('/events', eventsRoutes);
 router.use('/graph', graphRoutes);
+router.use('/nudges', nudgeRoutes);
+router.use('/import', importRoutes);
+router.use('/parent-bridge', parentBridgeRoutes);
+router.use('/preferences', preferencesRoutes);
+router.use('/students', studentsRoutes);
+router.use('/canvas', canvasRoutes);
+// NOTE: Public parent bridge routes (publicParentBridgeRoutes) must be mounted
+// separately in the main app at /api/public/parent-bridge/ without teacher auth.
+// Import from './routes/teacher/parentBridge.routes.js' and use publicParentBridgeRoutes.
 
 export default router;

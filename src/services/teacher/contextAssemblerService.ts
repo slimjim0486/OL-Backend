@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { agentMemoryService, AgentMemorySnapshot } from './agentMemoryService.js';
 import { getCurriculumConfig } from '../../config/curricula.js';
+import { prisma } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
 
 // ============================================
@@ -35,6 +36,7 @@ export interface AssembledContext {
   curriculumContext: string;
   styleContext: string;
   recentHistoryContext: string;
+  graphContext: string;
 }
 
 interface AssemblyOptions {
@@ -47,7 +49,9 @@ interface AssemblyOptions {
 const SECTION_LIMITS = {
   identity: 800,
   classroom: 1800,
-  curriculum: 1000,
+  // Bumped from 1000 → 1800 to fit 5 standard descriptions (~600 chars)
+  // on top of the existing curriculum state summary.
+  curriculum: 1800,
   style: 600,
   history: 1500,
 };
@@ -65,7 +69,86 @@ async function assembleContext(
   if (!snapshot) {
     return buildEmptyContext();
   }
-  return buildContextFromSnapshot(snapshot, taskType, opts);
+
+  // Pre-load curriculum standard descriptions for the recent "standardsTaught"
+  // codes across the teacher's relevant curriculum states. This lets
+  // buildCurriculumContext embed the actual learning-objective text in the
+  // prompt instead of just the notation codes. Async prefetch here keeps
+  // buildCurriculumContext itself synchronous and side-effect free.
+  const standardDescriptions = await loadStandardDescriptionsForStates(
+    snapshot.curriculumStates,
+    opts?.subject
+  );
+
+  const context = buildContextFromSnapshot(
+    snapshot,
+    taskType,
+    opts,
+    standardDescriptions
+  );
+
+  // Layer 6: Teaching Graph Context (async, non-fatal)
+  try {
+    const graphCtx = await buildGraphContext(teacherId);
+    if (graphCtx) {
+      context.graphContext = graphCtx;
+      // Re-build system prompt with graph context included
+      context.systemPrompt += `\n\n=== TEACHING GRAPH ===\n${graphCtx}`;
+    }
+  } catch (err) {
+    logger.warn('Failed to build graph context', { teacherId, error: (err as Error).message });
+  }
+
+  return context;
+}
+
+/**
+ * Look up the actual learning-objective text for the codes in each relevant
+ * curriculum state's standardsTaught. Returns a Map<notation, description> so
+ * buildCurriculumContext can enrich its output without becoming async.
+ * Caps lookup to the first 5 codes per state and at most the first 3 states,
+ * matching buildCurriculumContext's own slicing behavior.
+ */
+async function loadStandardDescriptionsForStates(
+  states: CurriculumState[],
+  subject?: string
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!states.length) return map;
+
+  // Mirror buildCurriculumContext's "3 relevant states, 5 codes each" slicing
+  let relevant = states;
+  if (subject) {
+    const filtered = states.filter((s) => s.subject === subject);
+    if (filtered.length) relevant = filtered;
+  }
+
+  const codesToFetch = new Set<string>();
+  for (const state of relevant.slice(0, 3)) {
+    if (state.standardsTaught?.length) {
+      for (const code of state.standardsTaught.slice(0, 5)) {
+        if (code) codesToFetch.add(code);
+      }
+    }
+  }
+  if (codesToFetch.size === 0) return map;
+
+  try {
+    const rows = await prisma.learningStandard.findMany({
+      where: { notation: { in: [...codesToFetch] } },
+      select: { notation: true, description: true },
+    });
+    for (const row of rows) {
+      if (row.notation) map.set(row.notation, row.description);
+    }
+  } catch (err) {
+    logger.warn('Failed to load standard descriptions for curriculum context', {
+      codes: codesToFetch.size,
+      error: (err as Error).message,
+    });
+  }
+
+  return map;
 }
 
 async function assembleChatContext(
@@ -78,7 +161,8 @@ async function assembleChatContext(
 function buildContextFromSnapshot(
   snapshot: AgentMemorySnapshot,
   taskType: TaskType,
-  opts?: AssemblyOptions
+  opts?: AssemblyOptions,
+  standardDescriptions?: Map<string, string>
 ): AssembledContext {
   const identityContext = buildIdentityContext(snapshot.agent);
   const classroomContext = buildClassroomContext(
@@ -91,7 +175,8 @@ function buildContextFromSnapshot(
     snapshot.curriculumStates,
     snapshot.agent,
     taskType,
-    opts?.subject
+    opts?.subject,
+    standardDescriptions
   );
   const styleContext = buildStyleContext(snapshot.styleProfile, taskType);
   const recentHistoryContext = buildHistoryContext(
@@ -115,6 +200,7 @@ function buildContextFromSnapshot(
     curriculumContext,
     styleContext,
     recentHistoryContext,
+    graphContext: '', // Populated async in assembleContext()
   };
 }
 
@@ -238,7 +324,8 @@ function buildCurriculumContext(
   states: CurriculumState[],
   agent: TeacherAgent,
   taskType: TaskType,
-  subject?: string
+  subject?: string,
+  standardDescriptions?: Map<string, string>
 ): string {
   if (!states.length) return '';
 
@@ -275,7 +362,26 @@ function buildCurriculumContext(
     }
 
     if (state.standardsTaught?.length) {
-      lines.push(`  Standards taught (${state.standardsTaught.length}): ${state.standardsTaught.slice(0, 5).join(', ')}${state.standardsTaught.length > 5 ? '...' : ''}`);
+      // Prefer enriched descriptions when the pre-loaded map is available.
+      const recentCodes = state.standardsTaught.slice(0, 5);
+      const enrichedLines: string[] = [];
+      if (standardDescriptions && standardDescriptions.size > 0) {
+        for (const code of recentCodes) {
+          const description = standardDescriptions.get(code);
+          if (description) {
+            enrichedLines.push(`    - ${code}: ${truncate(description, 140)}`);
+          }
+        }
+      }
+      if (enrichedLines.length > 0) {
+        lines.push(
+          `  Standards covered (${state.standardsTaught.length} total${state.standardsTaught.length > 5 ? ', showing ' + enrichedLines.length : ''}):`
+        );
+        for (const el of enrichedLines) lines.push(el);
+      } else {
+        // Fallback: codes-only when descriptions unavailable (empty table, old codes, etc.)
+        lines.push(`  Standards taught (${state.standardsTaught.length}): ${recentCodes.join(', ')}${state.standardsTaught.length > 5 ? '...' : ''}`);
+      }
     }
     if (state.standardsAssessed?.length) {
       lines.push(`  Standards assessed: ${state.standardsAssessed.length}`);
@@ -474,6 +580,74 @@ function buildSystemPrompt(
 }
 
 // ============================================
+// GRAPH CONTEXT (Layer 6 — Teaching Intelligence)
+// ============================================
+
+async function buildGraphContext(teacherId: string): Promise<string> {
+  // Get top TOPIC nodes by weight (most-discussed topics)
+  const topTopics = await prisma.teachingGraphNode.findMany({
+    where: { teacherId, type: 'TOPIC', weight: { gt: 0 } },
+    orderBy: { weight: 'desc' },
+    take: 10,
+    select: { label: true, weight: true, subject: true, linkedStandardCodes: true },
+  });
+
+  if (topTopics.length === 0) return '';
+
+  // Get recently active topic nodes
+  const recentTopics = await prisma.teachingGraphNode.findMany({
+    where: { teacherId, type: 'TOPIC', lastTouchedAt: { not: null } },
+    orderBy: { lastTouchedAt: 'desc' },
+    take: 5,
+    select: { label: true, subject: true },
+  });
+
+  // Calculate coverage for gap context
+  const teacher = await prisma.teacher.findUnique({
+    where: { id: teacherId },
+    select: { preferredCurriculum: true, gradeRange: true, primarySubject: true },
+  });
+
+  const parts: string[] = [];
+
+  // Most-discussed topics (high weight = many stream entries + materials)
+  const heavy = topTopics.filter(n => n.weight >= 8);
+  if (heavy.length > 0) {
+    parts.push(`Deeply explored topics: ${heavy.map(n => n.label).join(', ')}`);
+  }
+
+  const moderate = topTopics.filter(n => n.weight >= 3 && n.weight < 8);
+  if (moderate.length > 0) {
+    parts.push(`Well-covered topics: ${moderate.map(n => n.label).join(', ')}`);
+  }
+
+  const light = topTopics.filter(n => n.weight > 0 && n.weight < 3);
+  if (light.length > 0) {
+    parts.push(`Briefly mentioned: ${light.map(n => n.label).join(', ')}`);
+  }
+
+  // Recent teaching activity
+  if (recentTopics.length > 0) {
+    parts.push(`Recently active: ${recentTopics.map(n => n.label).join(', ')}`);
+  }
+
+  // Coverage summary (invisible curriculum metadata)
+  if (teacher?.preferredCurriculum) {
+    const allCoveredCodes = new Set<string>();
+    for (const topic of topTopics) {
+      for (const code of topic.linkedStandardCodes) {
+        allCoveredCodes.add(code);
+      }
+    }
+    if (allCoveredCodes.size > 0) {
+      parts.push(`Standards touched: ${allCoveredCodes.size} curriculum standards linked to teaching topics`);
+    }
+  }
+
+  return truncate(parts.join('\n'), 1200);
+}
+
+// ============================================
 // UTILITY
 // ============================================
 
@@ -491,6 +665,7 @@ function buildEmptyContext(): AssembledContext {
     curriculumContext: '',
     styleContext: '',
     recentHistoryContext: '',
+    graphContext: '',
   };
 }
 

@@ -45,6 +45,14 @@ import { scheduleDailyGamesRefresh } from './jobs/gamesDailyRefreshJob.js';
 import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/monthlyReviewJob.js';
 import { scheduleDownloadReminders } from './jobs/downloadReminderJob.js';
 import { scheduleContentDripDelivery } from './jobs/contentDripCronJob.js';
+import { scheduleNudgeGenerationJob, shutdownNudgeGenerationJob } from './jobs/nudgeGenerationJob.js';
+import { schedulePreferenceUpdateJob, shutdownPreferenceUpdateJob } from './jobs/preferenceUpdateJob.js';
+import { scheduleStreakResetJob, shutdownStreakResetJob } from './jobs/streakResetJob.js';
+import { scheduleWeeklyDigestJob, shutdownWeeklyDigestJob } from './jobs/weeklyDigestJob.js';
+import {
+  scheduleCollectiveInsightsAggregationJob,
+  shutdownCollectiveInsightsAggregationJob,
+} from './jobs/collectiveInsightsAggregationJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -52,6 +60,7 @@ import leadsRoutes from './routes/leads.routes.js';
 import referralRoutes from './routes/referral.routes.js';
 import shareRoutes from './routes/share.routes.js';
 import publicResourceRoutes from './routes/public/resources.routes.js';
+import { publicParentBridgeRoutes } from './routes/teacher/parentBridge.routes.js';
 import curriculumRoutes from './routes/curriculum.routes.js';
 import progressRoutes from './routes/progress.routes.js';
 import voiceRoutes from './routes/voice.routes.js';
@@ -72,6 +81,10 @@ import {
   shutdownContentDripJob,
   initializeGradingBatchJob,
   shutdownGradingBatchJob,
+  initializeStreamExtractionJob,
+  shutdownStreamExtractionJob,
+  initializeMaterialImportJob,
+  shutdownMaterialImportJob,
 } from './jobs/index.js';
 
 // Validate environment
@@ -253,6 +266,9 @@ app.use('/api/share', shareRoutes);
 // Public resource routes (unauthenticated - shared teacher content)
 app.use('/api/public/resources', publicResourceRoutes);
 
+// Public parent bridge routes (unauthenticated - shared material updates for parents)
+app.use('/api/public/parent-bridge', publicParentBridgeRoutes);
+
 // Curriculum routes (standards mapping)
 app.use('/api/curricula', curriculumRoutes);
 
@@ -348,6 +364,22 @@ async function startServer(): Promise<void> {
       logger.warn('Batch grading job initialization skipped');
     }
 
+    // Initialize stream extraction job queue (Intelligence Platform tag extraction)
+    try {
+      await initializeStreamExtractionJob();
+      logger.info('Stream extraction job initialized');
+    } catch (error) {
+      logger.warn('Stream extraction job initialization skipped');
+    }
+
+    // Initialize material import job queue (Intelligence Platform imports)
+    try {
+      await initializeMaterialImportJob();
+      logger.info('Material import job initialized');
+    } catch (error) {
+      logger.warn('Material import job initialization skipped');
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
@@ -366,6 +398,26 @@ async function startServer(): Promise<void> {
       // Schedule monthly review auto-generation (1st of month, 6 AM UTC)
       scheduleMonthlyReviewJob();
       logger.info('Monthly review job scheduled');
+
+      // Intelligence Platform: daily nudge generation (6 AM UTC)
+      scheduleNudgeGenerationJob();
+      logger.info('Nudge generation job scheduled');
+
+      // Intelligence Platform: weekly preference analysis (Sunday midnight UTC)
+      schedulePreferenceUpdateJob();
+      logger.info('Preference update job scheduled');
+
+      // Intelligence Platform: hourly streak reset (timezone-aware)
+      scheduleStreakResetJob();
+      logger.info('Streak reset job scheduled');
+
+      // Intelligence Platform: weekly digest email (Sunday 6 PM UTC)
+      scheduleWeeklyDigestJob();
+      logger.info('Weekly digest job scheduled');
+
+      // Intelligence Platform: weekly collective insights aggregation (Sunday 7 AM UTC)
+      scheduleCollectiveInsightsAggregationJob();
+      logger.info('Collective insights aggregation job scheduled');
 
       // Schedule download reminders (10 AM daily, 1h after Brevo checks)
       scheduleDownloadReminders();
@@ -390,6 +442,13 @@ async function startServer(): Promise<void> {
           await shutdownWeeklyPrepJob();
           await shutdownContentDripJob();
           await shutdownGradingBatchJob();
+          await shutdownStreamExtractionJob();
+          await shutdownMaterialImportJob();
+          shutdownNudgeGenerationJob();
+          shutdownPreferenceUpdateJob();
+          shutdownStreakResetJob();
+          shutdownWeeklyDigestJob();
+          shutdownCollectiveInsightsAggregationJob();
           shutdownMonthlyReviewJob();
           await prisma.$disconnect();
           await redis.quit();

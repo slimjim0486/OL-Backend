@@ -6,6 +6,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { IntelligenceMaterialType } from '@prisma/client';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { generationRateLimit } from '../../middleware/rateLimit.js';
 import { materialService } from '../../services/teacher/materialService.js';
 
 const router = Router();
@@ -131,7 +132,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // Generate material from stream entry
-router.post('/generate/from-stream/:entryId', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/generate/from-stream/:entryId', generationRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = generateFromStreamSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -139,6 +140,21 @@ router.post('/generate/from-stream/:entryId', async (req: Request, res: Response
     }
     const teacherId = (req as any).teacher.id;
     const material = await materialService.generateFromStream(teacherId, req.params.entryId, parsed.data);
+    res.status(201).json(material);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Generate material from graph node
+router.post('/generate/from-node/:nodeId', generationRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = generateFromStreamSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.errors });
+    }
+    const teacherId = (req as any).teacher.id;
+    const material = await materialService.generateFromNode(teacherId, req.params.nodeId, parsed.data);
     res.status(201).json(material);
   } catch (error) {
     next(error);
@@ -180,6 +196,29 @@ router.post('/:id/used', async (req: Request, res: Response, next: NextFunction)
   try {
     const teacherId = (req as any).teacher.id;
     const material = await materialService.markMaterialUsed(teacherId, req.params.id);
+    res.json(material);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Record outcome after using material in class
+const outcomeSchema = z.object({
+  outcomeRating: z.enum(['WORKED', 'NEEDED_TWEAKS', 'DIDNT_WORK']),
+  outcomeNotes: z.string().max(2000).optional(),
+});
+
+router.post('/:id/outcome', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = outcomeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.errors });
+    }
+    const teacherId = (req as any).teacher.id;
+    const material = await materialService.updateMaterial(teacherId, req.params.id, {
+      ...parsed.data,
+      outcomeRatedAt: new Date(),
+    } as any);
     res.json(material);
   } catch (error) {
     next(error);

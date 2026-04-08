@@ -75,3 +75,37 @@ export {
 } from './streamExtractionJob.js';
 
 export type { StreamExtractionJobData } from './streamExtractionJob.js';
+
+export {
+  initializeMaterialImportJob,
+  shutdownMaterialImportJob,
+  queueMaterialImport,
+} from './materialImportJob.js';
+
+export type { MaterialImportJobData } from './materialImportJob.js';
+
+// Intelligence Platform Cron Jobs
+export {
+  scheduleNudgeGenerationJob,
+  shutdownNudgeGenerationJob,
+  triggerNudgeGeneration,
+} from './nudgeGenerationJob.js';
+
+export {
+  schedulePreferenceUpdateJob,
+  shutdownPreferenceUpdateJob,
+  triggerPreferenceUpdate,
+} from './preferenceUpdateJob.js';
+
+// Phase 2: Streak & Digest Cron Jobs
+export {
+  scheduleStreakResetJob,
+  shutdownStreakResetJob,
+  triggerStreakReset,
+} from './streakResetJob.js';
+
+export {
+  scheduleWeeklyDigestJob,
+  shutdownWeeklyDigestJob,
+  triggerWeeklyDigest,
+} from './weeklyDigestJob.js';

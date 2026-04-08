@@ -2,6 +2,7 @@
 // CRUD for stream entries, full-text search, tag corrections
 import { prisma } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
+import { streakService } from './streakService.js';
 
 // ============================================
 // TYPES
@@ -37,7 +38,7 @@ export interface TagCorrections {
 // CRUD
 // ============================================
 
-async function createEntry(teacherId: string, input: CreateStreamEntryInput) {
+async function createEntry(teacherId: string, input: CreateStreamEntryInput & { timezone?: string }) {
   const entry = await prisma.teacherStreamEntry.create({
     data: {
       teacherId,
@@ -45,6 +46,13 @@ async function createEntry(teacherId: string, input: CreateStreamEntryInput) {
       extractionStatus: 'pending',
     },
   });
+
+  // Update streak (non-fatal)
+  try {
+    await streakService.updateStreak(teacherId, input.timezone);
+  } catch (err) {
+    logger.error('Failed to update streak', { teacherId, error: (err as Error).message });
+  }
 
   logger.info('Stream entry created', { teacherId, entryId: entry.id });
   return entry;

@@ -32,6 +32,7 @@ async function verifyJurisdictions(): Promise<VerificationResult> {
     'IB_MYP_DP',
     'IB_PYP',
     'INDIAN_CBSE',
+    'INDIAN_ICSE',
     'UK_NATIONAL_CURRICULUM',
     'US_C3',
     'US_COMMON_CORE',
@@ -207,6 +208,7 @@ async function verifyJurisdictionMappings(): Promise<VerificationResult> {
     { curriculumType: 'BRITISH', subject: undefined, expectedCode: 'UK_NATIONAL_CURRICULUM' },
     { curriculumType: 'IB', subject: undefined, expectedCode: 'IB_PYP' },
     { curriculumType: 'INDIAN_CBSE', subject: undefined, expectedCode: 'INDIAN_CBSE' },
+    { curriculumType: 'INDIAN_ICSE', subject: undefined, expectedCode: 'INDIAN_ICSE' },
   ];
 
   const issues: string[] = [];

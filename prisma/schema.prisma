@@ -1025,6 +1025,21 @@ model Teacher {
   nudges                TeacherNudge[]
   preferenceProfile     TeacherPreferenceProfile?
   materialImportJobs    MaterialImportJob[]
+  studentMentions       StudentMention[]
+
+  // Intelligence Platform — Streak & Reflection
+  currentStreak       Int       @default(0)
+  longestStreak       Int       @default(0)
+  lastActiveDate      DateTime? // Date of last stream entry (teacher's timezone)
+  reflectionTime      String    @default("15:30") // HH:MM in teacher's timezone
+  reflectionEnabled   Boolean   @default(true)
+
+  // Intelligence Platform — Inline Completions (Phase 4)
+  completionsEnabled   Boolean  @default(true)   // Teacher can opt out
+  completionsEligible  Boolean  @default(false)  // System sets true when thresholds met
+
+  // Intelligence Platform — Canvas (Phase 4-5)
+  canvases             TeacherCanvas[]
 
   @@index([email])
   @@index([organizationId])
@@ -3629,6 +3644,9 @@ model TeacherStreamEntry {
   pinned   Boolean @default(false)
   archived Boolean @default(false)
 
+  // Back-relation for graph node
+  graphNode TeachingGraphNode?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3638,18 +3656,10 @@ model TeacherStreamEntry {
 }
 
 enum GraphNodeType {
-  TOPIC
-  STANDARD
-  MATERIAL
-  STREAM_ENTRY
-  STUDENT_GROUP
-}
-
-enum NodeStatus {
-  UNTOUCHED
-  MENTIONED
-  COVERED
-  DEEP
+  TOPIC           // "Fractions", "Water cycle" — the anchor nodes, sized by weight
+  STREAM_ENTRY    // A teacher's note from the stream
+  MATERIAL        // A generated or imported teaching material
+  // STANDARD removed — standards are invisible metadata on TOPIC nodes (linkedStandardCodes)
 }
 
 model TeachingGraphNode {
@@ -3659,12 +3669,22 @@ model TeachingGraphNode {
 
   // Node identity
   type       GraphNodeType
-  label      String
-  externalId String? // e.g., LearningStandard.id or TeacherMaterial.id
+  label      String         // Human-readable: "Fractions", "Water cycle", NOT "UK.KS2.Y6.MA.NFR.8"
+
+  // For TOPIC nodes: invisible curriculum metadata (never displayed as nodes)
+  linkedStandardCodes String[] // e.g. ["UK.KS2.Y6.MA.NFR.1", "UK.KS2.Y6.MA.NFR.2"]
+
+  // For STREAM_ENTRY nodes: reference back to the stream entry
+  streamEntryId String? @unique
+  streamEntry   TeacherStreamEntry? @relation(fields: [streamEntryId], references: [id])
+
+  // For MATERIAL nodes: reference back to the material
+  materialId    String? @unique
+  material      TeacherMaterial? @relation(fields: [materialId], references: [id])
 
   // Visual properties (calculated)
-  weight        Float      @default(0)
-  status        NodeStatus @default(UNTOUCHED)
+  weight        Float    @default(0)   // Determines node size (TOPIC: count of connected entries + materials)
+  subject       String?                // For color coding: "mathematics", "science", "english"
   lastTouchedAt DateTime?
 
   // Connections
@@ -3680,11 +3700,12 @@ model TeachingGraphNode {
 }
 
 enum EdgeType {
-  MENTIONS
-  PREREQUISITE
-  RELATED
-  GENERATED_FROM
-  ASSESSED_BY
+  ABOUT           // Stream entry or material is ABOUT a topic
+  GENERATED_FROM  // Material was generated from a stream entry
+  RELATED         // Two topics co-occur in stream entries
+  SEQUENCE        // Teacher covered topic A then topic B (temporal)
+  REFLECTS_ON     // Stream entry reflects on a material's outcome
+  PREREQUISITE    // Directed: prereq_topic → dependent_topic (derived from LearningStandard.prerequisites)
 }
 
 model TeachingGraphEdge {
@@ -3699,7 +3720,6 @@ model TeachingGraphEdge {
   // Edge properties
   type   EdgeType
   weight Float   @default(1)
-  isGap  Boolean @default(false)
 
   createdAt DateTime @default(now())
 
@@ -3762,6 +3782,9 @@ model TeacherMaterial {
   // Parent bridge
   sharedUpdate SharedParentUpdate?
 
+  // Back-relation for graph node
+  graphNode TeachingGraphNode?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3783,6 +3806,7 @@ enum NudgeType {
   PACING_BEHIND
   RETEACH_SUGGESTION
   COLLECTIVE_INSIGHT
+  PREREQUISITE_GAP   // "X is a prereq for next week's Y" — derived from LearningStandard.prerequisites
 }
 
 model TeacherNudge {
@@ -3798,6 +3822,15 @@ model TeacherNudge {
   relatedTopicId    String?
   relatedStandardId String?
 
+  // Structured action context — populated by each nudge generator with the
+  // routing data the frontend needs when the teacher clicks "Take Action".
+  // Shape (frontend-readable):
+  //   { actionType: 'view_standards' | 'reteach_material' | 'view_weekly_prep'
+  //                 | 'view_preferences' | 'view_insight',
+  //     subject?: string, topicLabel?: string, standardCode?: string,
+  //     materialId?: string, materialTitle?: string }
+  actionContext Json?
+
   // State
   shown     Boolean @default(false)
   dismissed Boolean @default(false)
@@ -3809,6 +3842,49 @@ model TeacherNudge {
   createdAt DateTime @default(now())
 
   @@index([teacherId, shown, dismissed])
+}
+
+// Cross-teacher aggregated insights keyed by curriculum standard code.
+// Populated by the weekly collectiveInsightsAggregationJob. Read by
+// nudgeService.generateCollectiveInsightNudges to surface community signal
+// as COLLECTIVE_INSIGHT nudges.
+//
+// Privacy: rows are only written once MIN_TEACHER_THRESHOLD distinct
+// teachers have contributed signals for a (standardCode, curriculum, grade,
+// signalType) tuple. No teacherIds, student names, or raw content are
+// persisted — only aggregated counts and themes that themselves appear
+// across multiple teachers. Anonymization is enforced at aggregation time.
+model CollectiveInsight {
+  id String @id @default(cuid())
+
+  // Scope — the join key from teacher topics via linkedStandardCodes
+  standardCode   String // e.g. "UK.KS2.Y6.MA.NFR.8"
+  curriculumType String // "BRITISH", "AMERICAN", "IB", "INDIAN_CBSE", ...
+  gradeRange     String // Matches Teacher.gradeRange verbatim: "6", "6-8", "K-2"
+  signalType     String // "reteach", "success", "concern", "observation", "idea"
+
+  // Aggregated counts (k-anonymity enforced: teacherCount >= threshold)
+  teacherCount Int // Distinct teachers who contributed
+  signalCount  Int // Total raw signals aggregated
+
+  // Aggregated patterns (JSON structure):
+  //   {
+  //     themes: [ { phrase: "visual fraction bars", teacherCount: 4 }, ... ],
+  //     topTopics: [ "fraction bars", "equivalent fractions" ],
+  //     signalTypeBreakdown: { reteach: 12, success: 3 }
+  //   }
+  // Individual phrases must themselves appear in >= 2 teachers' signals
+  // before being retained, so no single teacher's language is exposed.
+  aggregatedPatterns Json
+
+  lastComputedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([standardCode, curriculumType, gradeRange, signalType])
+  @@index([curriculumType, gradeRange])
+  @@index([standardCode])
+  @@index([lastComputedAt])
 }
 
 model TeacherPreferenceProfile {
@@ -3885,4 +3961,66 @@ model SharedParentUpdate {
   expiresAt DateTime?
 
   @@index([shortcode])
+}
+
+// ============================================================
+// TEACHER INTELLIGENCE — UNIT PLANNING CANVAS (Phase 4-5)
+// ============================================================
+
+model TeacherCanvas {
+  id          String  @id @default(cuid())
+  teacherId   String
+  teacher     Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  title       String            // "Autumn Term Plan", "Year 3 Maths Sequence"
+  description String?
+
+  // Full canvas state as JSON (viewport, items, connections)
+  canvasData  Json              @default("{\"viewport\":{\"x\":0,\"y\":0,\"zoom\":1},\"items\":[],\"connections\":[]}")
+
+  // Metadata
+  isArchived  Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([teacherId])
+  @@index([teacherId, isArchived])
+}
+
+// ============================================
+// Student Entity Linking (Phase 2)
+// ============================================
+
+model StudentMention {
+  id              String   @id @default(cuid())
+  teacherId       String
+  teacher         Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Identity (normalized)
+  name            String            // "Ahmed", "Sophie", "Blue group"
+  type            StudentEntityType // INDIVIDUAL, GROUP
+  normalizedName  String            // Lowercase, trimmed: "ahmed", "blue group"
+
+  // All stream entries mentioning this student/group
+  streamEntryIds  String[]
+
+  // Derived context (built up over time from mentions)
+  subjects        String[]   // Subjects mentioned in connection with this student
+  topics          String[]   // Topics mentioned in connection with this student
+  signals         String[]   // Aggregated signals: "struggling with fractions", "strong reader"
+
+  // Metadata
+  mentionCount     Int       @default(1)
+  firstMentionedAt DateTime  @default(now())
+  lastMentionedAt  DateTime  @default(now())
+
+  @@unique([teacherId, normalizedName])
+  @@index([teacherId])
+  @@index([teacherId, normalizedName])
+}
+
+enum StudentEntityType {
+  INDIVIDUAL
+  GROUP
 }
