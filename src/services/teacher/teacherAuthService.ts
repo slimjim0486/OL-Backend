@@ -1104,6 +1104,13 @@ export const teacherAuthService = {
         schoolName: teacher.schoolName,
         primarySubject: teacher.primarySubject,
         gradeRange: teacher.gradeRange,
+        preferredCurriculum: teacher.preferredCurriculum,
+        authProvider: teacher.authProvider,
+        createdAt: teacher.createdAt,
+        // Settings — Term Dates & Sharing
+        termDates: teacher.termDates,
+        showNameOnShared: teacher.showNameOnShared,
+        allowRemix: teacher.allowRemix,
         // Notification preferences
         notifyProductUpdates: teacher.notifyProductUpdates,
         notifyTipsAndTutorials: teacher.notifyTipsAndTutorials,
@@ -1132,6 +1139,10 @@ export const teacherAuthService = {
       schoolName?: string | null;
       primarySubject?: string | null;
       gradeRange?: string | null;
+      preferredCurriculum?: string | null;
+      termDates?: unknown;
+      showNameOnShared?: boolean;
+      allowRemix?: boolean;
       notifyProductUpdates?: boolean;
       notifyTipsAndTutorials?: boolean;
       notifyUsageAlerts?: boolean;
@@ -1146,6 +1157,14 @@ export const teacherAuthService = {
     if (data.schoolName !== undefined) updateData.schoolName = data.schoolName;
     if (data.primarySubject !== undefined) updateData.primarySubject = data.primarySubject;
     if (data.gradeRange !== undefined) updateData.gradeRange = data.gradeRange;
+    if (data.preferredCurriculum !== undefined) updateData.preferredCurriculum = data.preferredCurriculum;
+
+    // Term dates (JSON array of { label, start, end })
+    if (data.termDates !== undefined) updateData.termDates = data.termDates;
+
+    // Sharing preferences
+    if (data.showNameOnShared !== undefined) updateData.showNameOnShared = data.showNameOnShared;
+    if (data.allowRemix !== undefined) updateData.allowRemix = data.allowRemix;
 
     // Notification preferences
     if (data.notifyProductUpdates !== undefined) updateData.notifyProductUpdates = data.notifyProductUpdates;
@@ -1164,6 +1183,10 @@ export const teacherAuthService = {
         schoolName: true,
         primarySubject: true,
         gradeRange: true,
+        preferredCurriculum: true,
+        termDates: true,
+        showNameOnShared: true,
+        allowRemix: true,
         notifyProductUpdates: true,
         notifyTipsAndTutorials: true,
         notifyUsageAlerts: true,

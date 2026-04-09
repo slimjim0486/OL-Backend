@@ -662,6 +662,19 @@ const updateProfileSchema = z.object({
     emptyStringToUndefined,
     z.enum(['ELEMENTARY', 'MIDDLE', 'HIGH', 'MIXED']).optional().nullable()
   ),
+  preferredCurriculum: z.preprocess(
+    emptyStringToUndefined,
+    z.enum(['AMERICAN', 'BRITISH', 'IB', 'INDIAN_CBSE', 'INDIAN_ICSE', 'ARABIC']).optional().nullable()
+  ),
+  // Term dates (array of { label, start, end })
+  termDates: z.array(z.object({
+    label: z.string().max(50),
+    start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })).optional().nullable(),
+  // Sharing preferences
+  showNameOnShared: z.boolean().optional(),
+  allowRemix: z.boolean().optional(),
   // Notification preferences
   notifyProductUpdates: z.boolean().optional(),
   notifyTipsAndTutorials: z.boolean().optional(),
@@ -686,6 +699,10 @@ router.patch(
         schoolName,
         primarySubject,
         gradeRange,
+        preferredCurriculum,
+        termDates,
+        showNameOnShared,
+        allowRemix,
         notifyProductUpdates,
         notifyTipsAndTutorials,
         notifyUsageAlerts,
@@ -698,6 +715,10 @@ router.patch(
         schoolName,
         primarySubject,
         gradeRange,
+        preferredCurriculum,
+        termDates,
+        showNameOnShared,
+        allowRemix,
         notifyProductUpdates,
         notifyTipsAndTutorials,
         notifyUsageAlerts,

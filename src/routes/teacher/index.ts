@@ -34,6 +34,7 @@ import studentsRoutes from './students.routes.js';
 import canvasRoutes from './canvas.routes.js';
 import searchRoutes from './search.routes.js';
 import notificationRoutes from './notifications.routes.js';
+import dataRoutes from './data.routes.js';
 const router = Router();
 
 // Mount teacher routes
@@ -73,6 +74,7 @@ router.use('/students', studentsRoutes);
 router.use('/canvas', canvasRoutes);
 router.use('/search', searchRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/data', dataRoutes);
 // NOTE: Public parent bridge routes (publicParentBridgeRoutes) must be mounted
 // separately in the main app at /api/public/parent-bridge/ without teacher auth.
 // Import from './routes/teacher/parentBridge.routes.js' and use publicParentBridgeRoutes.

@@ -1055,6 +1055,11 @@ model Teacher {
   notifications        TeacherNotification[]
   emailStreakEnabled   Boolean  @default(true)   // Streak milestone emails
 
+  // Settings — Term Dates & Sharing
+  termDates            Json?     // Array of { label, start, end } term date objects
+  showNameOnShared     Boolean   @default(true)  // Show teacher name on shared materials
+  allowRemix           Boolean   @default(true)  // Allow others to remix shared materials
+
   @@index([email])
   @@index([organizationId])
   @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
