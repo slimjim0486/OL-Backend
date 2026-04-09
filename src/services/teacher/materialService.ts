@@ -6,6 +6,7 @@ import { genAI, TEACHER_CONTENT_SAFETY_SETTINGS } from '../../config/gemini.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
 import { contentGenerationService } from './contentGenerationService.js';
+import { editAnalysisService } from './editAnalysisService.js';
 import { sseService } from './sseService.js';
 
 const FLASH_MODEL = config.gemini.models.flash;
@@ -282,11 +283,23 @@ async function generateFromStream(
   const gradeLevel = teacher?.gradeRange || teacher?.agentProfile?.gradesTaught?.[0] || '';
   const curriculum = teacher?.preferredCurriculum || teacher?.agentProfile?.curriculumType || '';
 
+  // Edit-derived preferences (Phase 4.9 — Edit Intelligence Loop).
+  // Injected into the generation context so the model generates in this
+  // teacher's voice from the start. Non-fatal on failure.
+  const [editPrefs, typeEditPrefs] = await Promise.all([
+    editAnalysisService.buildEditPreferencesContext(teacherId).catch(() => ''),
+    editAnalysisService
+      .buildTypeSpecificEditContext(teacherId, input.materialType)
+      .catch(() => ''),
+  ]);
+
   // Build additional context from stream entry
   const additionalContext = [
     `Teacher's note: "${entry.content}"`,
+    editPrefs,
+    typeEditPrefs,
     input.additionalContext || '',
-  ].filter(Boolean).join('\n');
+  ].filter(Boolean).join('\n\n');
 
   let generatedContent: any;
   let title = '';
@@ -507,6 +520,14 @@ async function generateFromNode(
     }
   }
 
+  // Edit-derived preferences (Phase 4.9 — Edit Intelligence Loop)
+  const [editPrefs, typeEditPrefs] = await Promise.all([
+    editAnalysisService.buildEditPreferencesContext(teacherId).catch(() => ''),
+    editAnalysisService
+      .buildTypeSpecificEditContext(teacherId, input.materialType)
+      .catch(() => ''),
+  ]);
+
   // Build context from node and related entries
   const contextParts = [
     `Generate content about: "${node.label}" (${node.type})`,
@@ -514,6 +535,8 @@ async function generateFromNode(
     relatedEntries.length > 0
       ? `Teacher's related notes:\n${relatedEntries.map(e => `- ${e.content.slice(0, 200)}`).join('\n')}`
       : '',
+    editPrefs,
+    typeEditPrefs,
     input.additionalContext || '',
   ].filter(Boolean).join('\n\n');
 

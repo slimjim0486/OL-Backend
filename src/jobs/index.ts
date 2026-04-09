@@ -84,6 +84,16 @@ export {
 
 export type { MaterialImportJobData } from './materialImportJob.js';
 
+// Phase 4.9: Edit Intelligence Loop
+export {
+  initializeEditAnalysisJob,
+  shutdownEditAnalysisJob,
+  queueEditAnalysis,
+  getEditAnalysisQueueStatus,
+} from './editAnalysisJob.js';
+
+export type { EditAnalysisJobData } from './editAnalysisJob.js';
+
 // Intelligence Platform Cron Jobs
 export {
   scheduleNudgeGenerationJob,

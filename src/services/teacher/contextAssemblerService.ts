@@ -99,6 +99,28 @@ async function assembleContext(
     logger.warn('Failed to build graph context', { teacherId, error: (err as Error).message });
   }
 
+  // Layer 7: Edit Intelligence Loop preferences (Phase 4.9 — async, non-fatal).
+  // Injects learned tendencies and patterns from the teacher's own edits on
+  // previously generated materials so the model matches their voice from
+  // the start.
+  try {
+    // Dynamic import to avoid a circular dependency: editAnalysisService
+    // imports prisma + gemini, contextAssembler is imported by anything that
+    // assembles a prompt.
+    const { editAnalysisService } = await import('./editAnalysisService.js');
+    const editPrefs = await editAnalysisService.buildEditPreferencesContext(
+      teacherId
+    );
+    if (editPrefs) {
+      context.systemPrompt += `\n\n=== LEARNED FROM EDITS ===\n${editPrefs}`;
+    }
+  } catch (err) {
+    logger.warn('Failed to build edit preferences context', {
+      teacherId,
+      error: (err as Error).message,
+    });
+  }
+
   return context;
 }
 

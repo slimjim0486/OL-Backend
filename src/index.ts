@@ -85,6 +85,8 @@ import {
   shutdownStreamExtractionJob,
   initializeMaterialImportJob,
   shutdownMaterialImportJob,
+  initializeEditAnalysisJob,
+  shutdownEditAnalysisJob,
 } from './jobs/index.js';
 
 // Validate environment
@@ -380,6 +382,14 @@ async function startServer(): Promise<void> {
       logger.warn('Material import job initialization skipped');
     }
 
+    // Initialize edit analysis job queue (Phase 4.9 — Edit Intelligence Loop)
+    try {
+      await initializeEditAnalysisJob();
+      logger.info('Edit analysis job initialized');
+    } catch (error) {
+      logger.warn('Edit analysis job initialization skipped');
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
@@ -444,6 +454,7 @@ async function startServer(): Promise<void> {
           await shutdownGradingBatchJob();
           await shutdownStreamExtractionJob();
           await shutdownMaterialImportJob();
+          await shutdownEditAnalysisJob();
           shutdownNudgeGenerationJob();
           shutdownPreferenceUpdateJob();
           shutdownStreakResetJob();

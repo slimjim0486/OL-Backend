@@ -1026,6 +1026,7 @@ model Teacher {
   preferenceProfile     TeacherPreferenceProfile?
   materialImportJobs    MaterialImportJob[]
   studentMentions       StudentMention[]
+  materialEdits         MaterialEdit[]
 
   // Intelligence Platform — Streak & Reflection
   currentStreak       Int       @default(0)
@@ -3785,6 +3786,9 @@ model TeacherMaterial {
   // Back-relation for graph node
   graphNode TeachingGraphNode?
 
+  // Edit Intelligence Loop (Phase 4.9)
+  edits MaterialEdit[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3912,7 +3916,101 @@ model TeacherPreferenceProfile {
   // Confidence scores for each preference dimension
   confidenceScores Json?
 
+  // ============================================
+  // Edit Intelligence Loop (Phase 4.9)
+  // ============================================
+
+  // Aggregate edit activity counters
+  totalEdits          Int      @default(0)
+  totalApprovedNoEdit Int      @default(0)   // Materials approved/downloaded/shared without edits
+  editRate            Float?                  // edits / (edits + approvedNoEdit) — lower is better
+
+  // Learned tendencies from edit diffs (analyzed by Gemini per edit, aggregated here)
+  vocabularyTendency  String?   // "simplifies_consistently", "elevates_consistently", "neutral"
+  difficultyTendency  String?   // "makes_easier_consistently", "makes_harder_consistently", "neutral"
+  lengthTendency      String?   // "shortens_consistently", "lengthens_consistently", "neutral"
+  toneTendency        String?   // "more_formal", "more_casual", "more_encouraging", "neutral"
+
+  // Specific learned patterns with confidence scores. Array of objects:
+  // [
+  //   { pattern: "prefers visual models over abstract notation", confidence: 0.85, sampleSize: 12 },
+  //   { pattern: "always adds real-world examples", confidence: 0.72, sampleSize: 8 },
+  // ]
+  learnedPatterns     Json?
+
+  // Per-material-type edit preferences:
+  // {
+  //   WORKSHEET: { avgEditsPerMaterial: 2.1, commonEdits: ["simplifies vocabulary", "adds visual supports"] },
+  //   QUIZ: { avgEditsPerMaterial: 0.8, commonEdits: ["reduces question count"] },
+  // }
+  typePreferences     Json?
+
+  // When we last told the teacher "I've learned your preferences" (Ollie whisper)
+  lastLearnedNotifiedAt DateTime?
+
   lastUpdatedAt DateTime @updatedAt
+}
+
+// ============================================
+// Edit Intelligence Loop (Phase 4.9)
+// ============================================
+// Every edit the teacher makes to a generated material is recorded here.
+// An async analysis job sends the diff to Gemini, extracts signals, and
+// aggregates learned patterns into TeacherPreferenceProfile. These
+// preferences are then fed back into the generation context so future
+// materials need less editing.
+
+model MaterialEdit {
+  id         String @id @default(cuid())
+  materialId String
+  material   TeacherMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  teacherId  String
+  teacher    Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // What happened
+  editType MaterialEditType
+
+  // What changed
+  sectionType     String?  // "introduction", "questions", "vocabulary", "instructions", "examples", etc.
+  originalContent String?  @db.Text  // What Ollie generated
+  newContent      String?  @db.Text  // What the teacher changed it to (null for DELETE / pending REGENERATE)
+
+  // AI-extracted learning (populated async by editAnalysisJob)
+  // Expected shape:
+  // {
+  //   vocabularyChange?: "simplified" | "elevated" | "no_change",
+  //   difficultyChange?: "easier" | "harder" | "no_change",
+  //   contentChange?: "added_examples" | "removed_fluff" | "changed_approach"
+  //                 | "added_scaffolding" | "added_extension" | "other",
+  //   formatChange?: "shorter" | "longer" | "restructured" | "no_change",
+  //   toneChange?: "more_formal" | "more_casual" | "more_encouraging" | "no_change",
+  //   specificPatterns?: string[],
+  //   // For DELETE type:
+  //   likelyReason?: "too_advanced" | "too_basic" | "off_topic" | "redundant"
+  //                | "wrong_format" | "unnecessary",
+  //   // For ADD type:
+  //   missingElement?: "examples" | "scaffolding" | "visual_support"
+  //                  | "real_world_context" | "differentiation" | "instructions"
+  //                  | "extension_activity" | "other",
+  // }
+  extractedSignals Json?
+
+  // Analysis status
+  analyzed   Boolean  @default(false)
+  analyzedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([teacherId, createdAt(sort: Desc)])
+  @@index([materialId])
+  @@index([teacherId, analyzed])
+}
+
+enum MaterialEditType {
+  REGENERATE   // Regenerated a section entirely — strong negative signal
+  DELETE       // Removed content — content should not have existed
+  ADD          // Added new content manually — generation missed something
+  TEXT_EDIT    // Modified existing text in place — wording/tone/vocabulary change
 }
 
 // ============================================================
