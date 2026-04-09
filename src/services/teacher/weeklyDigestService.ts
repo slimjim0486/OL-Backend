@@ -7,6 +7,16 @@ import { logger } from '../../utils/logger.js';
 
 const resend = config.email.apiKey ? new Resend(config.email.apiKey) : null;
 
+function getStartOfWeek(): Date {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const diff = day === 0 ? 6 : day - 1; // Monday = start of week
+  const monday = new Date(now);
+  monday.setUTCDate(monday.getUTCDate() - diff);
+  monday.setUTCHours(0, 0, 0, 0);
+  return monday;
+}
+
 // ============================================
 // TYPES
 // ============================================
@@ -291,8 +301,37 @@ async function processWeeklyDigests(): Promise<{ sent: number; skipped: number; 
         continue;
       }
 
+      // Check email cap (max 2/week) via unified notification tracking
+      const startOfWeek = getStartOfWeek();
+      const emailCount = await prisma.teacherNotification.count({
+        where: {
+          teacherId: teacher.id,
+          channel: 'EMAIL',
+          emailSentAt: { gte: startOfWeek },
+        },
+      });
+      if (emailCount >= 2) {
+        skipped++;
+        continue;
+      }
+
       const success = await sendDigestEmail(digest);
       if (success) {
+        // Track in unified notification system
+        try {
+          await prisma.teacherNotification.create({
+            data: {
+              teacherId: teacher.id,
+              type: 'WEEKLY_DIGEST',
+              channel: 'EMAIL',
+              title: 'Your week in teaching',
+              body: `${digest.noteCount} notes, ${digest.topicCount} topics, ${digest.materialCount} materials this week.`,
+              emailSentAt: new Date(),
+            },
+          });
+        } catch {
+          // Non-fatal: tracking failure doesn't affect email delivery
+        }
         sent++;
       } else {
         failed++;

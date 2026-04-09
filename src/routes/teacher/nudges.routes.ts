@@ -4,6 +4,7 @@
  */
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { nudgeService } from '../../services/teacher/nudgeService.js';
 
 const router = Router();
@@ -15,7 +16,7 @@ router.use(authenticateTeacher);
 //                 ?channel=graph  → returns all graph-side nudges (curriculum
 //                                    gap, pacing) for graph-embedded display
 //                 (no channel)    → legacy behaviour: all active nudges
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireFeature('ollie-whispers'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const channelParam = typeof req.query.channel === 'string' ? req.query.channel : undefined;

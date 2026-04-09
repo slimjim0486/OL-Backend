@@ -5,10 +5,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { canvasService } from '../../services/teacher/canvasService.js';
 
 const router = Router();
 router.use(authenticateTeacher);
+router.use(requireFeature('canvas'));
 
 // ============================================================================
 // Validation Schemas

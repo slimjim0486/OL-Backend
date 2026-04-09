@@ -935,7 +935,15 @@ model Teacher {
   subscriptionStatus    SubscriptionStatus      @default(ACTIVE)
   stripeCustomerId      String?
   stripeSubscriptionId  String? // Active Stripe subscription ID
+  stripePriceId         String?
   subscriptionExpiresAt DateTime?
+  subscriptionInterval  SubscriptionInterval?
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  generationsUsedThisMonth Int      @default(0)
+  generationCountResetAt   DateTime @default(now())
+  grandfatheredUntil    DateTime?
+  isFoundingMember      Boolean   @default(false)
 
   // Trial tracking (free-tier unlimited trial)
   trialStartedAt DateTime? // When unlimited trial began
@@ -992,6 +1000,7 @@ model Teacher {
 
   // Onboarding
   tutorialCompletedAt DateTime? // When dashboard tutorial was completed (null = not completed)
+  onboardingCompleted Boolean   @default(false) // Intelligence platform onboarding completed
 
   // Brevo behavioral email tracking
   lastActiveAt DateTime? // Track last activity for inactivity triggers
@@ -1042,10 +1051,24 @@ model Teacher {
   // Intelligence Platform — Canvas (Phase 4-5)
   canvases             TeacherCanvas[]
 
+  // Unified Notification System
+  notifications        TeacherNotification[]
+  emailStreakEnabled   Boolean  @default(true)   // Streak milestone emails
+
   @@index([email])
   @@index([organizationId])
   @@index([subscriptionStatus, quotaResetDate]) // Quota reset cron job
+  @@index([generationCountResetAt])
   @@index([lastActiveAt]) // For inactivity queries
+}
+
+model FoundingMemberOffer {
+  id           String   @id @default(cuid())
+  maxSlots     Int      @default(500)
+  claimedSlots Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model TeacherCreditPackPurchase {
@@ -2439,6 +2462,11 @@ enum TeacherSubscriptionTier {
   FREE // 30K tokens/month
   BASIC // 500K tokens/month
   PROFESSIONAL // 2M tokens/month
+}
+
+enum SubscriptionInterval {
+  MONTHLY
+  ANNUAL
 }
 
 enum TeacherDownloadProductType {
@@ -4121,4 +4149,63 @@ model StudentMention {
 enum StudentEntityType {
   INDIVIDUAL
   GROUP
+}
+
+// ============================================
+// Unified Notification System
+// ============================================
+
+model TeacherNotification {
+  id        String @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  type    TeacherNotificationType
+  channel TeacherNotificationChannel
+
+  title       String               // Short heading (bell/email)
+  body        String   @db.Text    // Full message
+  actionUrl   String?              // Deep link (e.g., "/library/abc123")
+  actionLabel String?              // CTA text (e.g., "View material")
+  metadata    Json?                // Flexible payload (materialId, streakCount, etc.)
+
+  read      Boolean @default(false)
+  dismissed Boolean @default(false)
+
+  // Scheduling
+  showAfter DateTime  @default(now())
+  expiresAt DateTime?
+
+  // Email tracking
+  emailSentAt DateTime?
+  emailId     String?              // Brevo/Resend message ID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, channel, read, dismissed])
+  @@index([teacherId, channel, showAfter, expiresAt])
+  @@index([teacherId, type])
+}
+
+enum TeacherNotificationType {
+  // Bell notifications
+  MATERIAL_SAVED
+  MATERIAL_REMIXED
+  STREAK_MILESTONE
+  TERM_WRAPPED_READY
+
+  // Email-only
+  WEEKLY_DIGEST
+  STREAK_REENGAGEMENT
+
+  // Stream whispers (routed to existing nudge system)
+  FIRST_NOTE_WELCOME
+}
+
+enum TeacherNotificationChannel {
+  STREAM_WHISPER
+  BELL
+  EMAIL
+  PUSH
 }

@@ -5,13 +5,14 @@
  */
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { prisma } from '../../config/database.js';
 
 const router = Router();
 router.use(authenticateTeacher);
 
 // Get teacher's learned preference profile
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireFeature('preference-learning'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const profile = await prisma.teacherPreferenceProfile.findUnique({
@@ -32,7 +33,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 // Surfaces everything the Edit Intelligence Loop has learned: tendencies,
 // specific patterns with confidence, per-type preferences, and the edit
 // rate metric that tells the teacher how much the system is improving.
-router.get('/edit-patterns', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/edit-patterns', requireFeature('preference-learning'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const profile = await prisma.teacherPreferenceProfile.findUnique({

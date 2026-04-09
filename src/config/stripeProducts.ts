@@ -1,216 +1,164 @@
-/**
- * Stripe Products Configuration - Teacher Portal
- *
- * Pricing Model (Teacher Portal):
- * - Free to generate + preview unlimited content
- * - Free exports:
- *   - 3 downloads/exports per month
- * - Subscriptions:
- *   - Teacher Unlimited (BASIC): $9.99/month or $95.99/year
- *   - Teacher Pro Seat (PROFESSIONAL): $29.99/month or $239.88/year
- */
-
-import { TeacherSubscriptionTier, TeacherDownloadProductType } from '@prisma/client';
-
-// =============================================================================
-// ENVIRONMENT VARIABLE LOADING
-// =============================================================================
+import { TeacherDownloadProductType } from '@prisma/client';
+import {
+  PublicSubscriptionTier,
+  mapDbTierToPublicTier,
+  mapPublicTierToDbTier,
+} from '../services/teacher/subscriptionTiers.js';
 
 const env = process.env;
 
-// =============================================================================
-// SUBSCRIPTION PRODUCTS
-// =============================================================================
-
 export interface SubscriptionProduct {
   name: string;
-  tier: TeacherSubscriptionTier;
-  priceMonthly: number;    // USD
-  priceAnnual: number;     // USD
+  publicTier: PublicSubscriptionTier;
+  internalTier: ReturnType<typeof mapPublicTierToDbTier>;
+  priceMonthly: number;
+  priceAnnual: number;
   priceIdMonthly: string;
   priceIdAnnual: string;
   features: string[];
 }
 
-// Teacher plan (BASIC/Teacher Unlimited) - sourced from UNLIMITED price IDs.
-const teacherMonthlyPriceId =
-  env.STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY || '';
+const PLUS_MONTHLY_PRICE_ID = env.STRIPE_PLUS_MONTHLY_PRICE_ID || '';
+const PLUS_ANNUAL_PRICE_ID = env.STRIPE_PLUS_ANNUAL_PRICE_ID || '';
+const PRO_MONTHLY_PRICE_ID = env.STRIPE_PRO_MONTHLY_PRICE_ID || '';
+const PRO_ANNUAL_PRICE_ID = env.STRIPE_PRO_ANNUAL_PRICE_ID || '';
+const FOUNDING_PLUS_ANNUAL_PRICE_ID = env.STRIPE_FOUNDING_PLUS_ANNUAL_PRICE_ID || '';
 
-const teacherAnnualPriceId =
-  env.STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL || '';
-
-const TEACHER_PRODUCT: SubscriptionProduct = {
-  name: 'Teacher Unlimited',
-  tier: 'BASIC',
-  priceMonthly: 9.99,
-  priceAnnual: 95.99,
-  priceIdMonthly: teacherMonthlyPriceId,
-  priceIdAnnual: teacherAnnualPriceId,
+const FREE_PRODUCT: SubscriptionProduct = {
+  name: 'OrbitLearn Free',
+  publicTier: 'FREE',
+  internalTier: mapPublicTierToDbTier('FREE'),
+  priceMonthly: 0,
+  priceAnnual: 0,
+  priceIdMonthly: '',
+  priceIdAnnual: '',
   features: [
-    '1 teacher seat',
-    'Unlimited downloads (all formats)',
-    'All answer keys + infographics',
-    'Google Slides + PowerPoint exports',
-    'Cancel anytime',
+    'Unlimited Stream, Graph, and Library access',
+    'Student linking, backlinks, streaks, reflection, and digest',
+    '5 material generations each month',
   ],
 };
 
-// Teacher Pro plan (PROFESSIONAL).
-const teacherProMonthlyPriceId = env.STRIPE_PRICE_TEACHER_PRO_MONTHLY || '';
-const teacherProAnnualPriceId = env.STRIPE_PRICE_TEACHER_PRO_ANNUAL || '';
-
-const TEACHER_PRO_PRODUCT: SubscriptionProduct = {
-  name: 'Teacher Pro',
-  tier: 'PROFESSIONAL',
-  priceMonthly: 29.99,
-  priceAnnual: 239.88,
-  priceIdMonthly: teacherProMonthlyPriceId,
-  priceIdAnnual: teacherProAnnualPriceId,
+const PLUS_PRODUCT: SubscriptionProduct = {
+  name: 'OrbitLearn Plus',
+  publicTier: 'PLUS',
+  internalTier: mapPublicTierToDbTier('PLUS'),
+  priceMonthly: 12.99,
+  priceAnnual: 103.9,
+  priceIdMonthly: PLUS_MONTHLY_PRICE_ID,
+  priceIdAnnual: PLUS_ANNUAL_PRICE_ID,
   features: [
-    '1 teacher seat',
-    'Everything in Teacher',
-    'AI grading + batch processing',
-    'Audio class updates',
-    'Advanced analytics + year-end handover PDF',
-    'Cancel anytime',
+    'Unlimited generation',
+    'Ollie whispers and preference learning',
+    'Material import, sharing, and voice input',
   ],
 };
 
-export const SUBSCRIPTION_PRODUCTS: Record<TeacherSubscriptionTier, SubscriptionProduct> = {
+const PRO_PRODUCT: SubscriptionProduct = {
+  name: 'OrbitLearn Pro',
+  publicTier: 'PRO',
+  internalTier: mapPublicTierToDbTier('PRO'),
+  priceMonthly: 24.99,
+  priceAnnual: 199.9,
+  priceIdMonthly: PRO_MONTHLY_PRICE_ID,
+  priceIdAnnual: PRO_ANNUAL_PRICE_ID,
+  features: [
+    'Everything in Plus',
+    'Priority queue and inline completions',
+    'Canvas, advanced analytics, and parent bridge export',
+  ],
+};
+
+export const SUBSCRIPTION_PRODUCTS = {
   FREE: {
-    name: 'Free to Create',
-    tier: 'FREE',
-    priceMonthly: 0,
-    priceAnnual: 0,
-    priceIdMonthly: '',
-    priceIdAnnual: '',
-    features: [
-      'Generate unlimited lessons, quizzes, and flashcards',
-      'Full-quality in-app previews',
-      'Save everything to your library',
-      '3 free downloads/exports each month',
-    ],
+    ...FREE_PRODUCT,
   },
-  BASIC: TEACHER_PRODUCT,
-  PROFESSIONAL: TEACHER_PRO_PRODUCT,
-};
+  PLUS: {
+    ...PLUS_PRODUCT,
+  },
+  PRO: {
+    ...PRO_PRODUCT,
+  },
+  BASIC: {
+    ...PLUS_PRODUCT,
+  },
+  PROFESSIONAL: {
+    ...PRO_PRODUCT,
+  },
+} as const;
 
-// =============================================================================
-// ONE-TIME DOWNLOAD PRODUCTS
-// =============================================================================
+export const FOUNDING_MEMBER_PRODUCT = {
+  publicTier: 'PLUS' as const,
+  interval: 'ANNUAL' as const,
+  price: 79,
+  priceId: FOUNDING_PLUS_ANNUAL_PRICE_ID,
+};
 
 export interface DownloadProduct {
   name: string;
   type: TeacherDownloadProductType;
-  price: number; // USD
+  price: number;
   priceId: string;
   includes: string[];
 }
 
 export const DOWNLOAD_PRODUCTS: Record<TeacherDownloadProductType, DownloadProduct> = {
   PDF: {
-    name: 'Lesson PDF Download',
+    name: 'Legacy Lesson PDF Download',
     type: 'PDF',
-    price: 1.99,
-    priceId: env.STRIPE_PRICE_TEACHER_PDF || '',
-    includes: ['Lesson PDF'],
+    price: 0,
+    priceId: '',
+    includes: ['Deprecated under subscription billing'],
   },
   BUNDLE: {
-    name: 'Full Lesson Bundle',
+    name: 'Legacy Full Lesson Bundle',
     type: 'BUNDLE',
-    price: 2.99,
-    priceId: env.STRIPE_PRICE_TEACHER_BUNDLE || '',
-    includes: [
-      'Lesson PDF',
-      'Quiz + Answer Key',
-      'Flashcards',
-      'Infographic',
-      'Google Slides',
-      'PowerPoint',
-    ],
+    price: 0,
+    priceId: '',
+    includes: ['Deprecated under subscription billing'],
   },
 };
 
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Get subscription product by tier
- */
-export function getProductByTier(tier: TeacherSubscriptionTier): SubscriptionProduct {
-  return SUBSCRIPTION_PRODUCTS[tier];
+export function getProductByTier(tier: PublicSubscriptionTier | ReturnType<typeof mapPublicTierToDbTier>) {
+  const publicTier = tier === 'BASIC' || tier === 'PROFESSIONAL'
+    ? mapDbTierToPublicTier(tier)
+    : tier;
+  return SUBSCRIPTION_PRODUCTS[publicTier];
 }
 
-/**
- * Get subscription product by price ID
- */
 export function getProductByPriceId(priceId: string): SubscriptionProduct | null {
   if (!priceId) return null;
+  return Object.values(SUBSCRIPTION_PRODUCTS).find(
+    (product) => product.priceIdMonthly === priceId || product.priceIdAnnual === priceId
+  ) || null;
+}
 
-  // Explicit mapping first
-  if (priceId === teacherMonthlyPriceId || priceId === teacherAnnualPriceId) {
-    return TEACHER_PRODUCT;
+export function getTierFromPriceId(priceId: string): ReturnType<typeof mapPublicTierToDbTier> | null {
+  if (priceId === FOUNDING_PLUS_ANNUAL_PRICE_ID) {
+    return mapPublicTierToDbTier('PLUS');
   }
-  if (priceId === teacherProMonthlyPriceId || priceId === teacherProAnnualPriceId) {
-    return TEACHER_PRO_PRODUCT;
+  return getProductByPriceId(priceId)?.internalTier || null;
+}
+
+export function getPublicTierFromPriceId(priceId: string): PublicSubscriptionTier | null {
+  if (priceId === FOUNDING_PLUS_ANNUAL_PRICE_ID) {
+    return 'PLUS';
   }
-
-  return null;
+  return getProductByPriceId(priceId)?.publicTier || null;
 }
 
-/**
- * Get download product by type
- */
-export function getDownloadProduct(type: TeacherDownloadProductType): DownloadProduct {
-  return DOWNLOAD_PRODUCTS[type];
-}
-
-/**
- * Get download product by price ID
- */
-export function getDownloadProductByPriceId(priceId: string): DownloadProduct | null {
-  return Object.values(DOWNLOAD_PRODUCTS).find(product => product.priceId === priceId) || null;
-}
-
-/**
- * Check if a price ID is for an annual subscription
- */
 export function isAnnualSubscription(priceId: string): boolean {
-  return priceId === teacherAnnualPriceId ||
-    priceId === teacherProAnnualPriceId;
+  return priceId === PLUS_ANNUAL_PRICE_ID ||
+    priceId === PRO_ANNUAL_PRICE_ID ||
+    priceId === FOUNDING_PLUS_ANNUAL_PRICE_ID;
 }
 
-/**
- * Get tier from price ID
- */
-export function getTierFromPriceId(priceId: string): TeacherSubscriptionTier | null {
-  const product = getProductByPriceId(priceId);
-  return product?.tier || null;
-}
-
-// =============================================================================
-// VALIDATION
-// =============================================================================
-
-/**
- * Validate that all required price IDs are configured
- */
 export function validateStripeConfig(): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
-
-  if (!teacherMonthlyPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_MONTHLY');
-  }
-  if (!teacherAnnualPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_UNLIMITED_ANNUAL');
-  }
-  if (!teacherProMonthlyPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_PRO_MONTHLY');
-  }
-  if (!teacherProAnnualPriceId) {
-    missing.push('STRIPE_PRICE_TEACHER_PRO_ANNUAL');
-  }
+  if (!PLUS_MONTHLY_PRICE_ID) missing.push('STRIPE_PLUS_MONTHLY_PRICE_ID');
+  if (!PLUS_ANNUAL_PRICE_ID) missing.push('STRIPE_PLUS_ANNUAL_PRICE_ID');
+  if (!PRO_MONTHLY_PRICE_ID) missing.push('STRIPE_PRO_MONTHLY_PRICE_ID');
+  if (!PRO_ANNUAL_PRICE_ID) missing.push('STRIPE_PRO_ANNUAL_PRICE_ID');
 
   return {
     valid: missing.length === 0,
@@ -218,18 +166,14 @@ export function validateStripeConfig(): { valid: boolean; missing: string[] } {
   };
 }
 
-// =============================================================================
-// EXPORTS
-// =============================================================================
-
 export default {
   SUBSCRIPTION_PRODUCTS,
+  FOUNDING_MEMBER_PRODUCT,
   DOWNLOAD_PRODUCTS,
   getProductByTier,
   getProductByPriceId,
-  getDownloadProduct,
-  getDownloadProductByPriceId,
-  isAnnualSubscription,
   getTierFromPriceId,
+  getPublicTierFromPriceId,
+  isAnnualSubscription,
   validateStripeConfig,
 };

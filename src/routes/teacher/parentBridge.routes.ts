@@ -8,6 +8,7 @@
  */
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { parentBridgeService } from '../../services/teacher/parentBridgeService.js';
 
 // ============================================================================
@@ -16,6 +17,7 @@ import { parentBridgeService } from '../../services/teacher/parentBridgeService.
 
 const authRouter = Router();
 authRouter.use(authenticateTeacher);
+authRouter.use(requireFeature('parent-bridge'));
 
 // Create share link for a material
 authRouter.post('/share/:materialId', async (req: Request, res: Response, next: NextFunction) => {

@@ -5,6 +5,7 @@ import { authenticateTeacher, optionalTeacherAuth } from '../../middleware/teach
 import { validateInput } from '../../middleware/validateInput.js';
 import { z } from 'zod';
 import { TeacherContentType, Subject, ShareCategory } from '@prisma/client';
+import { prisma } from '../../config/database.js';
 
 const router = Router();
 
@@ -242,6 +243,27 @@ router.post(
         req.teacher!.id
       );
 
+      // Notify original author (non-fatal)
+      try {
+        const original = await prisma.teacherContent.findUnique({
+          where: { id },
+          select: { teacherId: true, title: true },
+        });
+        if (original && original.teacherId !== req.teacher!.id) {
+          const { notificationService } = await import('../../services/teacher/notificationService.js');
+          await notificationService.send({
+            teacherId: original.teacherId,
+            type: 'MATERIAL_REMIXED',
+            title: 'Material remixed',
+            body: `A teacher remixed your "${original.title || 'material'}"`,
+            actionUrl: `/library`,
+            metadata: { contentId: id, remixedByTeacherId: req.teacher!.id },
+          });
+        }
+      } catch {
+        // Non-fatal
+      }
+
       res.json(remix);
     } catch (error) {
       next(error);
@@ -261,6 +283,27 @@ router.post(
       const { id } = req.params;
 
       await contentSharingService.likeContent(id, req.teacher!.id);
+
+      // Notify original author (non-fatal)
+      try {
+        const content = await prisma.teacherContent.findUnique({
+          where: { id },
+          select: { teacherId: true, title: true },
+        });
+        if (content && content.teacherId !== req.teacher!.id) {
+          const { notificationService } = await import('../../services/teacher/notificationService.js');
+          await notificationService.send({
+            teacherId: content.teacherId,
+            type: 'MATERIAL_SAVED',
+            title: 'Material saved',
+            body: `A teacher saved your "${content.title || 'material'}"`,
+            actionUrl: `/library`,
+            metadata: { contentId: id, savedByTeacherId: req.teacher!.id },
+          });
+        }
+      } catch {
+        // Non-fatal
+      }
 
       res.json({ success: true });
     } catch (error) {

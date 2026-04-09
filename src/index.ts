@@ -46,6 +46,7 @@ import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/month
 import { scheduleDownloadReminders } from './jobs/downloadReminderJob.js';
 import { scheduleContentDripDelivery } from './jobs/contentDripCronJob.js';
 import { scheduleNudgeGenerationJob, shutdownNudgeGenerationJob } from './jobs/nudgeGenerationJob.js';
+import { scheduleNotificationCleanupJob, shutdownNotificationCleanupJob } from './jobs/notificationCleanupJob.js';
 import { schedulePreferenceUpdateJob, shutdownPreferenceUpdateJob } from './jobs/preferenceUpdateJob.js';
 import { scheduleStreakResetJob, shutdownStreakResetJob } from './jobs/streakResetJob.js';
 import { scheduleWeeklyDigestJob, shutdownWeeklyDigestJob } from './jobs/weeklyDigestJob.js';
@@ -431,6 +432,10 @@ async function startServer(): Promise<void> {
       scheduleWeeklyDigestJob();
       logger.info('Weekly digest job scheduled');
 
+      // Intelligence Platform: notification cleanup (2 AM UTC daily)
+      scheduleNotificationCleanupJob();
+      logger.info('Notification cleanup job scheduled');
+
       // Intelligence Platform: weekly collective insights aggregation (Sunday 7 AM UTC)
       scheduleCollectiveInsightsAggregationJob();
       logger.info('Collective insights aggregation job scheduled');
@@ -462,6 +467,7 @@ async function startServer(): Promise<void> {
           await shutdownMaterialImportJob();
           await shutdownEditAnalysisJob();
           shutdownNudgeGenerationJob();
+          shutdownNotificationCleanupJob();
           shutdownPreferenceUpdateJob();
           shutdownStreakResetJob();
           shutdownWeeklyDigestJob();

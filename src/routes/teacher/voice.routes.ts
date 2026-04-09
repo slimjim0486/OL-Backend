@@ -2,6 +2,7 @@
 // No COPPA consent required (teachers are adults)
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { sttService } from '../../services/ai/sttService.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
@@ -12,6 +13,7 @@ const router = Router();
 
 // All teacher voice routes require authentication
 router.use(authenticateTeacher);
+router.use(requireFeature('voice-input'));
 
 // Multer for batch fallback (in-memory only)
 const upload = multer({

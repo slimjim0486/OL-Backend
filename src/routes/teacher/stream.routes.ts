@@ -6,6 +6,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { CurriculumType, Subject } from '@prisma/client';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { streamRateLimit } from '../../middleware/rateLimit.js';
 import { streamService } from '../../services/teacher/streamService.js';
 import { streakService } from '../../services/teacher/streakService.js';
@@ -26,14 +27,23 @@ router.get('/onboarding-status', async (req: Request, res: Response, next: NextF
     const teacherId = (req as any).teacher.id;
     const teacher = await prisma.teacher.findUnique({
       where: { id: teacherId },
-      select: { preferredCurriculum: true, gradeRange: true, primarySubject: true },
+      select: {
+        onboardingCompleted: true,
+        preferredCurriculum: true,
+        gradeRange: true,
+        primarySubject: true,
+        firstName: true,
+      },
     });
-    const isComplete = !!(teacher?.preferredCurriculum && teacher?.gradeRange && teacher?.primarySubject);
+    // Explicit flag preferred; fall back to field-presence check for teachers
+    // created before the onboardingCompleted column was added.
+    const isComplete = teacher?.onboardingCompleted
+      || !!(teacher?.preferredCurriculum && teacher?.gradeRange && teacher?.primarySubject);
     res.json({
       isComplete,
       curriculum: teacher?.preferredCurriculum || null,
-      gradeRange: teacher?.gradeRange || null,
-      primarySubject: teacher?.primarySubject || null,
+      gradeLevel: teacher?.gradeRange || null,
+      firstName: teacher?.firstName || null,
     });
   } catch (error) {
     next(error);
@@ -42,9 +52,8 @@ router.get('/onboarding-status', async (req: Request, res: Response, next: NextF
 
 const onboardingSchema = z.object({
   curriculum: z.nativeEnum(CurriculumType),
-  gradeRange: z.string().min(1),
-  primarySubject: z.nativeEnum(Subject),
-  additionalSubjects: z.array(z.nativeEnum(Subject)).optional(),
+  gradeLevel: z.string().min(1),
+  subjects: z.array(z.nativeEnum(Subject)).min(1),
 });
 
 // Complete onboarding: save profile + seed curriculum graph
@@ -55,23 +64,23 @@ router.post('/onboarding', async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ error: 'Validation failed', details: parsed.error.errors });
     }
     const teacherId = (req as any).teacher.id;
-    const { curriculum, gradeRange, primarySubject, additionalSubjects } = parsed.data;
+    const { curriculum, gradeLevel, subjects } = parsed.data;
 
-    // Update teacher profile
+    // Update teacher profile — first subject becomes primarySubject, gradeLevel stored in gradeRange
     await prisma.teacher.update({
       where: { id: teacherId },
       data: {
         preferredCurriculum: curriculum,
-        gradeRange,
-        primarySubject,
+        gradeRange: gradeLevel,
+        primarySubject: subjects[0],
+        onboardingCompleted: true,
       },
     });
 
     // Load curriculum metadata for invisible standard matching (no visible graph nodes created)
     try {
       const { teachingGraphService } = await import('../../services/teacher/teachingGraphService.js');
-      const subjects = [primarySubject, ...(additionalSubjects || [])];
-      await teachingGraphService.seedCurriculumMetadata(teacherId, curriculum, gradeRange, subjects);
+      await teachingGraphService.seedCurriculumMetadata(teacherId, curriculum, gradeLevel, subjects);
     } catch (err) {
       // Non-fatal: metadata loading can be retried
       logger.error('Failed to load curriculum metadata during onboarding', { error: (err as Error).message });
@@ -92,7 +101,7 @@ const completionSchema = z.object({
 });
 
 // POST /stream/complete — Get inline completion suggestion
-router.post('/complete', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/complete', requireFeature('inline-completions'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = completionSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -117,7 +126,7 @@ router.post('/complete', async (req: Request, res: Response, next: NextFunction)
 });
 
 // GET /stream/completions-status — Check if completions are enabled/eligible for this teacher
-router.get('/completions-status', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/completions-status', requireFeature('inline-completions'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const teacher = await prisma.teacher.findUnique({
@@ -134,7 +143,7 @@ router.get('/completions-status', async (req: Request, res: Response, next: Next
 });
 
 // PATCH /stream/completions-settings — Toggle completions on/off
-router.patch('/completions-settings', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/completions-settings', requireFeature('inline-completions'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
     const { enabled } = req.body;
@@ -193,6 +202,23 @@ router.post('/', streamRateLimit, async (req: Request, res: Response, next: Next
     } catch (err) {
       // Non-fatal: extraction will be retried or can be triggered manually
       logger.error('Failed to queue stream extraction', { error: (err as Error).message });
+    }
+
+    // First-entry Ollie whisper: welcome the teacher after their first note
+    try {
+      const entryCount = await prisma.teacherStreamEntry.count({ where: { teacherId } });
+      if (entryCount === 1) {
+        const { notificationService } = await import('../../services/teacher/notificationService.js');
+        await notificationService.send({
+          teacherId,
+          type: 'FIRST_NOTE_WELCOME',
+          title: 'Welcome',
+          body: "Nice first note! I've started building your teaching graph.",
+        });
+      }
+    } catch (err) {
+      // Non-fatal
+      logger.error('Failed to send first-note welcome', { error: (err as Error).message });
     }
 
     res.status(201).json(entry);

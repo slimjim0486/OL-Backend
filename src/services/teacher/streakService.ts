@@ -92,6 +92,24 @@ async function updateStreak(teacherId: string, timezone?: string | null) {
 
   logger.info('Streak updated', { teacherId, currentStreak, longestStreak, isNewDay });
 
+  // Send milestone notification for streak achievements
+  const MILESTONES = [7, 15, 30, 60, 100];
+  if (isNewDay && MILESTONES.includes(currentStreak)) {
+    try {
+      const { notificationService } = await import('./notificationService.js');
+      await notificationService.send({
+        teacherId,
+        type: 'STREAK_MILESTONE',
+        title: `${currentStreak}-day streak!`,
+        body: `You've been writing in your stream for ${currentStreak} days straight. Your teaching graph keeps getting richer.`,
+        metadata: { streakCount: currentStreak },
+      });
+    } catch (err) {
+      // Non-fatal
+      logger.error('Failed to send streak milestone notification', { error: (err as Error).message });
+    }
+  }
+
   return { currentStreak, longestStreak, isNewDay };
 }
 

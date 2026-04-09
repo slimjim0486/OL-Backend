@@ -5,11 +5,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
+import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { generationRateLimit } from '../../middleware/rateLimit.js';
 import { materialImportService } from '../../services/teacher/materialImportService.js';
 
 const router = Router();
 router.use(authenticateTeacher);
+router.use(requireFeature('material-import'));
 
 // ============================================================================
 // Validation Schemas
