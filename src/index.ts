@@ -401,9 +401,15 @@ async function startServer(): Promise<void> {
       scheduleBrevoInactivityChecks();
       logger.info('Brevo inactivity checks scheduled for 9:00 AM daily');
 
-      // Schedule daily games refresh (connections + icebreakers)
-      scheduleDailyGamesRefresh();
-      logger.info('Daily games refresh scheduled for 00:05 UTC');
+      // Legacy daily games cache warmers (connections / icebreakers / trivia /
+      // crossword). OrbitLearn 2.0 does not use these background refresh jobs,
+      // so keep them off unless explicitly re-enabled.
+      if (config.enableDailyGamesRefresh) {
+        scheduleDailyGamesRefresh();
+        logger.info('Daily games refresh scheduled for 00:05 UTC');
+      } else {
+        logger.info('Daily games refresh disabled');
+      }
 
       // Schedule monthly review auto-generation (1st of month, 6 AM UTC)
       scheduleMonthlyReviewJob();

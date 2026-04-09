@@ -118,6 +118,9 @@ export const config = {
 
   // Schedulers
   // In multi-instance deployments, run cron jobs on a single instance (or keep enabled but rely on Redis locks).
+  // OrbitLearn 2.0 does not use the legacy daily games cache warmers unless
+  // explicitly re-enabled for the older teacher games surface.
+  enableDailyGamesRefresh: process.env.ENABLE_DAILY_GAMES_REFRESH === 'true',
   enableWeeklyPrepScheduler: process.env.ENABLE_WEEKLY_PREP_SCHEDULER !== 'false',
 } as const;
 
