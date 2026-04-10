@@ -846,7 +846,7 @@ export const teacherAuthService = {
 
     // Build the verification URL
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const verificationUrl = `${frontendUrl}/teacher/verify-email-link?token=${verificationToken}`;
+    const verificationUrl = `${frontendUrl}/verify-email-link?token=${verificationToken}`;
 
     // Send the verification email with link
     const sent = await emailService.sendTeacherVerificationLinkEmail(

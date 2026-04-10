@@ -49,7 +49,7 @@ function buildDripContentTemplate(params: {
     drip_day0_lesson_pptx: {
       subject: `${safeTeacherName}, slides for your ${subjectContext} lesson on ${safeTopic}`,
       eyebrow: 'Free lesson slides',
-      emphasis: 'Here is your Orbit Learn lesson slide deck for the same topic, ready to present or edit.',
+      emphasis: 'Here is your Orba lesson slide deck for the same topic, ready to present or edit.',
       primaryLabel: 'Download Slide Deck',
       fileLabel: 'PowerPoint lesson slide deck',
       accent: '#3F6F94',
@@ -96,7 +96,7 @@ function buildDripContentTemplate(params: {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, ${meta.accent} 0%, #D4A853 100%); border-radius: 16px 16px 0 0; padding: 32px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 72px; height: 72px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.18);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 72px; height: 72px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.18);">
         <p style="margin: 0 0 8px 0; color: rgba(255,255,255,0.88); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">${meta.eyebrow}</p>
         <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">${meta.subject}</h1>
       </td>
@@ -119,7 +119,7 @@ function buildDripContentTemplate(params: {
         </div>
 
         <p style="color: #6B7280; font-size: 14px; text-align: center; margin: 0 0 28px;">
-          No login required. The file opens directly from the download link above.${isPptStep ? ' This deck uses your Orbit Learn presentation format.' : ''}
+          No login required. The file opens directly from the download link above.${isPptStep ? ' This deck uses your Orba presentation format.' : ''}
         </p>
 
         <div style="text-align: center;">
@@ -130,7 +130,7 @@ function buildDripContentTemplate(params: {
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
           You can also find this in your teacher content library.<br>
-          <span style="color: #3D4F66;">- The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">- The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -151,7 +151,7 @@ ${meta.fileLabel} for ${safeTopic}
 Download: ${params.downloadUrl}
 Explore your dashboard: ${dashboardUrl}
 
-- The Orbit Learn Team
+- The Orba Team
     `,
   };
 }
@@ -182,22 +182,22 @@ const templates = {
    * Welcome email for new parents
    */
   welcome: (parentName: string) => ({
-    subject: 'Welcome to Orbit Learn! Your Learning Adventure Begins 🚀',
+    subject: 'Welcome to Orba! Your Learning Adventure Begins 🚀',
     html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Orbit Learn!</title>
+  <title>Welcome to Orba!</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <!-- Header with Logo -->
     <tr>
       <td style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 40px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 120px; height: 120px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
-        <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">Welcome to Orbit Learn!</h1>
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 120px; height: 120px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700;">Welcome to Orba!</h1>
         <p style="color: rgba(255,255,255,0.95); margin-top: 10px; font-size: 18px;">Where Learning is an Adventure!</p>
       </td>
     </tr>
@@ -206,7 +206,7 @@ const templates = {
         <h2 style="color: #1e1b4b; margin-top: 0; font-size: 24px;">Hi ${parentName}! 👋</h2>
 
         <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          Thank you for joining Orbit Learn! We're thrilled to have you and your family as part of our learning community.
+          Thank you for joining Orba! We're thrilled to have you and your family as part of our learning community.
         </p>
 
         <!-- Ollie Introduction Box -->
@@ -260,7 +260,7 @@ const templates = {
 
         <p style="color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; padding-top: 24px; margin-bottom: 0; text-align: center;">
           Questions? Reply to this email - we're here to help!<br>
-          <span style="color: #9ca3af;">- The Orbit Learn Team 💜</span>
+          <span style="color: #9ca3af;">- The Orba Team 💜</span>
         </p>
       </td>
     </tr>
@@ -269,11 +269,11 @@ const templates = {
 </html>
     `,
     text: `
-Welcome to Orbit Learn!
+Welcome to Orba!
 
 Hi ${parentName}!
 
-Thank you for joining Orbit Learn! We're thrilled to have you and your family as part of our learning community.
+Thank you for joining Orba! We're thrilled to have you and your family as part of our learning community.
 
 Meet Ollie, Your Child's AI Tutor!
 Ollie is a friendly, patient AI tutor who adapts to each child's learning style. With a warm smile and playful personality, Ollie makes education fun with interactive lessons and personalized encouragement from kindergarten through middle school!
@@ -286,7 +286,7 @@ Getting Started:
 Start learning at: ${config.frontendUrl}/dashboard
 
 Questions? Reply to this email - we're here to help!
-- The Orbit Learn Team
+- The Orba Team
     `,
   }),
 
@@ -318,7 +318,7 @@ Questions? Reply to this email - we're here to help!
     const { title, message, action, emoji } = purposes[purpose];
 
     return {
-      subject: `${emoji} ${title} - Orbit Learn`,
+      subject: `${emoji} ${title} - Orba`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -332,7 +332,7 @@ Questions? Reply to this email - we're here to help!
     <!-- Header with Logo -->
     <tr>
       <td style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">${title}</h1>
       </td>
     </tr>
@@ -357,13 +357,13 @@ Questions? Reply to this email - we're here to help!
         <!-- Security Tip -->
         <div style="background-color: #FEF3C7; border-radius: 12px; padding: 16px 20px; margin-top: 24px; border-left: 4px solid #F59E0B;">
           <p style="color: #92400E; margin: 0; font-size: 14px;">
-            <strong>🔒 Security tip:</strong> Never share this code with anyone. Orbit Learn will never ask for your code via phone or text.
+            <strong>🔒 Security tip:</strong> Never share this code with anyone. Orba will never ask for your code via phone or text.
           </p>
         </div>
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
           If you didn't request this ${action}, please ignore this email or contact support if you have concerns.<br><br>
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+          <span style="color: #a78bfa;">- The Orba Team 💜</span>
         </p>
       </td>
     </tr>
@@ -380,11 +380,11 @@ Your verification code: ${otp}
 
 This code expires in 10 minutes.
 
-Security tip: Never share this code with anyone. Orbit Learn will never ask for your code via phone or text.
+Security tip: Never share this code with anyone. Orba will never ask for your code via phone or text.
 
 If you didn't request this ${action}, please ignore this email or contact support if you have concerns.
 
-- The Orbit Learn Team
+- The Orba Team
       `,
     };
   },
@@ -393,7 +393,7 @@ If you didn't request this ${action}, please ignore this email or contact suppor
    * Child added notification email
    */
   childAdded: (parentName: string, childName: string) => ({
-    subject: `🎉 ${childName}'s Profile is Ready! - Orbit Learn`,
+    subject: `🎉 ${childName}'s Profile is Ready! - Orba`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -407,7 +407,7 @@ If you didn't request this ${action}, please ignore this email or contact suppor
     <!-- Header with Logo -->
     <tr>
       <td style="background: linear-gradient(135deg, #2DD4BF 0%, #7C3AED 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">🎉 ${childName}'s Profile is Ready!</h1>
       </td>
     </tr>
@@ -470,7 +470,7 @@ If you didn't request this ${action}, please ignore this email or contact suppor
         </div>
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+          <span style="color: #a78bfa;">- The Orba Team 💜</span>
         </p>
       </td>
     </tr>
@@ -494,7 +494,7 @@ Next Steps:
 
 View profile at: ${config.frontendUrl}/dashboard/children
 
-- The Orbit Learn Team
+- The Orba Team
     `,
   }),
 
@@ -512,7 +512,7 @@ View profile at: ${config.frontendUrl}/dashboard/children
       badgesEarned: string[];
     }
   ) => ({
-    subject: `📊 ${childName}'s Weekly Learning Report - Orbit Learn`,
+    subject: `📊 ${childName}'s Weekly Learning Report - Orba`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -526,7 +526,7 @@ View profile at: ${config.frontendUrl}/dashboard/children
     <!-- Header with Logo -->
     <tr>
       <td style="background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">${childName}'s Weekly Report 📊</h1>
         <p style="color: rgba(255,255,255,0.95); margin-top: 8px; font-size: 16px;">Great progress this week!</p>
       </td>
@@ -594,7 +594,7 @@ View profile at: ${config.frontendUrl}/dashboard/children
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
           Keep up the great work! Every lesson brings ${childName} closer to their learning goals.<br><br>
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+          <span style="color: #a78bfa;">- The Orba Team 💜</span>
         </p>
       </td>
     </tr>
@@ -621,7 +621,7 @@ View full report at: ${config.frontendUrl}/dashboard/progress
 
 Keep up the great work! Every lesson brings ${childName} closer to their learning goals.
 
-- The Orbit Learn Team
+- The Orba Team
     `,
   }),
 
@@ -629,21 +629,21 @@ Keep up the great work! Every lesson brings ${childName} closer to their learnin
    * Welcome email for new teachers (green color scheme)
    */
   teacherWelcome: (teacherName: string) => ({
-    subject: 'Welcome to Orbit Learn — Meet Ollie, the AI That Learns How You Teach',
+    subject: 'Welcome to Orba — Meet Ollie, the AI That Learns How You Teach',
     html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Orbit Learn</title>
+  <title>Welcome to Orba</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Outfit', 'Segoe UI', sans-serif; background-color: #FDF8F3;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <!-- Header -->
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 48px 40px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 18px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 18px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Fraunces', Georgia, serif; line-height: 1.3;">Meet Ollie</h1>
         <p style="color: rgba(255,255,255,0.92); margin: 8px 0 0 0; font-size: 16px; line-height: 1.5;">The AI teaching assistant that learns <em>you</em></p>
       </td>
@@ -655,7 +655,7 @@ Keep up the great work! Every lesson brings ${childName} closer to their learnin
         <h2 style="color: #1E2A3A; margin: 0 0 20px 0; font-size: 22px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
 
         <p style="color: #3D4F66; line-height: 1.7; font-size: 16px; margin: 0 0 24px 0;">
-          Welcome to Orbit Learn. We didn't build another content generator. We built <strong>Ollie</strong> — an AI teaching assistant that remembers your classroom, learns your teaching style, and gets better every time you work together.
+          Welcome to Orba. We didn't build another content generator. We built <strong>Ollie</strong> — an AI teaching assistant that remembers your classroom, learns your teaching style, and gets better every time you work together.
         </p>
 
         <!-- What Makes Ollie Different -->
@@ -734,7 +734,7 @@ Keep up the great work! Every lesson brings ${childName} closer to their learnin
         <!-- Footer -->
         <p style="color: #9CA3AF; font-size: 14px; border-top: 1px solid #E5E7EB; padding-top: 24px; margin: 0; text-align: center; line-height: 1.6;">
           Questions? Just reply to this email — a real person will get back to you.<br>
-          <span style="color: #3D4F66; font-weight: 500;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66; font-weight: 500;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -743,11 +743,11 @@ Keep up the great work! Every lesson brings ${childName} closer to their learnin
 </html>
     `,
     text: `
-Welcome to Orbit Learn
+Welcome to Orba
 
 Hi ${teacherName},
 
-Welcome to Orbit Learn. We didn't build another content generator. We built Ollie — an AI teaching assistant that remembers your classroom, learns your teaching style, and gets better every time you work together.
+Welcome to Orba. We didn't build another content generator. We built Ollie — an AI teaching assistant that remembers your classroom, learns your teaching style, and gets better every time you work together.
 
 OLLIE ISN'T JUST A TOOL. OLLIE IS YOUR PARTNER.
 
@@ -767,7 +767,7 @@ Start chatting with Ollie: ${config.frontendUrl}/teacher/agent/chat
 "I used to spend my Sundays planning. Now I tell Ollie what I need and spend that time with my family." — 3rd Grade Teacher, Texas
 
 Questions? Just reply to this email — a real person will get back to you.
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -775,7 +775,7 @@ Questions? Just reply to this email — a real person will get back to you.
    * Teacher trial welcome email (7-day unlimited trial)
    */
   teacherTrialWelcome: (teacherName: string, trialEndDateText: string) => ({
-    subject: 'Your 7-Day Pro Trial Starts Now — Orbit Learn',
+    subject: 'Your 7-Day Pro Trial Starts Now — Orba',
     html: `
 <!DOCTYPE html>
 <html>
@@ -788,7 +788,7 @@ Questions? Just reply to this email — a real person will get back to you.
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 36px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 96px; height: 96px; border-radius: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 96px; height: 96px; border-radius: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your 7-Day Pro Trial Starts Now</h1>
         <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 16px;">Unlock everything Ollie can do</p>
       </td>
@@ -797,7 +797,7 @@ Questions? Just reply to this email — a real person will get back to you.
       <td style="background-color: #ffffff; padding: 36px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(30,42,58,0.05);">
         <h2 style="color: #1E2A3A; margin-top: 0; font-size: 22px; font-family: 'Fraunces', Georgia, serif;">Hi ${teacherName},</h2>
         <p style="color: #3D4F66; line-height: 1.7; font-size: 16px;">
-          Welcome to Orbit Learn! For the next 7 days, you have full access to <strong>Ollie</strong>, your AI teaching assistant, plus every Pro feature.
+          Welcome to Orba! For the next 7 days, you have full access to <strong>Ollie</strong>, your AI teaching assistant, plus every Pro feature.
         </p>
 
         <div style="background: #FAF7F2; border-radius: 12px; padding: 20px; margin: 24px 0; border-left: 4px solid #D4A853;">
@@ -837,7 +837,7 @@ Questions? Just reply to this email — a real person will get back to you.
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 18px; margin: 0;">
           Questions? Reply to this email — we're here to help.<br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -850,7 +850,7 @@ Your 7-Day Pro Trial Starts Now
 
 Hi ${teacherName},
 
-Welcome to Orbit Learn! For the next 7 days, you have full access to Ollie, your AI teaching assistant, plus every Pro feature.
+Welcome to Orba! For the next 7 days, you have full access to Ollie, your AI teaching assistant, plus every Pro feature.
 
 Your trial ends on ${trialEndDateText}.
 
@@ -865,7 +865,7 @@ After your trial, free generation continues — you only pay when downloading or
 
 Start with Ollie: ${config.frontendUrl}/teacher/agent/chat
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -873,7 +873,7 @@ Start with Ollie: ${config.frontendUrl}/teacher/agent/chat
    * Teacher trial expiring email (24 hours remaining)
    */
   teacherTrialExpiring: (teacherName: string, trialEndDateText: string) => ({
-    subject: 'Your Pro trial ends tomorrow — Orbit Learn',
+    subject: 'Your Pro trial ends tomorrow — Orba',
     html: `
 <!DOCTYPE html>
 <html>
@@ -903,12 +903,12 @@ Start with Ollie: ${config.frontendUrl}/teacher/agent/chat
           </p>
         </div>
         <div style="text-align: center; margin: 24px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 32px; border-radius: 16px; font-weight: 700; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+          <a href="${config.frontendUrl}/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 32px; border-radius: 16px; font-weight: 700; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
             Upgrade to Pro
           </a>
         </div>
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 16px; margin: 0;">
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -925,9 +925,9 @@ Ollie is ready to keep planning your week, tracking your standards, and generati
 
 After your trial, free content generation continues — you only pay when exporting. Pro adds weekly prep, AI grading, audio updates, and more.
 
-Upgrade to Pro: ${config.frontendUrl}/teacher/billing
+Upgrade to Pro: ${config.frontendUrl}/billing
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -972,12 +972,12 @@ Upgrade to Pro: ${config.frontendUrl}/teacher/billing
         </div>
 
         <div style="text-align: center; margin: 24px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 32px; border-radius: 16px; font-weight: 700; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+          <a href="${config.frontendUrl}/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 14px 32px; border-radius: 16px; font-weight: 700; font-size: 15px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
             See Pro Features
           </a>
         </div>
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 16px; margin: 0;">
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -996,9 +996,9 @@ Chat with Ollie, generate lessons, quizzes, flashcards, sub plans, and IEP goals
 Pro features (upgrade to keep):
 Weekly prep packages, AI grading, audio updates, standards tracking, and review summaries.
 
-See Pro features: ${config.frontendUrl}/teacher/billing
+See Pro features: ${config.frontendUrl}/billing
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -1030,7 +1030,7 @@ See Pro features: ${config.frontendUrl}/teacher/billing
     const { title, message, action, emoji } = purposes[purpose];
 
     return {
-      subject: `${emoji} ${title} - Orbit Learn for Educators`,
+      subject: `${emoji} ${title} - Orba for Educators`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -1043,7 +1043,7 @@ See Pro features: ${config.frontendUrl}/teacher/billing
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">${title}</h1>
       </td>
     </tr>
@@ -1068,13 +1068,13 @@ See Pro features: ${config.frontendUrl}/teacher/billing
         <!-- Security Tip -->
         <div style="background-color: #FAF7F2; border-radius: 12px; padding: 16px 20px; margin-top: 24px; border-left: 4px solid #2D5A4A;">
           <p style="color: #1E2A3A; margin: 0; font-size: 14px;">
-            <strong>Security tip:</strong> Never share this code with anyone. Orbit Learn will never ask for your code via phone or text.
+            <strong>Security tip:</strong> Never share this code with anyone. Orba will never ask for your code via phone or text.
           </p>
         </div>
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
           If you didn't request this ${action}, please ignore this email or contact support if you have concerns.<br><br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -1091,11 +1091,11 @@ Your verification code: ${otp}
 
 This code expires in 10 minutes.
 
-Security tip: Never share this code with anyone. Orbit Learn will never ask for your code via phone or text.
+Security tip: Never share this code with anyone. Orba will never ask for your code via phone or text.
 
 If you didn't request this ${action}, please ignore this email or contact support if you have concerns.
 
-— The Orbit Learn Team
+— The Orba Team
       `,
     };
   },
@@ -1104,7 +1104,7 @@ If you didn't request this ${action}, please ignore this email or contact suppor
    * Teacher verification link email (click-to-verify, lower friction than OTP)
    */
   teacherVerificationLink: (teacherName: string, verificationUrl: string) => ({
-    subject: 'Verify Your Email — Orbit Learn for Educators',
+    subject: 'Verify Your Email — Orba for Educators',
     html: `
 <!DOCTYPE html>
 <html>
@@ -1117,7 +1117,7 @@ If you didn't request this ${action}, please ignore this email or contact suppor
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Verify Your Email</h1>
       </td>
     </tr>
@@ -1164,7 +1164,7 @@ If you didn't request this ${action}, please ignore this email or contact suppor
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 28px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
           If you didn't create an account, please ignore this email.<br><br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -1189,7 +1189,7 @@ Why verify?
 
 If you didn't create an account, please ignore this email.
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -1237,10 +1237,10 @@ If you didn't create an account, please ignore this email.
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #7C3AED 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">Subscription Renewed</h1>
         <p style="color: rgba(255,255,255,0.95); margin-top: 8px; font-size: 16px;">
-          Thanks for being part of Orbit Learn!
+          Thanks for being part of Orba!
         </p>
       </td>
     </tr>
@@ -1280,7 +1280,7 @@ If you didn't create an account, please ignore this email.
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
           Questions? Reply to this email or contact support.<br><br>
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+          <span style="color: #a78bfa;">- The Orba Team 💜</span>
         </p>
       </td>
     </tr>
@@ -1302,7 +1302,7 @@ ${invoiceNumber ? `Invoice: ${invoiceNumber}\n` : ''}${receiptUrl ? `Receipt: ${
 Manage billing: ${config.frontendUrl}/parent/billing
 
 Questions? Reply to this email or contact support.
-- The Orbit Learn Team
+- The Orba Team
       `,
     };
   },
@@ -1351,7 +1351,7 @@ Questions? Reply to this email or contact support.
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Subscription Renewed</h1>
         <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 16px;">
           Ollie is ready for another month
@@ -1386,7 +1386,7 @@ Questions? Reply to this email or contact support.
         </div>
 
         <div style="text-align: center; margin: 28px 0 16px;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: bold; font-size: 15px; display: inline-block; border: 2px solid #1E4035;">
+          <a href="${config.frontendUrl}/billing" style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: bold; font-size: 15px; display: inline-block; border: 2px solid #1E4035;">
             Manage Billing
           </a>
         </div>
@@ -1394,7 +1394,7 @@ Questions? Reply to this email or contact support.
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
           Questions? Reply to this email — we're here to help.<br><br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -1413,10 +1413,10 @@ Plan: ${planName}
 Amount Paid: ${amountPaid}
 Next Billing Date: ${nextBillingDate}
 ${invoiceNumber ? `Invoice: ${invoiceNumber}\n` : ''}${receiptUrl ? `Receipt: ${receiptUrl}\n` : ''}
-Manage billing: ${config.frontendUrl}/teacher/billing
+Manage billing: ${config.frontendUrl}/billing
 
 Questions? Reply to this email — we're here to help.
-— The Orbit Learn Team
+— The Orba Team
       `,
     };
   },
@@ -1439,8 +1439,8 @@ Questions? Reply to this email — we're here to help.
 
     return {
       subject: isUrgent
-        ? `⚠️ Only ${lessonsRemaining} Lessons Remaining! - Orbit Learn`
-        : `📊 You've Used ${threshold}% of Your Monthly Lessons - Orbit Learn`,
+        ? `⚠️ Only ${lessonsRemaining} Lessons Remaining! - Orba`
+        : `📊 You've Used ${threshold}% of Your Monthly Lessons - Orba`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -1453,7 +1453,7 @@ Questions? Reply to this email — we're here to help.
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, ${urgencyColor} 0%, #F59E0B 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
           ${isUrgent ? '⚠️ Running Low on Lessons' : '📊 Usage Update'}
         </h1>
@@ -1507,7 +1507,7 @@ Questions? Reply to this email — we're here to help.
         </div>
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+          <span style="color: #a78bfa;">- The Orba Team 💜</span>
         </p>
       </td>
     </tr>
@@ -1534,7 +1534,7 @@ ${isUrgent
 
 Upgrade at: ${config.frontendUrl}/parent/billing
 
-- The Orbit Learn Team
+- The Orba Team
       `,
     };
   },
@@ -1543,7 +1543,7 @@ Upgrade at: ${config.frontendUrl}/parent/billing
    * Limit reached email (100%)
    */
   limitReached: (parentName: string, lessonsLimit: number) => ({
-    subject: `🚫 Monthly Lesson Limit Reached - Orbit Learn`,
+    subject: `🚫 Monthly Lesson Limit Reached - Orba`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -1556,7 +1556,7 @@ Upgrade at: ${config.frontendUrl}/parent/billing
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
           Monthly Lesson Limit Reached
         </h1>
@@ -1614,7 +1614,7 @@ Upgrade at: ${config.frontendUrl}/parent/billing
         </div>
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          <span style="color: #a78bfa;">- The Orbit Learn Team 💜</span>
+          <span style="color: #a78bfa;">- The Orba Team 💜</span>
         </p>
       </td>
     </tr>
@@ -1642,7 +1642,7 @@ Family Plan Benefits:
 Upgrade at: ${config.frontendUrl}/parent/billing
 (7-day free trial • Cancel anytime)
 
-- The Orbit Learn Team
+- The Orba Team
     `,
   }),
 
@@ -1650,7 +1650,7 @@ Upgrade at: ${config.frontendUrl}/parent/billing
    * Security alert email for sensitive account changes
    */
   securityAlert: (parentName: string, alertType: string, details: string) => ({
-    subject: `🔒 Security Alert: ${alertType} - Orbit Learn`,
+    subject: `🔒 Security Alert: ${alertType} - Orba`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -1664,7 +1664,7 @@ Upgrade at: ${config.frontendUrl}/parent/billing
     <!-- Header with Logo -->
     <tr>
       <td style="background: linear-gradient(135deg, #EF4444 0%, #F59E0B 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">🔒 Security Alert</h1>
       </td>
     </tr>
@@ -1675,7 +1675,7 @@ Upgrade at: ${config.frontendUrl}/parent/billing
         </p>
 
         <p style="color: #4b5563; line-height: 1.7; font-size: 16px;">
-          We're letting you know about a security-related change on your Orbit Learn account:
+          We're letting you know about a security-related change on your Orba account:
         </p>
 
         <!-- Alert Box -->
@@ -1705,7 +1705,7 @@ Upgrade at: ${config.frontendUrl}/parent/billing
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
           This is an automated security notification. If you have any questions, please contact our support team.<br><br>
-          <span style="color: #a78bfa;">- The Orbit Learn Security Team 🛡️</span>
+          <span style="color: #a78bfa;">- The Orba Security Team 🛡️</span>
         </p>
       </td>
     </tr>
@@ -1718,7 +1718,7 @@ Security Alert: ${alertType}
 
 Hi ${parentName},
 
-We're letting you know about a security-related change on your Orbit Learn account:
+We're letting you know about a security-related change on your Orba account:
 
 ${alertType}
 ${details}
@@ -1730,7 +1730,7 @@ If you didn't authorize this action, please secure your account immediately by c
 
 Review your account settings at: ${config.frontendUrl}/parent/settings
 
-- The Orbit Learn Security Team
+- The Orba Security Team
     `,
   }),
 
@@ -1754,7 +1754,7 @@ Review your account settings at: ${config.frontendUrl}/parent/settings
       : ['Lesson PDF'];
 
     return {
-      subject: `✅ Purchase Confirmed: ${productName} - Orbit Learn`,
+      subject: `✅ Purchase Confirmed: ${productName} - Orba`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -1767,7 +1767,7 @@ Review your account settings at: ${config.frontendUrl}/parent/settings
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
           ✅ Purchase Confirmed!
         </h1>
@@ -1824,7 +1824,7 @@ Review your account settings at: ${config.frontendUrl}/parent/settings
         <!-- Footer -->
         <div style="border-top: 1px solid #E5E7EB; margin-top: 32px; padding-top: 24px; text-align: center;">
           <p style="color: #9CA3AF; font-size: 13px; margin: 0;">
-            Questions? Reply to this email or contact us at support@orbitlearn.app
+            Questions? Reply to this email or contact us at hello@withorba.com
           </p>
         </div>
       </td>
@@ -1851,9 +1851,9 @@ ${includes.map(item => `- ${item}`).join('\n')}
 
 Download your files at: ${config.frontendUrl}/teacher/content
 
-Questions? Contact us at support@orbitlearn.app
+Questions? Contact us at hello@withorba.com
 
-- The Orbit Learn Team
+- The Orba Team
       `,
     };
   },
@@ -1894,8 +1894,8 @@ Questions? Contact us at support@orbitlearn.app
 
     return {
       subject: isUrgent
-        ? `Only ${creditsRemaining} Credits Remaining — Orbit Learn`
-        : `You've Used ${threshold}% of Your Monthly Credits — Orbit Learn`,
+        ? `Only ${creditsRemaining} Credits Remaining — Orba`
+        : `You've Used ${threshold}% of Your Monthly Credits — Orba`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -1908,7 +1908,7 @@ Questions? Contact us at support@orbitlearn.app
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, ${isUrgent ? '#C75B39' : '#2D5A4A'} 0%, ${isUrgent ? '#E07B6B' : '#3D7A6A'} 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">
           ${isUrgent ? 'Credits Running Low' : 'Credit Usage Update'}
         </h1>
@@ -1962,13 +1962,13 @@ Questions? Contact us at support@orbitlearn.app
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+          <a href="${config.frontendUrl}/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
             ${isUrgent ? 'Upgrade Now' : 'View Plans'}
           </a>
         </div>
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -1993,9 +1993,9 @@ ${isUrgent
   : 'Need more? Upgrade to Pro for unlimited generation plus weekly prep, AI grading, and more.'
 }
 
-View plans: ${config.frontendUrl}/teacher/billing
+View plans: ${config.frontendUrl}/billing
 
-— The Orbit Learn Team
+— The Orba Team
       `,
     };
   },
@@ -2008,7 +2008,7 @@ View plans: ${config.frontendUrl}/teacher/billing
     creditsTotal: number,
     tier: string
   ) => ({
-    subject: `Monthly Credit Limit Reached — Orbit Learn`,
+    subject: `Monthly Credit Limit Reached — Orba`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -2021,7 +2021,7 @@ View plans: ${config.frontendUrl}/teacher/billing
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #C75B39 0%, #E07B6B 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">
           Monthly Credit Limit Reached
         </h1>
@@ -2066,13 +2066,13 @@ View plans: ${config.frontendUrl}/teacher/billing
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${config.frontendUrl}/teacher/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
+          <a href="${config.frontendUrl}/billing" style="background: linear-gradient(135deg, #D4A853 0%, #E8C97A 100%); color: #1E2A3A; text-decoration: none; padding: 16px 36px; border-radius: 16px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #B8923F; box-shadow: 0 4px 0 #B8923F;">
             View Plans
           </a>
         </div>
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -2094,9 +2094,9 @@ Your options:
 - Pay per download — Export individual files as needed
 - Wait — Credits reset on the 1st of next month
 
-View plans: ${config.frontendUrl}/teacher/billing
+View plans: ${config.frontendUrl}/billing
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -2126,7 +2126,7 @@ View plans: ${config.frontendUrl}/teacher/billing
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">
           Your ${exportCopy.subjectLabel} is Ready
         </h1>
@@ -2162,7 +2162,7 @@ View plans: ${config.frontendUrl}/teacher/billing
         </p>
 
         <p style="color: #9CA3AF; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #E5E7EB; padding-top: 20px;">
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -2185,7 +2185,7 @@ Download your file: ${downloadUrl}
 
 You can also find this file in your Downloads section at: ${config.frontendUrl}/teacher/downloads
 
-— The Orbit Learn Team
+— The Orba Team
     `,
     };
   },
@@ -2198,7 +2198,7 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
     contentItems: Array<{ title: string; type: string }>,
     downloadsRemaining: number
   ) => ({
-    subject: 'Your content is ready to download — Orbit Learn',
+    subject: 'Your content is ready to download — Orba',
     html: `
 <!DOCTYPE html>
 <html>
@@ -2245,8 +2245,8 @@ You can also find this file in your Downloads section at: ${config.frontendUrl}/
         </div>
 
         <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
-          You're receiving this because you have un-downloaded content. <a href="${config.frontendUrl}/teacher/settings" style="color: #9CA3AF;">Unsubscribe</a><br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          You're receiving this because you have un-downloaded content. <a href="${config.frontendUrl}/settings" style="color: #9CA3AF;">Unsubscribe</a><br>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -2266,7 +2266,7 @@ You have ${downloadsRemaining} of 3 free downloads remaining this month.
 
 Go to My Content: ${config.frontendUrl}/teacher/content
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -2286,7 +2286,7 @@ Go to My Content: ${config.frontendUrl}/teacher/content
     }>,
     downloadsRemaining: number
   ) => ({
-    subject: "Here's a peek at what you made — Orbit Learn",
+    subject: "Here's a peek at what you made — Orba",
     html: `
 <!DOCTYPE html>
 <html>
@@ -2340,8 +2340,8 @@ Go to My Content: ${config.frontendUrl}/teacher/content
         </div>
 
         <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
-          You're receiving this because you have un-downloaded content. <a href="${config.frontendUrl}/teacher/settings" style="color: #9CA3AF;">Unsubscribe</a><br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          You're receiving this because you have un-downloaded content. <a href="${config.frontendUrl}/settings" style="color: #9CA3AF;">Unsubscribe</a><br>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -2368,7 +2368,7 @@ You have ${downloadsRemaining} of 3 free downloads remaining this month.
 
 Download your content: ${config.frontendUrl}/teacher/content
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -2427,12 +2427,12 @@ Download your content: ${config.frontendUrl}/teacher/content
         </div>
 
         <p style="color: #3D4F66; line-height: 1.7; font-size: 15px; text-align: center;">
-          Want unlimited downloads? <a href="${config.frontendUrl}/teacher/billing" style="color: #2D5A4A; font-weight: 600;">Upgrade to Teacher Unlimited</a>
+          Want unlimited downloads? <a href="${config.frontendUrl}/billing" style="color: #2D5A4A; font-weight: 600;">Upgrade to Teacher Unlimited</a>
         </p>
 
         <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
-          This was a one-time gift. <a href="${config.frontendUrl}/teacher/settings" style="color: #9CA3AF;">Manage notifications</a><br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          This was a one-time gift. <a href="${config.frontendUrl}/settings" style="color: #9CA3AF;">Manage notifications</a><br>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -2452,9 +2452,9 @@ Download it here: ${downloadUrl}
 
 You have ${downloadsRemaining} free download${downloadsRemaining === 1 ? '' : 's'} left this month — they reset on ${resetDate}.
 
-Want unlimited downloads? Upgrade at ${config.frontendUrl}/teacher/billing
+Want unlimited downloads? Upgrade at ${config.frontendUrl}/billing
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -2475,7 +2475,7 @@ Want unlimited downloads? Upgrade at ${config.frontendUrl}/teacher/billing
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 36px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your Package is Generating!</h1>
         <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 15px;">Ollie is hard at work creating your materials</p>
       </td>
@@ -2517,7 +2517,7 @@ Want unlimited downloads? Upgrade at ${config.frontendUrl}/teacher/billing
 
         <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
           Questions? Reply to this email — we're here to help.<br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -2537,7 +2537,7 @@ Estimated time: 5-10 minutes
 We'll send you another email as soon as everything is ready. You can also track progress in your dashboard:
 ${dashboardUrl}
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 
@@ -2558,7 +2558,7 @@ ${dashboardUrl}
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, #2D5A4A 0%, #3D7A6A 100%); border-radius: 16px 16px 0 0; padding: 36px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; font-family: 'Fraunces', Georgia, serif;">Your Package is Ready!</h1>
         <p style="color: rgba(255,255,255,0.92); margin-top: 8px; font-size: 15px;">Ollie finished creating your materials</p>
       </td>
@@ -2596,7 +2596,7 @@ ${dashboardUrl}
 
         <p style="color: #9CA3AF; font-size: 13px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-bottom: 0; text-align: center;">
           Questions? Reply to this email — we're here to help.<br>
-          <span style="color: #3D4F66;">— The Orbit Learn Team</span>
+          <span style="color: #3D4F66;">— The Orba Team</span>
         </p>
       </td>
     </tr>
@@ -2617,7 +2617,7 @@ You can now review, approve, and download your materials. If anything needs twea
 
 View your package: ${packageUrl}
 
-— The Orbit Learn Team
+— The Orba Team
     `,
   }),
 };
@@ -2636,7 +2636,7 @@ export const emailService = {
       const template = templates.welcome(parentName);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2673,7 +2673,7 @@ export const emailService = {
       const template = templates.otp(otp, purpose);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2710,7 +2710,7 @@ export const emailService = {
       const template = templates.childAdded(parentName, childName);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2754,7 +2754,7 @@ export const emailService = {
       const template = templates.weeklyProgress(parentName, childName, stats);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2792,7 +2792,7 @@ export const emailService = {
       const template = templates.securityAlert(parentName, alertType, details);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn Security <${config.email.fromEmail}>`,
+        from: `Orba Security <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2825,7 +2825,7 @@ export const emailService = {
       const template = templates.teacherWelcome(teacherName);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2865,7 +2865,7 @@ export const emailService = {
       const template = templates.teacherTrialWelcome(teacherName, trialEndDateText);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2905,7 +2905,7 @@ export const emailService = {
       const template = templates.teacherTrialExpiring(teacherName, trialEndDateText);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2938,7 +2938,7 @@ export const emailService = {
       const template = templates.teacherTrialExpired(teacherName);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -2975,7 +2975,7 @@ export const emailService = {
       const template = templates.teacherOtp(otp, purpose);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3012,7 +3012,7 @@ export const emailService = {
       const template = templates.teacherVerificationLink(teacherName, verificationUrl);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3058,7 +3058,7 @@ export const emailService = {
       );
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3095,7 +3095,7 @@ export const emailService = {
       const template = templates.limitReached(parentName, lessonsLimit);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3143,7 +3143,7 @@ export const emailService = {
       );
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3195,7 +3195,7 @@ export const emailService = {
       );
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3233,7 +3233,7 @@ export const emailService = {
       const template = templates.teacherCreditLimitReached(teacherName, creditsTotal, tier);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3281,7 +3281,7 @@ export const emailService = {
       );
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3341,7 +3341,7 @@ export const emailService = {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background: linear-gradient(135deg, ${portalColor} 0%, #2DD4BF 100%); border-radius: 24px 24px 0 0; padding: 30px; text-align: center;">
-        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orbit Learn" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+        <img src="${config.frontendUrl}/assets/orbit-learn-logo.png" alt="Orba" style="width: 80px; height: 80px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700;">
           📬 New Suggestion Received
         </h1>
@@ -3406,7 +3406,7 @@ export const emailService = {
         </div>
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-          This suggestion was submitted via the Orbit Learn suggestion box.
+          This suggestion was submitted via the Orba suggestion box.
         </p>
       </td>
     </tr>
@@ -3433,10 +3433,10 @@ Details:
       `;
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn Suggestions <${config.email.fromEmail}>`,
-        to: 'support@orbitlearn.app',
+        from: `Orba Suggestions <${config.email.fromEmail}>`,
+        to: 'hello@withorba.com',
         replyTo: userEmail || undefined,
-        subject: `[${portal.toUpperCase()}] New Suggestion - Orbit Learn`,
+        subject: `[${portal.toUpperCase()}] New Suggestion - Orba`,
         html,
         text,
       });
@@ -3484,7 +3484,7 @@ Details:
       );
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3530,7 +3530,7 @@ Details:
       );
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3575,7 +3575,7 @@ Details:
       );
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3613,7 +3613,7 @@ Details:
       const template = templates.downloadReminder24h(teacherName, contentItems, downloadsRemaining);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3659,7 +3659,7 @@ Details:
       const template = templates.downloadReminder72h(teacherName, contentItems, previews, downloadsRemaining);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3699,7 +3699,7 @@ Details:
       const template = templates.autoGiftPdf(teacherName, contentTitle, downloadUrl, downloadsRemaining, resetDate);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3739,7 +3739,7 @@ Details:
       const template = templates.packageGenerating(teacherName, packageName, resourceEstimate, totalWeeks, dashboardUrl);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,
@@ -3779,7 +3779,7 @@ Details:
       const template = templates.packageReady(teacherName, packageName, totalMaterials, totalWeeks, packageUrl);
 
       const { error } = await resend.emails.send({
-        from: `Orbit Learn <${config.email.fromEmail}>`,
+        from: `Orba <${config.email.fromEmail}>`,
         to: email,
         subject: template.subject,
         html: template.html,

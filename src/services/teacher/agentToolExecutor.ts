@@ -444,8 +444,8 @@ export async function executeToolCall(
           games: '/teacher/games',
           standards: '/teacher/agent/standards',
           reviews: '/teacher/agent/reviews',
-          settings: '/teacher/settings',
-          billing: '/teacher/billing',
+          settings: '/settings',
+          billing: '/billing',
           content: '/teacher/content',
           store: '/teacher/store',
         };

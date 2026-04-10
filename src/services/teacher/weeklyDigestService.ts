@@ -155,7 +155,7 @@ async function generateDigest(teacherId: string): Promise<WeeklyDigest | null> {
 // ============================================
 
 function buildDigestEmail(digest: WeeklyDigest): { subject: string; html: string; text: string } {
-  const streamUrl = `${config.frontendUrl}/teacher/stream`;
+  const streamUrl = `${config.frontendUrl}/stream`;
   const streakText = digest.currentStreak > 0
     ? ` (🔥 ${digest.currentStreak}-day streak!)`
     : '';
@@ -213,7 +213,7 @@ function buildDigestEmail(digest: WeeklyDigest): { subject: string; html: string
         <!-- Footer -->
         <tr><td style="padding:20px 40px 32px;border-top:1px solid #f0ece7;text-align:center;">
           <p style="color:#8a8580;font-size:12px;line-height:1.5;margin:0;">
-            Orbit Learn · You received this because you're an active teacher on our platform.
+            Orba · You received this because you're an active teacher on our platform.
           </p>
         </td></tr>
 
@@ -253,7 +253,7 @@ async function sendDigestEmail(digest: WeeklyDigest): Promise<boolean> {
 
   try {
     const { error } = await resend.emails.send({
-      from: `Orbit Learn <${config.email.fromEmail}>`,
+      from: `Orba <${config.email.fromEmail}>`,
       to: digest.email,
       subject: template.subject,
       html: template.html,

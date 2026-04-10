@@ -234,7 +234,7 @@ async function sendEmail(notificationId: string, teacherId: string): Promise<voi
     const html = buildEmailHtml(notification.title, notification.body, notification.actionUrl, notification.actionLabel, teacher.firstName);
 
     const { data, error } = await resend.emails.send({
-      from: `Orbit Learn <${config.email.fromEmail}>`,
+      from: `Orba <${config.email.fromEmail}>`,
       to: teacher.email,
       subject: notification.title,
       html,
@@ -260,15 +260,15 @@ function buildEmailHtml(title: string, body: string, actionUrl?: string | null, 
   const name = firstName || 'there';
   const ctaHtml = actionUrl ? `
     <div style="text-align: center; margin-top: 24px;">
-      <a href="https://orbitlearn.app${actionUrl}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #2D5A4A, #3D7A6A); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 600;">
-        ${actionLabel || 'Open OrbitLearn'}
+      <a href="https://withorba.com${actionUrl}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #2D5A4A, #3D7A6A); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 600;">
+        ${actionLabel || 'Open Orba'}
       </a>
     </div>` : '';
 
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px;">
       <div style="background: linear-gradient(135deg, #2D5A4A, #1E4035); border-radius: 16px 16px 0 0; padding: 24px; text-align: center;">
-        <h1 style="color: #fff; font-size: 20px; margin: 0;">Orbit Learn</h1>
+        <h1 style="color: #fff; font-size: 20px; margin: 0;">Orba</h1>
       </div>
       <div style="background: #fff; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px; padding: 32px 24px;">
         <p style="color: #1E2A3A; font-size: 16px; margin: 0 0 8px;">Hi ${name},</p>
@@ -276,7 +276,7 @@ function buildEmailHtml(title: string, body: string, actionUrl?: string | null, 
         ${ctaHtml}
       </div>
       <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 16px;">
-        Orbit Learn | <a href="https://orbitlearn.app/teacher/profile" style="color: #9ca3af;">Manage preferences</a>
+        Orba | <a href="https://withorba.com/settings" style="color: #9ca3af;">Manage preferences</a>
       </p>
     </div>`;
 }
