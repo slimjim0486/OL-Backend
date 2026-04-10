@@ -46,6 +46,7 @@ import { scheduleMonthlyReviewJob, shutdownMonthlyReviewJob } from './jobs/month
 import { scheduleDownloadReminders } from './jobs/downloadReminderJob.js';
 import { scheduleContentDripDelivery } from './jobs/contentDripCronJob.js';
 import { scheduleNudgeGenerationJob, shutdownNudgeGenerationJob } from './jobs/nudgeGenerationJob.js';
+import { scheduleCompletionsEligibilityJob, shutdownCompletionsEligibilityJob } from './jobs/completionsEligibilityJob.js';
 import { scheduleNotificationCleanupJob, shutdownNotificationCleanupJob } from './jobs/notificationCleanupJob.js';
 import { schedulePreferenceUpdateJob, shutdownPreferenceUpdateJob } from './jobs/preferenceUpdateJob.js';
 import { scheduleStreakResetJob, shutdownStreakResetJob } from './jobs/streakResetJob.js';
@@ -403,7 +404,7 @@ async function startServer(): Promise<void> {
       logger.info('Brevo inactivity checks scheduled for 9:00 AM daily');
 
       // Legacy daily games cache warmers (connections / icebreakers / trivia /
-      // crossword). OrbitLearn 2.0 does not use these background refresh jobs,
+      // crossword). Orba does not use these background refresh jobs,
       // so keep them off unless explicitly re-enabled.
       if (config.enableDailyGamesRefresh) {
         scheduleDailyGamesRefresh();
@@ -415,6 +416,10 @@ async function startServer(): Promise<void> {
       // Schedule monthly review auto-generation (1st of month, 6 AM UTC)
       scheduleMonthlyReviewJob();
       logger.info('Monthly review job scheduled');
+
+      // Intelligence Platform: daily completions eligibility check (2 AM UTC)
+      scheduleCompletionsEligibilityJob();
+      logger.info('Completions eligibility job scheduled');
 
       // Intelligence Platform: daily nudge generation (6 AM UTC)
       scheduleNudgeGenerationJob();
@@ -466,6 +471,7 @@ async function startServer(): Promise<void> {
           await shutdownStreamExtractionJob();
           await shutdownMaterialImportJob();
           await shutdownEditAnalysisJob();
+          shutdownCompletionsEligibilityJob();
           shutdownNudgeGenerationJob();
           shutdownNotificationCleanupJob();
           shutdownPreferenceUpdateJob();

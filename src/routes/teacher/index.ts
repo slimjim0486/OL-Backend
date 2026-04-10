@@ -23,6 +23,7 @@ import communicationRoutes from './communication.routes.js';
 import organizationRoutes from './organization.routes.js';
 import voiceRoutes from './voice.routes.js';
 import streamRoutes from './stream.routes.js';
+import completionsRoutes from './completions.routes.js';
 import materialsRoutes from './materials.routes.js';
 import eventsRoutes from './events.routes.js';
 import graphRoutes from './graph.routes.js';
@@ -63,6 +64,7 @@ router.use('/voice', voiceRoutes);
 
 // Teacher Intelligence Platform
 router.use('/stream', streamRoutes);
+router.use('/completions', completionsRoutes);
 router.use('/materials', materialsRoutes);
 router.use('/events', eventsRoutes);
 router.use('/graph', graphRoutes);

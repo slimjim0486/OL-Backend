@@ -107,6 +107,13 @@ export {
   triggerPreferenceUpdate,
 } from './preferenceUpdateJob.js';
 
+// Completions Eligibility Cron (2 AM UTC daily)
+export {
+  scheduleCompletionsEligibilityJob,
+  shutdownCompletionsEligibilityJob,
+  triggerCompletionsEligibility,
+} from './completionsEligibilityJob.js';
+
 // Phase 2: Streak & Digest Cron Jobs
 export {
   scheduleStreakResetJob,

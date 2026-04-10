@@ -100,7 +100,7 @@ const completionSchema = z.object({
   currentInput: z.string().min(1).max(500),
 });
 
-// POST /stream/complete — Get inline completion suggestion
+// POST /stream/complete — Backward-compat alias (delegates to surface-aware service with surface='stream')
 router.post('/complete', requireFeature('inline-completions'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = completionSchema.safeParse(req.body);
@@ -109,9 +109,8 @@ router.post('/complete', requireFeature('inline-completions'), async (req: Reque
     }
     const teacherId = (req as any).teacher.id;
 
-    // Hard 800ms timeout on entire handler
     const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 800));
-    const completionPromise = completionService.getCompletion(teacherId, parsed.data.currentInput);
+    const completionPromise = completionService.getCompletion(teacherId, parsed.data.currentInput, 'stream');
 
     const result = await Promise.race([completionPromise, timeout]);
 
@@ -120,7 +119,6 @@ router.post('/complete', requireFeature('inline-completions'), async (req: Reque
     }
     return res.json({ completion: null });
   } catch (error) {
-    // On any error, return null — never block the typing experience
     return res.json({ completion: null });
   }
 });
