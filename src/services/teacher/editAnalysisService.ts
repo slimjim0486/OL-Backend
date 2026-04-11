@@ -581,6 +581,16 @@ async function recordApprovedNoEdit(teacherId: string, materialId: string) {
   });
   if (editCount > 0) return;
 
+  const markedApproved = await prisma.teacherMaterial.updateMany({
+    where: {
+      id: materialId,
+      teacherId,
+      approved: false,
+    },
+    data: { approved: true },
+  });
+  if (markedApproved.count === 0) return;
+
   await prisma.teacherPreferenceProfile.upsert({
     where: { teacherId },
     create: { teacherId, totalApprovedNoEdit: 1 },

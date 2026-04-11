@@ -2903,7 +2903,7 @@ model TeacherExport {
 
   // Export details
   format     ExportFormat
-  filename   String        // Original filename (e.g., "Fractions Lesson - Orbit Learn.pptx")
+  filename   String        // Original filename (e.g., "Fractions Lesson - Orba.pptx")
   fileSize   Int?          // Size in bytes
 
   // R2 Storage
@@ -3721,6 +3721,10 @@ model TeachingGraphNode {
   subject       String?                // For color coding: "mathematics", "science", "english"
   lastTouchedAt DateTime?
 
+  // Canvas planning (synced from canvas auto-save)
+  plannedForTerm   Boolean  @default(false) // Topic appears on a non-archived canvas
+  plannedWeekLabel String?                  // Nearest TimeColumnNode label, e.g. "Week 3"
+
   // Connections
   edges         TeachingGraphEdge[] @relation("sourceEdges")
   incomingEdges TeachingGraphEdge[] @relation("targetEdges")
@@ -3731,6 +3735,7 @@ model TeachingGraphNode {
   @@unique([teacherId, type, label])
   @@index([teacherId])
   @@index([teacherId, type])
+  @@index([teacherId, plannedForTerm])
 }
 
 enum EdgeType {
@@ -4110,7 +4115,8 @@ model TeacherCanvas {
   canvasData  Json              @default("{\"viewport\":{\"x\":0,\"y\":0,\"zoom\":1},\"items\":[],\"connections\":[]}")
 
   // Metadata
-  isArchived  Boolean @default(false)
+  isArchived   Boolean @default(false)
+  planningHash String?            // Hash of {graphNodeId, weekLabel} tuples — skip sync if unchanged
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

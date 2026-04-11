@@ -89,6 +89,8 @@ import {
   shutdownMaterialImportJob,
   initializeEditAnalysisJob,
   shutdownEditAnalysisJob,
+  initializeCanvasGenerationJob,
+  shutdownCanvasGenerationJob,
 } from './jobs/index.js';
 
 // Validate environment
@@ -392,6 +394,14 @@ async function startServer(): Promise<void> {
       logger.warn('Edit analysis job initialization skipped');
     }
 
+    // Initialize canvas generation job queue (Phase 5 — Canvas Extensions)
+    try {
+      await initializeCanvasGenerationJob();
+      logger.info('Canvas generation job initialized');
+    } catch (error) {
+      logger.warn('Canvas generation job initialization skipped');
+    }
+
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`NanoBanana K-6 Backend running on port ${config.port}`);
@@ -471,6 +481,7 @@ async function startServer(): Promise<void> {
           await shutdownStreamExtractionJob();
           await shutdownMaterialImportJob();
           await shutdownEditAnalysisJob();
+          await shutdownCanvasGenerationJob();
           shutdownCompletionsEligibilityJob();
           shutdownNudgeGenerationJob();
           shutdownNotificationCleanupJob();

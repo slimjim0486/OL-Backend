@@ -252,11 +252,9 @@ router.post('/generate/from-node/:nodeId', generationRateLimit, async (req: Requ
 router.post('/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
-    const material = await materialService.approveMaterial(teacherId, req.params.id);
     // Non-fatal — track no-edit approval so editRate reflects reality
-    editAnalysisService
-      .recordApprovedNoEdit(teacherId, req.params.id)
-      .catch(() => {});
+    await editAnalysisService.recordApprovedNoEdit(teacherId, req.params.id).catch(() => {});
+    const material = await materialService.approveMaterial(teacherId, req.params.id);
     res.json(material);
   } catch (error) {
     next(error);

@@ -188,6 +188,17 @@ async function generateWeeklyPlan(prepId: string): Promise<void> {
     include: { agent: true },
   });
 
+  const existingMaterialCount = await prisma.agentMaterial.count({
+    where: { weeklyPrepId: prepId },
+  });
+  if (prep.plan && existingMaterialCount > 0) {
+    logger.info('Weekly plan already generated; skipping duplicate plan phase', {
+      prepId,
+      existingMaterialCount,
+    });
+    return;
+  }
+
   const context = await contextAssemblerService.assembleContext(
     prep.agent.teacherId,
     'WEEKLY_PREP'

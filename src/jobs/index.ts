@@ -107,6 +107,15 @@ export {
   triggerPreferenceUpdate,
 } from './preferenceUpdateJob.js';
 
+// Canvas Material Generation
+export {
+  initializeCanvasGenerationJob,
+  shutdownCanvasGenerationJob,
+  queueCanvasGeneration,
+} from './canvasGenerationJob.js';
+
+export type { CanvasGenerationJobData } from './canvasGenerationJob.js';
+
 // Completions Eligibility Cron (2 AM UTC daily)
 export {
   scheduleCompletionsEligibilityJob,

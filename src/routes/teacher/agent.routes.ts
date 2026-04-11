@@ -13,6 +13,7 @@ import {
   MessageRole,
   AgentInteractionType,
   SourceType,
+  ContentStatus,
 } from '@prisma/client';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
 import { agentMemoryService } from '../../services/teacher/agentMemoryService.js';
@@ -738,8 +739,22 @@ router.post(
         case 'approval': {
           await reinforcementService.recordApproval(teacherId, interactionId, contentId, ctx);
 
-          // Persist generated content to My Content library
-          if (generatedContent && contentType) {
+          if (contentId) {
+            try {
+              await contentService.updateStatus(contentId, teacherId, ContentStatus.PUBLISHED);
+              createdContentId = contentId;
+            } catch (publishError) {
+              logger.warn('Failed to publish approved content', {
+                teacherId,
+                contentId,
+                error: (publishError as Error).message,
+              });
+            }
+          }
+
+          // Persist generated content to My Content library if this is an older
+          // action card that predates generation-time persistence.
+          if (!contentId && generatedContent && contentType) {
             try {
               const CONTENT_TYPE_MAP: Record<string, string> = {
                 lesson: 'LESSON',
@@ -848,12 +863,15 @@ router.post(
     try {
       const teacherId = (req as any).teacher.id;
       const weekStartDate = req.body.weekStartDate ? new Date(req.body.weekStartDate) : undefined;
-      const { prepId, weekLabel } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
+      const { prepId, weekLabel, existed } = await weeklyPrepService.initiateWeeklyPrep(teacherId, {
         triggeredBy: 'manual',
         weekStartDate,
       });
+      if (existed) {
+        return res.status(200).json({ prepId, weekLabel, status: 'EXISTING', existed: true });
+      }
       await queueWeeklyPrep({ prepId, teacherId, triggeredBy: 'manual' });
-      res.status(201).json({ prepId, weekLabel, status: 'GENERATING' });
+      res.status(201).json({ prepId, weekLabel, status: 'GENERATING', existed: false });
     } catch (error) {
       next(error);
     }

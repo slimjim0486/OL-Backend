@@ -588,9 +588,14 @@ export const contentGenerationService = {
     let result: Awaited<ReturnType<typeof generateWithModel>>;
     let responseText: string;
     let tokensUsed: number;
+    let totalTokensUsed = 0;
+    let flashTokensUsed = 0;
+    let proTokensUsed = 0;
 
     try {
       result = await generateWithModel('flash');
+      flashTokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+      totalTokensUsed += flashTokensUsed;
       const responseCheck = checkGeminiResponse(result);
 
       if (responseCheck.isBlocked || responseCheck.isEmpty) {
@@ -607,7 +612,7 @@ export const contentGenerationService = {
       } else {
         // Flash succeeded - validate output quality
         responseText = responseCheck.responseText;
-        tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+        tokensUsed = totalTokensUsed;
 
         try {
           const flashLesson = JSON.parse(extractJSON(responseText)) as Omit<GeneratedLesson, 'tokensUsed'>;
@@ -707,18 +712,23 @@ export const contentGenerationService = {
     }
 
     responseText = proResponseCheck.responseText;
-    tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+    proTokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+    totalTokensUsed += proTokensUsed;
+    tokensUsed = totalTokensUsed || proTokensUsed;
 
     try {
       const lesson = JSON.parse(extractJSON(responseText)) as Omit<GeneratedLesson, 'tokensUsed'>;
 
       // Record usage with Pro model
       if (!resolvedInput.skipQuota) {
+        const usageModel = fallbackTriggered && flashTokensUsed > 0
+          ? `${config.gemini.models.flash}+${config.gemini.models.pro}`
+          : config.gemini.models.pro;
         await quotaService.recordUsage({
           teacherId,
           operation: TokenOperation.LESSON_GENERATION,
           tokensUsed,
-          modelUsed: config.gemini.models.pro,
+          modelUsed: usageModel,
           resourceType: 'lesson',
         });
       }
@@ -860,6 +870,17 @@ export const contentGenerationService = {
       error: lastError || 'Unknown error',
       responseText: lastResponseText.substring(0, 500),
     });
+    if (!input.skipQuota && totalTokensUsed > 0) {
+      await quotaService.recordUsage({
+        teacherId,
+        operation: TokenOperation.QUIZ_GENERATION,
+        tokensUsed: totalTokensUsed,
+        modelUsed: config.gemini.models.flash,
+        resourceType: 'quiz_failed',
+        resourceId: contentId,
+        countGeneration: false,
+      });
+    }
     throw new Error('Quiz generation failed unexpectedly. Try again, or ask for a shorter or more focused quiz.');
   },
 
@@ -899,6 +920,18 @@ export const contentGenerationService = {
     // Check for blocked or empty responses
     const responseCheck = checkGeminiResponse(result);
     if (responseCheck.isBlocked || responseCheck.isEmpty) {
+      const tokensUsed = result.response.usageMetadata?.totalTokenCount || estimatedTokens;
+      if (!input.skipQuota) {
+        await quotaService.recordUsage({
+          teacherId,
+          operation: TokenOperation.FLASHCARD_GENERATION,
+          tokensUsed,
+          modelUsed: config.gemini.models.flash,
+          resourceType: 'flashcards_failed',
+          resourceId: contentId,
+          countGeneration: false,
+        });
+      }
       logger.warn('Flashcard generation blocked or empty', {
         teacherId,
         contentId,
@@ -940,6 +973,17 @@ export const contentGenerationService = {
 
       return { ...flashcards, tokensUsed };
     } catch (error) {
+      if (!input.skipQuota) {
+        await quotaService.recordUsage({
+          teacherId,
+          operation: TokenOperation.FLASHCARD_GENERATION,
+          tokensUsed,
+          modelUsed: config.gemini.models.flash,
+          resourceType: 'flashcards_failed',
+          resourceId: contentId,
+          countGeneration: false,
+        });
+      }
       logger.error('Failed to parse generated flashcards', {
         error: error instanceof Error ? error.message : 'Unknown error',
         responseText: responseText.substring(0, 500),

@@ -1164,6 +1164,47 @@ function buildSourceContentForQuickGenerators(input: z.infer<typeof generateFrom
   return text;
 }
 
+function stripGenerationMetadata(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const {
+    tokensUsed: _tokensUsed,
+    modelUsed: _modelUsed,
+    fallbackTriggered: _fallbackTriggered,
+    fallbackReason: _fallbackReason,
+    ...content
+  } = value as Record<string, unknown>;
+  return content;
+}
+
+async function saveGeneratedContentToLibrary(
+  teacherId: string,
+  input: {
+    title: string;
+    description?: string;
+    subject?: Subject;
+    gradeLevel?: string;
+    contentType: TeacherContentType;
+    lessonContent?: unknown;
+    quizContent?: unknown;
+    flashcardContent?: unknown;
+    infographicUrl?: string;
+  }
+) {
+  return contentService.createContent(teacherId, {
+    title: input.title,
+    description: input.description,
+    subject: input.subject,
+    gradeLevel: input.gradeLevel,
+    contentType: input.contentType,
+    sourceType: SourceType.TEXT,
+    status: ContentStatus.DRAFT,
+    lessonContent: input.lessonContent,
+    quizContent: input.quizContent,
+    flashcardContent: input.flashcardContent,
+    infographicUrl: input.infographicUrl,
+  });
+}
+
 // ============================================
 // PDF ANALYSIS ROUTES
 // ============================================
@@ -1540,10 +1581,18 @@ router.post(
         req.teacher!.id,
         req.body
       );
+      const content = await saveGeneratedContentToLibrary(req.teacher!.id, {
+        title: result.title || req.body.topic,
+        description: result.summary,
+        subject: req.body.subject,
+        gradeLevel: req.body.gradeLevel,
+        contentType: TeacherContentType.LESSON,
+        lessonContent: stripGenerationMetadata(result),
+      });
 
       res.json({
         success: true,
-        data: result,
+        data: { ...result, contentId: content.id },
         message: 'Lesson generated successfully',
       });
     } catch (error) {
@@ -1591,11 +1640,22 @@ router.post(
           sendEvent('progress', progress);
         }
       );
+      const content = await saveGeneratedContentToLibrary(req.teacher!.id, {
+        title: result.lesson.title || req.body.topic,
+        description: result.lesson.summary,
+        subject: req.body.subject,
+        gradeLevel: req.body.gradeLevel,
+        contentType: TeacherContentType.LESSON,
+        lessonContent: result.lesson,
+        quizContent: result.quiz,
+        flashcardContent: result.flashcards,
+        infographicUrl: result.infographic?.imageUrl,
+      });
 
       // Send final result
       sendEvent('complete', {
         success: true,
-        data: result,
+        data: { ...result, contentId: content.id },
         message: 'Full lesson generated successfully',
       });
 
@@ -1635,10 +1695,21 @@ router.post(
         req.body
         // No progress callback - just wait for the result
       );
+      const content = await saveGeneratedContentToLibrary(req.teacher!.id, {
+        title: result.lesson.title || req.body.topic,
+        description: result.lesson.summary,
+        subject: req.body.subject,
+        gradeLevel: req.body.gradeLevel,
+        contentType: TeacherContentType.LESSON,
+        lessonContent: result.lesson,
+        quizContent: result.quiz,
+        flashcardContent: result.flashcards,
+        infographicUrl: result.infographic?.imageUrl,
+      });
 
       res.json({
         success: true,
-        data: result,
+        data: { ...result, contentId: content.id },
         message: 'Full lesson generated successfully',
       });
     } catch (error) {
@@ -1844,10 +1915,17 @@ router.post(
         '',
         req.body
       );
+      const content = await saveGeneratedContentToLibrary(req.teacher!.id, {
+        title: result.title || req.body.title || 'Generated Quiz',
+        description: `Generated quiz with ${result.questions?.length || 0} questions`,
+        gradeLevel: req.body.gradeLevel,
+        contentType: TeacherContentType.QUIZ,
+        quizContent: stripGenerationMetadata(result),
+      });
 
       res.json({
         success: true,
-        data: result,
+        data: { ...result, contentId: content.id },
         message: 'Quiz generated successfully',
       });
     } catch (error) {

@@ -1,8 +1,9 @@
 // Agent Tool Executor — Dispatches Claude tool calls to existing backend services
-import { AgentInteractionType, Subject } from '@prisma/client';
+import { AgentInteractionType, ContentStatus, SourceType, Subject, TeacherContentType } from '@prisma/client';
 import { agentMemoryService } from './agentMemoryService.js';
 import { contextAssemblerService } from './contextAssemblerService.js';
 import { contentGenerationService } from './contentGenerationService.js';
+import { contentService } from './contentService.js';
 import { subPlanService } from './subPlanService.js';
 import { iepGoalService } from './iepGoalService.js';
 import { communicationService } from './communicationService.js';
@@ -39,6 +40,18 @@ export const TOOL_TO_CONTENT_TYPE: Record<string, string> = {
   generate_parent_email: 'parent_email',
   generate_report_comments: 'report_comments',
 };
+
+function stripGenerationMetadata(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const {
+    tokensUsed: _tokensUsed,
+    modelUsed: _modelUsed,
+    fallbackTriggered: _fallbackTriggered,
+    fallbackReason: _fallbackReason,
+    ...content
+  } = value as Record<string, unknown>;
+  return content;
+}
 
 // ============================================
 // TOOL EXECUTOR
@@ -134,8 +147,9 @@ export async function executeToolCall(
         const profile = await agentMemoryService.getStyleProfile(agentId);
         if (!profile) return { toolName, result: { message: 'No style profile yet — using defaults.' }, isContentGeneration: false };
         const prefs = profile.preferences as Record<string, any> || {};
-        const contentPrefs = toolInput.contentType && prefs[toolInput.contentType]
-          ? prefs[toolInput.contentType]
+        const byContentType = prefs._byContentType as Record<string, any> | undefined;
+        const contentPrefs = toolInput.contentType && byContentType?.[toolInput.contentType]
+          ? byContentType[toolInput.contentType]
           : prefs;
         return {
           toolName,
@@ -193,19 +207,34 @@ export async function executeToolCall(
           includeActivities: true,
           includeAssessment: true,
         });
+        const savedContent = await contentService.createContent(teacherId, {
+          title: result.title || toolInput.topic,
+          description: result.summary,
+          contentType: TeacherContentType.LESSON,
+          subject: mapToSubject(toolInput.subject),
+          gradeLevel: toolInput.gradeLevel,
+          sourceType: SourceType.TEXT,
+          status: ContentStatus.DRAFT,
+          lessonContent: stripGenerationMetadata(result),
+        });
 
         const interaction = await agentMemoryService.recordInteraction(agentId, {
           type: AgentInteractionType.CONTENT_GENERATION,
           summary: `Generated lesson: ${result.title}`,
           input: toolInput.topic,
           outputType: 'lesson',
+          outputId: savedContent.id,
           tokensUsed: result.tokensUsed,
           modelUsed: result.modelUsed || 'flash',
         });
 
         return {
           toolName,
-          result: { content: result, preview: `Created lesson: "${result.title}" with ${result.sections.length} sections` },
+          result: {
+            content: { ...result, id: savedContent.id, contentId: savedContent.id },
+            contentId: savedContent.id,
+            preview: `Created lesson: "${result.title}" with ${result.sections.length} sections`,
+          },
           isContentGeneration: true,
           contentType: 'lesson',
           interactionId: interaction?.id,
@@ -228,19 +257,34 @@ export async function executeToolCall(
           difficulty: toolInput.difficulty || 'mixed',
           gradeLevel: toolInput.gradeLevel,
         });
+        const savedContent = await contentService.createContent(teacherId, {
+          title: result.title || toolInput.title || `Quiz: ${toolInput.topic}`,
+          description: `Generated quiz with ${result.questions.length} questions`,
+          contentType: TeacherContentType.QUIZ,
+          subject: mapToSubject(toolInput.subject),
+          gradeLevel: toolInput.gradeLevel,
+          sourceType: SourceType.TEXT,
+          status: ContentStatus.DRAFT,
+          quizContent: stripGenerationMetadata(result),
+        });
 
         const interaction = await agentMemoryService.recordInteraction(agentId, {
           type: AgentInteractionType.CONTENT_GENERATION,
           summary: `Generated quiz: ${result.title} (${result.questions.length} questions)`,
           input: toolInput.topic,
           outputType: 'quiz',
+          outputId: savedContent.id,
           tokensUsed: result.tokensUsed,
           modelUsed: 'flash',
         });
 
         return {
           toolName,
-          result: { content: result, preview: `Created quiz: "${result.title}" with ${result.questions.length} questions (${result.totalPoints} points)` },
+          result: {
+            content: { ...result, id: savedContent.id, contentId: savedContent.id },
+            contentId: savedContent.id,
+            preview: `Created quiz: "${result.title}" with ${result.questions.length} questions (${result.totalPoints} points)`,
+          },
           isContentGeneration: true,
           contentType: 'quiz',
           interactionId: interaction?.id,
@@ -262,19 +306,34 @@ export async function executeToolCall(
           cardCount: toolInput.cardCount || 20,
           gradeLevel: toolInput.gradeLevel,
         });
+        const savedContent = await contentService.createContent(teacherId, {
+          title: result.title || toolInput.title || `Flashcards: ${toolInput.topic}`,
+          description: `Generated flashcard deck with ${result.cards.length} cards`,
+          contentType: TeacherContentType.FLASHCARD_DECK,
+          subject: mapToSubject(toolInput.subject),
+          gradeLevel: toolInput.gradeLevel,
+          sourceType: SourceType.TEXT,
+          status: ContentStatus.DRAFT,
+          flashcardContent: stripGenerationMetadata(result),
+        });
 
         const interaction = await agentMemoryService.recordInteraction(agentId, {
           type: AgentInteractionType.CONTENT_GENERATION,
           summary: `Generated flashcards: ${result.title} (${result.cards.length} cards)`,
           input: toolInput.topic,
           outputType: 'flashcards',
+          outputId: savedContent.id,
           tokensUsed: result.tokensUsed,
           modelUsed: 'flash',
         });
 
         return {
           toolName,
-          result: { content: result, preview: `Created flashcard set: "${result.title}" with ${result.cards.length} cards` },
+          result: {
+            content: { ...result, id: savedContent.id, contentId: savedContent.id },
+            contentId: savedContent.id,
+            preview: `Created flashcard set: "${result.title}" with ${result.cards.length} cards`,
+          },
           isContentGeneration: true,
           contentType: 'flashcards',
           interactionId: interaction?.id,
@@ -420,10 +479,17 @@ export async function executeToolCall(
 
       // ── STATE & NAVIGATION TOOLS ──
       case 'update_curriculum_progress': {
+        const existing = await agentMemoryService.getCurriculumState(agentId, toolInput.subject);
+        const existingTopicProgress =
+          existing?.topicProgress && typeof existing.topicProgress === 'object'
+            ? (existing.topicProgress as Record<string, any>)
+            : {};
         const updated = await agentMemoryService.updateCurriculumState(agentId, toolInput.subject, {
           standardsTaught: toolInput.standardsTaught,
           standardsAssessed: toolInput.standardsAssessed,
-          topicProgress: toolInput.currentTopic ? { current: toolInput.currentTopic } : undefined,
+          topicProgress: toolInput.currentTopic
+            ? { ...existingTopicProgress, currentTopic: toolInput.currentTopic }
+            : undefined,
         });
         return {
           toolName,

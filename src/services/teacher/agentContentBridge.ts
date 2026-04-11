@@ -1,7 +1,8 @@
 // Agent Content Bridge — Wraps existing generation services with memory context
 // CRITICAL: Does NOT modify contentGenerationService.ts. Injects context through existing fields.
-import { Subject, AgentInteractionType } from '@prisma/client';
+import { Subject, AgentInteractionType, ContentStatus, SourceType, TeacherContentType } from '@prisma/client';
 import { contentGenerationService } from './contentGenerationService.js';
+import { contentService } from './contentService.js';
 import { subPlanService } from './subPlanService.js';
 import { iepGoalService } from './iepGoalService.js';
 import { communicationService } from './communicationService.js';
@@ -28,6 +29,18 @@ export interface BridgeResult {
 // LESSON GENERATION WITH CONTEXT
 // ============================================
 
+function stripGenerationMetadata(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const {
+    tokensUsed: _tokensUsed,
+    modelUsed: _modelUsed,
+    fallbackTriggered: _fallbackTriggered,
+    fallbackReason: _fallbackReason,
+    ...content
+  } = value as Record<string, unknown>;
+  return content;
+}
+
 async function generateLessonWithContext(
   teacherId: string,
   intent: TaskIntent,
@@ -50,6 +63,16 @@ async function generateLessonWithContext(
     includeActivities: true,
     includeAssessment: true,
   });
+  const savedContent = await contentService.createContent(teacherId, {
+    title: result.title || intent.extractedParams.topic || 'Generated Lesson',
+    description: result.summary,
+    contentType: TeacherContentType.LESSON,
+    subject: mapToSubject(intent.extractedParams.subject),
+    gradeLevel: intent.extractedParams.gradeLevel,
+    sourceType: SourceType.TEXT,
+    status: ContentStatus.DRAFT,
+    lessonContent: stripGenerationMetadata(result),
+  });
 
   // Record interaction
   let interactionId: string | undefined;
@@ -60,6 +83,7 @@ async function generateLessonWithContext(
       summary: `Generated lesson: ${result.title}`,
       input: intent.extractedParams.topic,
       outputType: 'lesson',
+      outputId: savedContent.id,
       tokensUsed: result.tokensUsed,
       modelUsed: result.modelUsed || 'flash',
     });
@@ -67,10 +91,11 @@ async function generateLessonWithContext(
   }
 
   return {
-    content: result,
+    content: { ...result, id: savedContent.id, contentId: savedContent.id },
     preview: `Created lesson: "${result.title}" with ${result.sections.length} sections`,
     tokensUsed: result.tokensUsed,
     contentType: 'lesson',
+    contentId: savedContent.id,
     interactionId,
   };
 }
@@ -103,6 +128,16 @@ async function generateQuizWithContext(
     difficulty: intent.extractedParams.difficulty || 'mixed',
     gradeLevel: intent.extractedParams.gradeLevel,
   });
+  const savedContent = await contentService.createContent(teacherId, {
+    title: result.title || intent.extractedParams.title || `Quiz: ${intent.extractedParams.topic || 'Generated Quiz'}`,
+    description: `Generated quiz with ${result.questions.length} questions`,
+    contentType: TeacherContentType.QUIZ,
+    subject: mapToSubject(intent.extractedParams.subject),
+    gradeLevel: intent.extractedParams.gradeLevel,
+    sourceType: SourceType.TEXT,
+    status: ContentStatus.DRAFT,
+    quizContent: stripGenerationMetadata(result),
+  });
 
   let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
@@ -112,6 +147,7 @@ async function generateQuizWithContext(
       summary: `Generated quiz: ${result.title} (${result.questions.length} questions)`,
       input: intent.extractedParams.topic,
       outputType: 'quiz',
+      outputId: savedContent.id,
       tokensUsed: result.tokensUsed,
       modelUsed: 'flash',
     });
@@ -119,10 +155,11 @@ async function generateQuizWithContext(
   }
 
   return {
-    content: result,
+    content: { ...result, id: savedContent.id, contentId: savedContent.id },
     preview: `Created quiz: "${result.title}" with ${result.questions.length} questions (${result.totalPoints} points)`,
     tokensUsed: result.tokensUsed,
     contentType: 'quiz',
+    contentId: savedContent.id,
     interactionId,
   };
 }
@@ -153,6 +190,16 @@ async function generateFlashcardsWithContext(
     cardCount: intent.extractedParams.count || 20,
     gradeLevel: intent.extractedParams.gradeLevel,
   });
+  const savedContent = await contentService.createContent(teacherId, {
+    title: result.title || intent.extractedParams.title || `Flashcards: ${intent.extractedParams.topic || 'Generated Flashcards'}`,
+    description: `Generated flashcard deck with ${result.cards.length} cards`,
+    contentType: TeacherContentType.FLASHCARD_DECK,
+    subject: mapToSubject(intent.extractedParams.subject),
+    gradeLevel: intent.extractedParams.gradeLevel,
+    sourceType: SourceType.TEXT,
+    status: ContentStatus.DRAFT,
+    flashcardContent: stripGenerationMetadata(result),
+  });
 
   let interactionId: string | undefined;
   const agent = await agentMemoryService.getAgent(teacherId);
@@ -162,6 +209,7 @@ async function generateFlashcardsWithContext(
       summary: `Generated flashcards: ${result.title} (${result.cards.length} cards)`,
       input: intent.extractedParams.topic,
       outputType: 'flashcards',
+      outputId: savedContent.id,
       tokensUsed: result.tokensUsed,
       modelUsed: 'flash',
     });
@@ -169,10 +217,11 @@ async function generateFlashcardsWithContext(
   }
 
   return {
-    content: result,
+    content: { ...result, id: savedContent.id, contentId: savedContent.id },
     preview: `Created flashcard set: "${result.title}" with ${result.cards.length} cards`,
     tokensUsed: result.tokensUsed,
     contentType: 'flashcards',
+    contentId: savedContent.id,
     interactionId,
   };
 }

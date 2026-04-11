@@ -110,8 +110,17 @@ export const quotaService = {
     modelUsed: string;
     resourceType?: string;
     resourceId?: string;
+    countGeneration?: boolean;
   }) {
-    const { teacherId, operation, tokensUsed, modelUsed, resourceType, resourceId } = params;
+    const {
+      teacherId,
+      operation,
+      tokensUsed,
+      modelUsed,
+      resourceType,
+      resourceId,
+      countGeneration = true,
+    } = params;
 
     await prisma.tokenUsageLog.create({
       data: {
@@ -125,7 +134,7 @@ export const quotaService = {
       },
     });
 
-    if (COUNTED_GENERATION_OPERATIONS.has(operation)) {
+    if (countGeneration && COUNTED_GENERATION_OPERATIONS.has(operation)) {
       await subscriptionService.incrementGenerationCount(teacherId);
     }
   },
