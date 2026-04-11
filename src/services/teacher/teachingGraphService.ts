@@ -312,6 +312,176 @@ async function recalcTopicWeight(nodeId: string) {
   });
 }
 
+async function recalcAndPruneTopicNodes(teacherId: string, topicIds: Iterable<string>) {
+  const uniqueIds = [...new Set([...topicIds].filter(Boolean))];
+
+  for (const topicId of uniqueIds) {
+    const node = await prisma.teachingGraphNode.findFirst({
+      where: { id: topicId, teacherId, type: 'TOPIC' },
+      select: { id: true, plannedForTerm: true },
+    });
+    if (!node) continue;
+
+    const aboutCount = await prisma.teachingGraphEdge.count({
+      where: { teacherId, targetId: topicId, type: 'ABOUT' },
+    });
+
+    if (aboutCount === 0 && !node.plannedForTerm) {
+      await prisma.teachingGraphNode.delete({ where: { id: topicId } });
+      continue;
+    }
+
+    await prisma.teachingGraphNode.update({
+      where: { id: topicId },
+      data: {
+        weight: aboutCount,
+        ...(aboutCount > 0 ? { lastTouchedAt: new Date() } : {}),
+      },
+    });
+  }
+}
+
+async function rebuildPrerequisiteEdges(teacherId: string) {
+  const topicNodes = await prisma.teachingGraphNode.findMany({
+    where: { teacherId, type: 'TOPIC' },
+    select: { id: true, linkedStandardCodes: true },
+  });
+
+  for (const topicNode of topicNodes) {
+    const codes = topicNode.linkedStandardCodes || [];
+    if (codes.length === 0) continue;
+
+    const standards = await prisma.learningStandard.findMany({
+      where: { notation: { in: codes } },
+      select: { prerequisites: true },
+    });
+
+    const prereqIds = new Set<string>();
+    for (const s of standards) {
+      for (const pid of s.prerequisites || []) prereqIds.add(pid);
+    }
+    if (prereqIds.size === 0) continue;
+
+    const prereqStandards = await prisma.learningStandard.findMany({
+      where: { id: { in: [...prereqIds] } },
+      select: { notation: true },
+    });
+    const prereqNotations = prereqStandards
+      .map((s) => s.notation)
+      .filter((n): n is string => Boolean(n));
+    if (prereqNotations.length === 0) continue;
+
+    const prereqTopicNodes = await prisma.teachingGraphNode.findMany({
+      where: {
+        teacherId,
+        type: 'TOPIC',
+        id: { not: topicNode.id },
+        linkedStandardCodes: { hasSome: prereqNotations },
+      },
+      select: { id: true },
+    });
+
+    for (const prereqTopic of prereqTopicNodes) {
+      await upsertEdge(teacherId, prereqTopic.id, topicNode.id, 'PREREQUISITE');
+    }
+  }
+}
+
+async function rebuildDerivedTopicEdges(teacherId: string) {
+  await prisma.teachingGraphEdge.deleteMany({
+    where: {
+      teacherId,
+      type: { in: ['RELATED', 'SEQUENCE', 'PREREQUISITE'] },
+    },
+  });
+
+  const topicNodes = await prisma.teachingGraphNode.findMany({
+    where: { teacherId, type: 'TOPIC' },
+    select: { id: true, label: true },
+  });
+  const topicsByLabel = new Map(
+    topicNodes.map((node) => [node.label.toLowerCase().trim(), node.id]),
+  );
+
+  const entries = await prisma.teacherStreamEntry.findMany({
+    where: {
+      teacherId,
+      archived: false,
+      NOT: { extractedTags: { equals: Prisma.DbNull } },
+    },
+    orderBy: { createdAt: 'asc' },
+    select: { extractedTags: true },
+  });
+
+  let previousTopicIds: string[] = [];
+  for (const entry of entries) {
+    const tags = entry.extractedTags as { topics?: unknown } | null;
+    const topicLabels = Array.isArray(tags?.topics)
+      ? tags.topics
+          .filter((topic): topic is string => typeof topic === 'string' && topic.trim().length > 0)
+          .map((topic) => topic.toLowerCase().trim())
+      : [];
+    const currentTopicIds = [...new Set(topicLabels)]
+      .map((label) => topicsByLabel.get(label))
+      .filter((id): id is string => Boolean(id));
+
+    for (let i = 0; i < currentTopicIds.length; i++) {
+      for (let j = i + 1; j < currentTopicIds.length; j++) {
+        await upsertEdge(teacherId, currentTopicIds[i], currentTopicIds[j], 'RELATED');
+      }
+    }
+
+    for (const previousTopicId of previousTopicIds) {
+      for (const currentTopicId of currentTopicIds) {
+        if (previousTopicId !== currentTopicId) {
+          await upsertEdge(teacherId, previousTopicId, currentTopicId, 'SEQUENCE');
+        }
+      }
+    }
+
+    if (currentTopicIds.length > 0) {
+      previousTopicIds = currentTopicIds;
+    }
+  }
+
+  await rebuildPrerequisiteEdges(teacherId);
+}
+
+async function cleanupStreamEntryGraph(
+  teacherId: string,
+  entryId: string,
+  options: { deleteNode?: boolean; rebuildDerivedEdges?: boolean } = {},
+) {
+  const entryNode = await prisma.teachingGraphNode.findFirst({
+    where: { teacherId, type: 'STREAM_ENTRY', streamEntryId: entryId },
+    select: { id: true },
+  });
+
+  if (!entryNode) return { affectedTopicIds: [] as string[] };
+
+  const aboutEdges = await prisma.teachingGraphEdge.findMany({
+    where: { teacherId, sourceId: entryNode.id, type: 'ABOUT' },
+    select: { targetId: true },
+  });
+  const affectedTopicIds = aboutEdges.map((edge) => edge.targetId);
+
+  await prisma.teachingGraphEdge.deleteMany({
+    where: { teacherId, sourceId: entryNode.id, type: 'ABOUT' },
+  });
+
+  if (options.deleteNode) {
+    await prisma.teachingGraphNode.delete({ where: { id: entryNode.id } });
+  }
+
+  await recalcAndPruneTopicNodes(teacherId, affectedTopicIds);
+
+  if (options.rebuildDerivedEdges !== false) {
+    await rebuildDerivedTopicEdges(teacherId);
+  }
+
+  return { affectedTopicIds };
+}
+
 // ============================================
 // GRAPH BUILDING FROM STREAM ENTRIES
 // ============================================
@@ -343,6 +513,11 @@ async function processStreamEntry(teacherId: string, entryId: string) {
   const subjects: string[] = tags.subjects || [];
   const standards: Array<{ code: string; description: string }> = tags.standards || [];
   const primarySubject = subjects[0] || null;
+  const { affectedTopicIds: previouslyLinkedTopicIds } = await cleanupStreamEntryGraph(
+    teacherId,
+    entryId,
+    { rebuildDerivedEdges: false },
+  );
 
   // Load teacher profile for curriculum matching
   const teacher = await prisma.teacher.findUnique({
@@ -638,10 +813,14 @@ async function processStreamEntry(teacherId: string, entryId: string) {
     }
   }
 
-  // Step 6: Update topic node weights
-  for (const topicNode of topicNodes) {
-    await recalcTopicWeight(topicNode.id);
-  }
+  // Step 6: Update topic weights and rebuild derived topic-topic edges.
+  // RELATED/SEQUENCE/PREREQUISITE edges do not store source-entry provenance,
+  // so rebuilding them keeps edits/re-extractions from leaving stale graph links.
+  await recalcAndPruneTopicNodes(
+    teacherId,
+    [...previouslyLinkedTopicIds, ...topicNodes.map((topicNode) => topicNode.id)],
+  );
+  await rebuildDerivedTopicEdges(teacherId);
 
   logger.info('Graph updated from stream entry', {
     teacherId,
@@ -740,6 +919,10 @@ async function getFullGraph(teacherId: string): Promise<GraphData> {
         teacherId,
         // Only load valid thought-centric node types (old STANDARD/STUDENT_GROUP rows ignored)
         type: { in: ['TOPIC', 'STREAM_ENTRY', 'MATERIAL'] },
+        OR: [
+          { type: { not: 'STREAM_ENTRY' } },
+          { streamEntry: { is: { archived: false } } },
+        ],
       },
       orderBy: { weight: 'desc' },
       include: {
@@ -756,6 +939,8 @@ async function getFullGraph(teacherId: string): Promise<GraphData> {
   const entryNodes = nodes.filter(n => n.type === 'STREAM_ENTRY');
   const materialNodes = nodes.filter(n => n.type === 'MATERIAL');
   const uniqueSubjects = new Set(nodes.map(n => n.subject).filter(Boolean));
+  const visibleNodeIds = new Set(nodes.map(n => n.id));
+  const visibleEdges = edges.filter(e => visibleNodeIds.has(e.sourceId) && visibleNodeIds.has(e.targetId));
 
   return {
     nodes: nodes.map(n => {
@@ -778,7 +963,7 @@ async function getFullGraph(teacherId: string): Promise<GraphData> {
         lastTouchedAt: n.lastTouchedAt?.toISOString() || null,
       };
     }),
-    edges: edges.map(e => ({
+    edges: visibleEdges.map(e => ({
       id: e.id,
       sourceId: e.sourceId,
       targetId: e.targetId,
@@ -1261,6 +1446,8 @@ export const teachingGraphService = {
   createMaterialNode,
   upsertEdge,
   recalcTopicWeight,
+  cleanupStreamEntryGraph,
+  rebuildDerivedTopicEdges,
   // Stream processing
   processStreamEntry,
   // Material processing

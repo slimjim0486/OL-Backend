@@ -322,18 +322,39 @@ async function processStreamExtractionJob(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    try {
-      await prisma.teacherStreamEntry.update({
-        where: { id: entryId },
-        data: { extractionStatus: 'failed' },
-      });
-    } catch (updateErr) {
-      logger.error('Failed to update entry status to failed', { entryId, error: (updateErr as Error).message });
+    const maxAttempts = job.opts.attempts ?? 1;
+    const isFinalAttempt = job.attemptsMade + 1 >= maxAttempts;
+
+    if (isFinalAttempt) {
+      try {
+        await prisma.teacherStreamEntry.update({
+          where: { id: entryId },
+          data: { extractionStatus: 'failed' },
+        });
+      } catch (updateErr) {
+        logger.error('Failed to update entry status to failed', { entryId, error: (updateErr as Error).message });
+      }
+    } else {
+      try {
+        await prisma.teacherStreamEntry.update({
+          where: { id: entryId },
+          data: { extractionStatus: 'pending' },
+        });
+      } catch (updateErr) {
+        logger.error('Failed to reset entry status before retry', { entryId, error: (updateErr as Error).message });
+      }
     }
 
-    logger.error('Stream extraction failed', { entryId, teacherId, error: errorMessage });
+    logger.error('Stream extraction failed', {
+      entryId,
+      teacherId,
+      attempt: job.attemptsMade + 1,
+      maxAttempts,
+      finalAttempt: isFinalAttempt,
+      error: errorMessage,
+    });
 
-    return { success: false, entryId, error: errorMessage };
+    throw error instanceof Error ? error : new Error(errorMessage);
   }
 }
 

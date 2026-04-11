@@ -3,6 +3,7 @@
 import { prisma } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
 import { streakService } from './streakService.js';
+import { teachingGraphService } from './teachingGraphService.js';
 
 // ============================================
 // TYPES
@@ -160,6 +161,18 @@ async function updateEntry(teacherId: string, entryId: string, input: UpdateStre
   });
 
   const contentChanged = input.content !== undefined;
+  if (contentChanged) {
+    try {
+      await teachingGraphService.cleanupStreamEntryGraph(teacherId, entryId);
+    } catch (err) {
+      logger.error('Failed to clean stream entry graph links after content update', {
+        teacherId,
+        entryId,
+        error: (err as Error).message,
+      });
+    }
+  }
+
   logger.info('Stream entry updated', { teacherId, entryId, contentChanged });
 
   return { entry: updated, contentChanged };
@@ -178,6 +191,16 @@ async function deleteEntry(teacherId: string, entryId: string) {
     where: { id: entryId },
     data: { archived: true },
   });
+
+  try {
+    await teachingGraphService.cleanupStreamEntryGraph(teacherId, entryId, { deleteNode: true });
+  } catch (err) {
+    logger.error('Failed to clean stream entry graph links after archive', {
+      teacherId,
+      entryId,
+      error: (err as Error).message,
+    });
+  }
 
   logger.info('Stream entry archived', { teacherId, entryId });
 }
