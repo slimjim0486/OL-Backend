@@ -925,7 +925,15 @@ async function getFullGraph(teacherId: string): Promise<GraphData> {
         ],
       },
       orderBy: { weight: 'desc' },
-      include: {
+      select: {
+        id: true,
+        type: true,
+        label: true,
+        weight: true,
+        subject: true,
+        streamEntryId: true,
+        materialId: true,
+        lastTouchedAt: true,
         streamEntry: { select: { content: true } },
         material: { select: { title: true } },
       },
@@ -1101,12 +1109,47 @@ async function linkEntryToNode(
 async function getNodeDetail(teacherId: string, nodeId: string) {
   const node = await prisma.teachingGraphNode.findFirst({
     where: { id: nodeId, teacherId },
-    include: {
+    select: {
+      id: true,
+      type: true,
+      label: true,
+      weight: true,
+      subject: true,
+      streamEntryId: true,
+      materialId: true,
+      linkedStandardCodes: true,
+      lastTouchedAt: true,
       edges: {
-        include: { target: true },
+        include: {
+          target: {
+            select: {
+              id: true,
+              type: true,
+              label: true,
+              weight: true,
+              subject: true,
+              streamEntryId: true,
+              materialId: true,
+              lastTouchedAt: true,
+            },
+          },
+        },
       },
       incomingEdges: {
-        include: { source: true },
+        include: {
+          source: {
+            select: {
+              id: true,
+              type: true,
+              label: true,
+              weight: true,
+              subject: true,
+              streamEntryId: true,
+              materialId: true,
+              lastTouchedAt: true,
+            },
+          },
+        },
       },
     },
   });
@@ -1121,7 +1164,7 @@ async function getNodeDetail(teacherId: string, nodeId: string) {
       where: { targetId: nodeId, type: 'ABOUT' },
       include: {
         source: {
-          include: { streamEntry: true },
+          select: { streamEntry: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -1149,7 +1192,7 @@ async function getNodeDetail(teacherId: string, nodeId: string) {
       where: { targetId: nodeId, type: 'ABOUT' },
       include: {
         source: {
-          include: { material: true },
+          select: { material: true },
         },
       },
       orderBy: { createdAt: 'desc' },
