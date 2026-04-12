@@ -31,7 +31,7 @@ export const FEATURE_TIER_MAP: Record<string, PublicSubscriptionTier[]> = {
   'priority-generation': ['PRO'],
   'inline-completions': ['PRO'],
   'term-wrapped': ['PRO'],
-  canvas: ['PRO'],
+  canvas: ['PLUS', 'PRO'],
   'advanced-analytics': ['PRO'],
   'parent-bridge': ['PRO'],
 };
