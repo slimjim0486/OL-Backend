@@ -740,6 +740,223 @@ async function generateAISection(
 }
 
 // ============================================
+// SECTION-SPECIFIC ITEM GENERATION
+// ============================================
+
+interface GenerateSectionItemsInput {
+  sectionType: string;
+  targetKey: string;
+  instruction: string;
+  count?: number;
+}
+
+interface SectionTypeConfig {
+  defaultCount: number;
+  buildPrompt: (ctx: { title: string; subject: string; gradeLevel: string; curriculum: string }, existing: unknown[], instruction: string, count: number) => string;
+}
+
+const SECTION_TYPE_CONFIGS: Record<string, SectionTypeConfig> = {
+  questions: {
+    defaultCount: 3,
+    buildPrompt: (ctx, existing, instruction, count) => {
+      const existingList = (existing as Array<{ question: string }>)
+        .map((q, i) => `${i + 1}. ${q.question}`).join('\n');
+      return [
+        `You are adding ${count} NEW quiz questions to an existing assessment.`,
+        '',
+        `Subject: ${ctx.subject || 'General'} | Grade: ${ctx.gradeLevel || 'General'}`,
+        `Material: ${ctx.title}`,
+        '',
+        `EXISTING QUESTIONS (do NOT repeat these):`,
+        existingList || 'None yet',
+        '',
+        `TEACHER'S INSTRUCTION: ${instruction}`,
+        '',
+        `Generate ${count} NEW questions that:`,
+        `- Cover different aspects of the topic than the existing questions`,
+        `- Are age-appropriate and standards-aligned`,
+        `- Include a mix of question types (multiple_choice, true_false, short_answer)`,
+        '',
+        'Return JSON:',
+        '{ "items": [{ "question": "...", "type": "multiple_choice", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correctAnswer": "A) ...", "explanation": "Why this is correct", "difficulty": "medium", "points": 2 }] }',
+      ].join('\n');
+    },
+  },
+  vocabulary: {
+    defaultCount: 5,
+    buildPrompt: (ctx, existing, instruction, count) => {
+      const existingList = (existing as Array<{ term: string }>)
+        .map((v, i) => `${i + 1}. ${v.term}`).join('\n');
+      return [
+        `You are adding ${count} NEW vocabulary terms to an existing vocabulary list.`,
+        '',
+        `Subject: ${ctx.subject || 'General'} | Grade: ${ctx.gradeLevel || 'General'}`,
+        `Material: ${ctx.title}`,
+        '',
+        `EXISTING TERMS (do NOT repeat these):`,
+        existingList || 'None yet',
+        '',
+        `TEACHER'S INSTRUCTION: ${instruction}`,
+        '',
+        `Generate ${count} NEW vocabulary terms that are relevant to the material and age-appropriate.`,
+        '',
+        'Return JSON:',
+        '{ "items": [{ "term": "Word", "definition": "Clear, student-friendly definition", "example": "Example sentence using the word" }] }',
+      ].join('\n');
+    },
+  },
+  flashcards: {
+    defaultCount: 5,
+    buildPrompt: (ctx, existing, instruction, count) => {
+      const existingList = (existing as Array<{ front: string }>)
+        .map((c, i) => `${i + 1}. ${c.front}`).join('\n');
+      return [
+        `You are adding ${count} NEW flashcards to an existing set.`,
+        '',
+        `Subject: ${ctx.subject || 'General'} | Grade: ${ctx.gradeLevel || 'General'}`,
+        `Material: ${ctx.title}`,
+        '',
+        `EXISTING CARDS (do NOT repeat these):`,
+        existingList || 'None yet',
+        '',
+        `TEACHER'S INSTRUCTION: ${instruction}`,
+        '',
+        `Generate ${count} NEW flashcards with clear, concise front/back content.`,
+        '',
+        'Return JSON:',
+        '{ "items": [{ "front": "Question or prompt", "back": "Answer or explanation", "hint": "Optional hint", "category": "Optional category" }] }',
+      ].join('\n');
+    },
+  },
+  sections: {
+    defaultCount: 1,
+    buildPrompt: (ctx, existing, instruction, count) => {
+      const existingList = (existing as Array<{ title: string }>)
+        .map((s, i) => `${i + 1}. ${s.title}`).join('\n');
+      return [
+        `You are adding ${count} NEW lesson section(s) to an existing lesson plan.`,
+        '',
+        `Subject: ${ctx.subject || 'General'} | Grade: ${ctx.gradeLevel || 'General'}`,
+        `Material: ${ctx.title}`,
+        '',
+        `EXISTING SECTIONS:`,
+        existingList || 'None yet',
+        '',
+        `TEACHER'S INSTRUCTION: ${instruction}`,
+        '',
+        `Generate ${count} detailed, engaging lesson section(s) that fit naturally with the existing flow.`,
+        '',
+        'Return JSON:',
+        '{ "items": [{ "title": "Section title", "content": "Detailed content (200-400 words)", "duration": 10, "activities": ["Activity description"] }] }',
+      ].join('\n');
+    },
+  },
+  guidedPractice: {
+    defaultCount: 3,
+    buildPrompt: (ctx, existing, instruction, count) => {
+      const existingList = (existing as Array<{ prompt: string }>)
+        .map((p, i) => `${i + 1}. ${p.prompt}`).join('\n');
+      return [
+        `You are adding ${count} NEW guided practice prompts to an existing lesson.`,
+        '',
+        `Subject: ${ctx.subject || 'General'} | Grade: ${ctx.gradeLevel || 'General'}`,
+        `Material: ${ctx.title}`,
+        '',
+        `EXISTING PROMPTS (do NOT repeat these):`,
+        existingList || 'None yet',
+        '',
+        `TEACHER'S INSTRUCTION: ${instruction}`,
+        '',
+        `Generate ${count} NEW guided practice items with scaffolding.`,
+        '',
+        'Return JSON:',
+        '{ "items": [{ "prompt": "Practice prompt or question", "scaffolding": "Step-by-step guidance", "answer": "Expected answer" }] }',
+      ].join('\n');
+    },
+  },
+  worksheetSections: {
+    defaultCount: 1,
+    buildPrompt: (ctx, existing, instruction, count) => {
+      const existingList = (existing as Array<{ name: string }>)
+        .map((s, i) => `${i + 1}. ${s.name}`).join('\n');
+      return [
+        `You are adding ${count} NEW worksheet section(s) to an existing worksheet.`,
+        '',
+        `Subject: ${ctx.subject || 'General'} | Grade: ${ctx.gradeLevel || 'General'}`,
+        `Material: ${ctx.title}`,
+        '',
+        `EXISTING SECTIONS (do NOT repeat these):`,
+        existingList || 'None yet',
+        '',
+        `TEACHER'S INSTRUCTION: ${instruction}`,
+        '',
+        `Generate ${count} NEW worksheet section(s) with practice problems.`,
+        '',
+        'Return JSON:',
+        '{ "items": [{ "name": "Section name", "problems": [{ "question": "Problem text", "answer": "Answer" }] }] }',
+      ].join('\n');
+    },
+  },
+};
+
+function resolveNestedValue(obj: any, dotPath: string): unknown {
+  return dotPath.split('.').reduce((acc, key) => acc?.[key], obj);
+}
+
+async function generateSectionItems(
+  teacherId: string,
+  materialId: string,
+  input: GenerateSectionItemsInput
+) {
+  const material = await prisma.teacherMaterial.findFirst({
+    where: { id: materialId, teacherId },
+  });
+  if (!material) {
+    throw new Error('Material not found');
+  }
+
+  const typeConfig = SECTION_TYPE_CONFIGS[input.sectionType];
+  if (!typeConfig) {
+    throw new Error(`Unknown section type: ${input.sectionType}`);
+  }
+
+  const content = material.content as Record<string, unknown> | null;
+  const count = Math.min(Math.max(input.count || typeConfig.defaultCount, 1), 20);
+
+  const existingItems = (resolveNestedValue(content, input.targetKey) as unknown[]) || [];
+
+  const materialContext = {
+    title: (content?.title as string) || material.title || 'Untitled',
+    subject: material.subject || '',
+    gradeLevel: material.gradeLevel || '',
+    curriculum: material.curriculum || '',
+  };
+
+  const prompt = typeConfig.buildPrompt(materialContext, existingItems, input.instruction, count);
+
+  const generated = await generateWithGemini(
+    'SECTION_ITEMS',
+    materialContext.title,
+    materialContext.subject,
+    materialContext.gradeLevel,
+    materialContext.curriculum,
+    '',
+    prompt
+  );
+
+  const items = generated?.items || (Array.isArray(generated) ? generated : [generated]);
+
+  logger.info('Section items generated', {
+    teacherId,
+    materialId,
+    sectionType: input.sectionType,
+    count: items.length,
+  });
+
+  return { items, sectionType: input.sectionType, targetKey: input.targetKey };
+}
+
+// ============================================
 // EXPORT
 // ============================================
 
@@ -757,4 +974,5 @@ export const materialService = {
   rateMaterial,
   markMaterialUsed,
   generateAISection,
+  generateSectionItems,
 };

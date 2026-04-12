@@ -267,6 +267,28 @@ router.post('/:id/generate-section', generationRateLimit, async (req: Request, r
   }
 });
 
+// Generate type-specific items to add to an existing section (e.g., more quiz questions, vocabulary)
+const generateSectionItemsSchema = z.object({
+  sectionType: z.string().min(1).max(50),
+  targetKey: z.string().min(1).max(100),
+  instruction: z.string().min(1).max(2000),
+  count: z.number().int().min(1).max(20).optional(),
+});
+
+router.post('/:id/generate-section-items', generationRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = generateSectionItemsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.errors });
+    }
+    const teacherId = (req as any).teacher.id;
+    const result = await materialService.generateSectionItems(teacherId, req.params.id, parsed.data);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Approve material — also records a no-edit approval if the material has
 // no MaterialEdit rows yet. That's the positive signal that closes the loop.
 router.post('/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
