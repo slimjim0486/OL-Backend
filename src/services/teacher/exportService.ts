@@ -2136,22 +2136,19 @@ export async function exportMaterialContent(
 
   const contentType = typeMap[material.type] || 'LESSON';
 
-  // Build a TeacherContent-shaped object the existing renderer expects
+  // Build a TeacherContent-shaped object the existing renderer expects.
+  // Always set lessonContent as fallback — the switch in exportContent defaults
+  // to generateLessonHTML when contentType isn't recognized.
   const fakeContent = {
     id: material.id,
     title: material.title,
     subject: material.subject || 'OTHER',
     gradeLevel: material.gradeLevel || '',
     contentType,
-    // Lesson-shaped types use lessonContent
-    lessonContent: contentType === 'LESSON' || contentType === 'WORKSHEET' || contentType === 'STUDY_GUIDE'
-      ? content
-      : null,
-    // Quiz uses quizContent
+    lessonContent: content,
     quizContent: contentType === 'QUIZ'
       ? { title: content.title || material.title, questions: content.questions || content.assessment?.questions || [] }
       : null,
-    // Flashcards use flashcardContent
     flashcardContent: contentType === 'FLASHCARD_DECK'
       ? { title: content.title || material.title, cards: content.cards || content.flashcards || [] }
       : null,

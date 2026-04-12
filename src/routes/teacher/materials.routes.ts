@@ -364,8 +364,8 @@ router.post('/:id/outcome', async (req: Request, res: Response, next: NextFuncti
 // Material Export (PDF / PPTX)
 // ============================================================================
 
-// Helper: load material and check download access, consume allowance
-async function loadMaterialForExport(teacherId: string, materialId: string, res: Response) {
+// Helper: load material and verify ownership (does NOT consume allowance)
+async function loadMaterial(teacherId: string, materialId: string, res: Response) {
   const material = await prisma.teacherMaterial.findFirst({
     where: { id: materialId, teacherId },
   });
@@ -373,7 +373,12 @@ async function loadMaterialForExport(teacherId: string, materialId: string, res:
     res.status(404).json({ error: 'Material not found' });
     return null;
   }
+  return material;
+}
 
+// Helper: check + consume download allowance. Call AFTER any validation
+// that might reject the request, so the teacher doesn't lose a download.
+async function consumeDownloadOrRespond(teacherId: string, materialId: string, res: Response): Promise<boolean> {
   const access = await getDownloadAccess(teacherId, materialId);
   if (!access.canDownload) {
     res.status(403).json({
@@ -383,7 +388,7 @@ async function loadMaterialForExport(teacherId: string, materialId: string, res:
       freeDownloadsRemaining: access.freeDownloadsRemaining,
       freeDownloadsResetAt: access.freeDownloadsResetAt,
     });
-    return null;
+    return false;
   }
 
   if (!access.isSubscriber) {
@@ -397,11 +402,11 @@ async function loadMaterialForExport(teacherId: string, materialId: string, res:
         freeDownloadsRemaining: latest.freeDownloadsRemaining,
         freeDownloadsResetAt: latest.freeDownloadsResetAt,
       });
-      return null;
+      return false;
     }
   }
 
-  return material;
+  return true;
 }
 
 // Helper: build a fake TeacherContent for Presenton from TeacherMaterial
@@ -412,17 +417,19 @@ function materialToTeacherContent(material: any) {
     FLASHCARDS: 'FLASHCARD_DECK', SUB_PLAN: 'LESSON', RETEACH_ACTIVITY: 'LESSON',
     SUMMARY: 'STUDY_GUIDE', PARENT_UPDATE: 'LESSON', INFOGRAPHIC: 'LESSON', AUDIO_UPDATE: 'LESSON',
   };
+  const contentType = typeMap[material.type] || 'LESSON';
   return {
     id: material.id,
     title: material.title,
     subject: material.subject || 'OTHER',
     gradeLevel: material.gradeLevel || '',
-    contentType: typeMap[material.type] || 'LESSON',
+    contentType,
+    // Always set lessonContent so fallback renderers have data
     lessonContent: content,
-    quizContent: material.type === 'QUIZ'
+    quizContent: contentType === 'QUIZ'
       ? { title: content.title || material.title, questions: content.questions || content.assessment?.questions || [] }
       : null,
-    flashcardContent: material.type === 'FLASHCARDS'
+    flashcardContent: contentType === 'FLASHCARD_DECK'
       ? { title: content.title || material.title, cards: content.cards || content.flashcards || [] }
       : null,
   };
@@ -443,8 +450,11 @@ router.get('/:id/download-access', async (req: Request, res: Response, next: Nex
 router.get('/:id/export/pdf', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
-    const material = await loadMaterialForExport(teacherId, req.params.id, res);
+    const material = await loadMaterial(teacherId, req.params.id, res);
     if (!material) return;
+
+    // Consume allowance AFTER validation passes
+    if (!(await consumeDownloadOrRespond(teacherId, req.params.id, res))) return;
 
     const options = {
       format: 'pdf' as const,
@@ -468,16 +478,19 @@ router.get('/:id/export/pdf', async (req: Request, res: Response, next: NextFunc
 router.get('/:id/export/pptx', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teacherId = (req as any).teacher.id;
-    const material = await loadMaterialForExport(teacherId, req.params.id, res);
+    const material = await loadMaterial(teacherId, req.params.id, res);
     if (!material) return;
 
-    // Only lesson-shaped types support PPTX
+    // Only lesson-shaped types support PPTX — check BEFORE consuming allowance
     const pptxTypes = ['LESSON_PLAN', 'WORKSHEET', 'FLASHCARDS', 'SUB_PLAN', 'RETEACH_ACTIVITY'];
     if (!pptxTypes.includes(material.type)) {
       return res.status(400).json({
         error: 'This material type can only be exported as PDF. Try PDF export instead.',
       });
     }
+
+    // Consume allowance only after all validation passes
+    if (!(await consumeDownloadOrRespond(teacherId, req.params.id, res))) return;
 
     const themeMap: Record<string, PresentonExportOptions['theme']> = {
       'professional': 'professional-blue',
