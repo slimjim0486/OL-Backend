@@ -247,6 +247,26 @@ router.post('/generate/from-node/:nodeId', generationRateLimit, async (req: Requ
   }
 });
 
+// Generate an AI section for a material
+const generateSectionSchema = z.object({
+  title: z.string().max(500).optional(),
+  instruction: z.string().min(1).max(2000),
+});
+
+router.post('/:id/generate-section', generationRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = generateSectionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.error.errors });
+    }
+    const teacherId = (req as any).teacher.id;
+    const section = await materialService.generateAISection(teacherId, req.params.id, parsed.data);
+    res.json({ success: true, data: section });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Approve material — also records a no-edit approval if the material has
 // no MaterialEdit rows yet. That's the positive signal that closes the loop.
 router.post('/:id/approve', async (req: Request, res: Response, next: NextFunction) => {

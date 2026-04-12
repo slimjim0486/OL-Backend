@@ -666,6 +666,80 @@ async function markMaterialUsed(teacherId: string, materialId: string) {
 }
 
 // ============================================
+// AI SECTION GENERATION
+// ============================================
+
+interface GenerateAISectionInput {
+  title?: string;
+  instruction: string;
+}
+
+async function generateAISection(
+  teacherId: string,
+  materialId: string,
+  input: GenerateAISectionInput
+) {
+  const material = await prisma.teacherMaterial.findFirst({
+    where: { id: materialId, teacherId },
+  });
+
+  if (!material) {
+    throw new Error('Material not found');
+  }
+
+  const content = material.content as Record<string, unknown> | null;
+
+  // Build context from existing material content
+  const existingSections = Array.isArray(content?.sections)
+    ? (content.sections as Array<{ title: string }>).map((s, i) => `${i + 1}. ${s.title}`).join('\n')
+    : '';
+
+  const materialTitle = (content?.title as string) || material.title || 'Untitled';
+  const summary = (content?.summary as string) || '';
+
+  // Note: generateWithGemini already injects system preamble (role, grade,
+  // subject, curriculum) so we only need the task-specific instructions here.
+  const prompt = [
+    `Add a new section to this ${material.type.toLowerCase().replace(/_/g, ' ')}.`,
+    '',
+    `MATERIAL TITLE: ${materialTitle}`,
+    summary ? `Summary: ${summary}` : '',
+    existingSections ? `\nEXISTING SECTIONS:\n${existingSections}` : '',
+    '',
+    input.title ? `NEW SECTION TITLE: ${input.title}` : '',
+    `TEACHER'S INSTRUCTION: ${input.instruction}`,
+    '',
+    'Generate a detailed, engaging section that fits naturally with the existing material flow.',
+    '',
+    'Return JSON:',
+    '{',
+    '  "title": "Section title",',
+    '  "content": "Detailed section content (200-400 words)...",',
+    '  "duration": 10,',
+    '  "activities": ["Activity description"]',
+    '}',
+  ].filter(Boolean).join('\n');
+
+  const generatedSection = await generateWithGemini(
+    'SECTION',
+    materialTitle,
+    material.subject || '',
+    material.gradeLevel || '',
+    material.curriculum || '',
+    '',
+    prompt
+  );
+
+  logger.info('AI section generated for material', {
+    teacherId,
+    materialId,
+    sectionTitle: generatedSection?.title,
+  });
+
+  return generatedSection;
+}
+
+// ============================================
 // EXPORT
 // ============================================
 
@@ -682,4 +756,5 @@ export const materialService = {
   approveMaterial,
   rateMaterial,
   markMaterialUsed,
+  generateAISection,
 };
