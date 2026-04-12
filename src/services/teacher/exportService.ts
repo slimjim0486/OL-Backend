@@ -172,7 +172,7 @@ function getIcon(name: string, color: string = 'currentColor'): string {
   return icons[name] || '';
 }
 
-// ─── Orbit Learn Logo (Inline SVG) ──────────────────────────────────────────
+// ─── Orba Logo (Inline SVG) ─────────────────────────────────────────────────
 function getOrbitLogo(size: number = 22, color: string = '#2D5A4A'): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none">
     <circle cx="16" cy="16" r="14" stroke="${color}" stroke-width="2.5"/>
@@ -243,7 +243,7 @@ function getBrandedHeader(
       <div class="header-top">
         <div class="header-brand">
           ${getOrbitLogo(20, logoColor)}
-          <span class="brand-name">Orbit Learn</span>
+          <span class="brand-name">Orba</span>
         </div>
         <div class="header-badges">
           <span class="badge badge-subject">${escapeHtml(subjectLabel)}</span>
@@ -290,7 +290,7 @@ function getFooterTemplate(primaryColor: string, colorScheme: string): string {
       <div style="display: flex; justify-content: space-between; align-items: center; color: #9CA3AF;">
         <span style="display: flex; align-items: center; gap: 4px;">
           <svg width="10" height="10" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="${barColor}" stroke-width="3"/><circle cx="16" cy="16" r="5" fill="${barColor}"/></svg>
-          Made with Orbit Learn
+          Made with Orba
         </span>
         <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
       </div>
@@ -1255,7 +1255,7 @@ function generateWeeklyTemplateHTML(
   html += `
       </div>
       <div class="footer">
-        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orba · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1577,7 +1577,7 @@ function generateLessonHTML(
 
   html += `
       <div class="footer">
-        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orba · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1762,7 +1762,7 @@ function generateQuizHTML(
       ` : ''}
 
       <div class="footer">
-        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orba · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1818,7 +1818,7 @@ function generateFlashcardHTML(
       </div>
 
       <div class="footer">
-        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orba · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1917,7 +1917,7 @@ function generateStudyGuideHTML(
 
   html += `
       <div class="footer">
-        ${getOrbitLogo(12, '#9CA3AF')} Made with Orbit Learn · ${new Date().toLocaleDateString()}
+        ${getOrbitLogo(12, '#9CA3AF')} Made with Orba · ${new Date().toLocaleDateString()}
       </div>
     </body>
     </html>
@@ -1959,34 +1959,34 @@ export async function exportContent(
     case 'WORKSHEET':
       const lessonData = content.lessonContent as unknown as LessonContent;
       html = generateLessonHTML(content, lessonData || { title: content.title }, opts);
-      filename = `${cleanTitle} - Orbit Learn`;
+      filename = `${cleanTitle} - Orba`;
       break;
 
     case 'QUIZ':
       const quizData = content.quizContent as unknown as QuizContent;
       html = generateQuizHTML(content, quizData || { title: content.title, questions: [] }, opts);
       filename = opts.answerKeyOnly
-        ? `${cleanTitle} - Answer Key - Orbit Learn`
-        : `${cleanTitle} - Orbit Learn`;
+        ? `${cleanTitle} - Answer Key - Orba`
+        : `${cleanTitle} - Orba`;
       break;
 
     case 'FLASHCARD_DECK':
       const flashcardData = content.flashcardContent as unknown as FlashcardContent;
       html = generateFlashcardHTML(content, flashcardData || { title: content.title, cards: [] }, opts);
-      filename = `${cleanTitle} - Orbit Learn`;
+      filename = `${cleanTitle} - Orba`;
       break;
 
     case 'STUDY_GUIDE':
       const guideData = content.lessonContent as unknown as StudyGuideContent;
       html = generateStudyGuideHTML(content, guideData || { title: content.title }, opts);
-      filename = `${cleanTitle} - Orbit Learn`;
+      filename = `${cleanTitle} - Orba`;
       break;
 
     default:
       // Default to lesson format
       const defaultData = content.lessonContent as unknown as LessonContent;
       html = generateLessonHTML(content, defaultData || { title: content.title }, opts);
-      filename = `${cleanTitle} - Orbit Learn`;
+      filename = `${cleanTitle} - Orba`;
   }
 
   // Return HTML if requested
@@ -2096,14 +2096,72 @@ export async function exportMultipleContent(
     return {
       data: Buffer.from(pdfBuffer),
       mimeType: 'application/pdf',
-      filename: `Orbit_Learn_Export_${new Date().toISOString().split('T')[0]}.pdf`,
+      filename: `Orba_Export_${new Date().toISOString().split('T')[0]}.pdf`,
     };
   } finally {
     await browser.close();
   }
 }
 
+/**
+ * Export a TeacherMaterial (intelligence platform) to PDF.
+ * Adapts the material's JSON content into the shape exportContent expects.
+ */
+export async function exportMaterialContent(
+  material: {
+    id: string;
+    title: string;
+    type: string; // IntelligenceMaterialType
+    content: any;
+    subject: string;
+    gradeLevel: string;
+  },
+  options: ExportOptions = {}
+): Promise<{ data: Buffer | string; mimeType: string; filename: string }> {
+  const content = material.content || {};
+
+  // Map IntelligenceMaterialType → legacy TeacherContentType for the renderer
+  const typeMap: Record<string, string> = {
+    LESSON_PLAN: 'LESSON',
+    WORKSHEET: 'WORKSHEET',
+    QUIZ: 'QUIZ',
+    FLASHCARDS: 'FLASHCARD_DECK',
+    SUB_PLAN: 'LESSON',
+    RETEACH_ACTIVITY: 'LESSON',
+    SUMMARY: 'STUDY_GUIDE',
+    PARENT_UPDATE: 'LESSON',
+    INFOGRAPHIC: 'LESSON',
+    AUDIO_UPDATE: 'LESSON',
+  };
+
+  const contentType = typeMap[material.type] || 'LESSON';
+
+  // Build a TeacherContent-shaped object the existing renderer expects
+  const fakeContent = {
+    id: material.id,
+    title: material.title,
+    subject: material.subject || 'OTHER',
+    gradeLevel: material.gradeLevel || '',
+    contentType,
+    // Lesson-shaped types use lessonContent
+    lessonContent: contentType === 'LESSON' || contentType === 'WORKSHEET' || contentType === 'STUDY_GUIDE'
+      ? content
+      : null,
+    // Quiz uses quizContent
+    quizContent: contentType === 'QUIZ'
+      ? { title: content.title || material.title, questions: content.questions || content.assessment?.questions || [] }
+      : null,
+    // Flashcards use flashcardContent
+    flashcardContent: contentType === 'FLASHCARD_DECK'
+      ? { title: content.title || material.title, cards: content.cards || content.flashcards || [] }
+      : null,
+  } as unknown as TeacherContent;
+
+  return exportContent(fakeContent, options);
+}
+
 export default {
   exportContent,
   exportMultipleContent,
+  exportMaterialContent,
 };

@@ -5,7 +5,7 @@ import { ForbiddenError } from '../../middleware/errorHandler.js';
 
 export type ExportKind = 'pdf' | 'pptx' | 'drive' | 'batch';
 
-const FREE_DOWNLOADS_PER_MONTH = 3;
+const FREE_DOWNLOADS_PER_MONTH = 5;
 
 function getCurrentMonthStart(date: Date = new Date()): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));

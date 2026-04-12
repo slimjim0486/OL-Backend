@@ -12,6 +12,10 @@ import { generationRateLimit } from '../../middleware/rateLimit.js';
 import { materialService } from '../../services/teacher/materialService.js';
 import { editAnalysisService } from '../../services/teacher/editAnalysisService.js';
 import { queueEditAnalysis } from '../../jobs/editAnalysisJob.js';
+import { exportMaterialContent } from '../../services/teacher/exportService.js';
+import { getDownloadAccess, consumeFreeDownloadAllowance } from '../../services/teacher/downloadAccessService.js';
+import { prisma } from '../../config/database.js';
+import { generateLessonPPTX, generateFlashcardPPTX, PresentonExportOptions } from '../../services/teacher/presentonService.js';
 
 const router = Router();
 router.use(authenticateTeacher);
@@ -351,6 +355,151 @@ router.post('/:id/outcome', async (req: Request, res: Response, next: NextFuncti
       outcomeRatedAt: new Date(),
     } as any);
     res.json(material);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
+// Material Export (PDF / PPTX)
+// ============================================================================
+
+// Helper: load material and check download access, consume allowance
+async function loadMaterialForExport(teacherId: string, materialId: string, res: Response) {
+  const material = await prisma.teacherMaterial.findFirst({
+    where: { id: materialId, teacherId },
+  });
+  if (!material) {
+    res.status(404).json({ error: 'Material not found' });
+    return null;
+  }
+
+  const access = await getDownloadAccess(teacherId, materialId);
+  if (!access.canDownload) {
+    res.status(403).json({
+      error: 'Free monthly download limit reached. Upgrade to continue exporting.',
+      freeMonthlyLimit: access.freeMonthlyLimit,
+      freeDownloadsUsed: access.freeDownloadsUsed,
+      freeDownloadsRemaining: access.freeDownloadsRemaining,
+      freeDownloadsResetAt: access.freeDownloadsResetAt,
+    });
+    return null;
+  }
+
+  if (!access.isSubscriber) {
+    try {
+      await consumeFreeDownloadAllowance(teacherId);
+    } catch {
+      const latest = await getDownloadAccess(teacherId, materialId);
+      res.status(403).json({
+        error: 'Free monthly download limit reached. Upgrade to continue exporting.',
+        freeDownloadsUsed: latest.freeDownloadsUsed,
+        freeDownloadsRemaining: latest.freeDownloadsRemaining,
+        freeDownloadsResetAt: latest.freeDownloadsResetAt,
+      });
+      return null;
+    }
+  }
+
+  return material;
+}
+
+// Helper: build a fake TeacherContent for Presenton from TeacherMaterial
+function materialToTeacherContent(material: any) {
+  const content = material.content || {};
+  const typeMap: Record<string, string> = {
+    LESSON_PLAN: 'LESSON', WORKSHEET: 'WORKSHEET', QUIZ: 'QUIZ',
+    FLASHCARDS: 'FLASHCARD_DECK', SUB_PLAN: 'LESSON', RETEACH_ACTIVITY: 'LESSON',
+    SUMMARY: 'STUDY_GUIDE', PARENT_UPDATE: 'LESSON', INFOGRAPHIC: 'LESSON', AUDIO_UPDATE: 'LESSON',
+  };
+  return {
+    id: material.id,
+    title: material.title,
+    subject: material.subject || 'OTHER',
+    gradeLevel: material.gradeLevel || '',
+    contentType: typeMap[material.type] || 'LESSON',
+    lessonContent: content,
+    quizContent: material.type === 'QUIZ'
+      ? { title: content.title || material.title, questions: content.questions || content.assessment?.questions || [] }
+      : null,
+    flashcardContent: material.type === 'FLASHCARDS'
+      ? { title: content.title || material.title, cards: content.cards || content.flashcards || [] }
+      : null,
+  };
+}
+
+// Check download access for a material
+router.get('/:id/download-access', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const teacherId = (req as any).teacher.id;
+    const access = await getDownloadAccess(teacherId, req.params.id);
+    res.json({ success: true, data: access });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Export material as PDF
+router.get('/:id/export/pdf', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const teacherId = (req as any).teacher.id;
+    const material = await loadMaterialForExport(teacherId, req.params.id, res);
+    if (!material) return;
+
+    const options = {
+      format: 'pdf' as const,
+      includeAnswers: req.query.includeAnswers !== 'false',
+      includeTeacherNotes: req.query.includeTeacherNotes !== 'false',
+      paperSize: (req.query.paperSize as 'letter' | 'a4') || 'letter',
+      colorScheme: (req.query.colorScheme as 'color' | 'grayscale') || 'color',
+    };
+
+    const result = await exportMaterialContent(material, options);
+
+    res.setHeader('Content-Type', result.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Export material as PPTX via Presenton
+router.get('/:id/export/pptx', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const teacherId = (req as any).teacher.id;
+    const material = await loadMaterialForExport(teacherId, req.params.id, res);
+    if (!material) return;
+
+    // Only lesson-shaped types support PPTX
+    const pptxTypes = ['LESSON_PLAN', 'WORKSHEET', 'FLASHCARDS', 'SUB_PLAN', 'RETEACH_ACTIVITY'];
+    if (!pptxTypes.includes(material.type)) {
+      return res.status(400).json({
+        error: 'This material type can only be exported as PDF. Try PDF export instead.',
+      });
+    }
+
+    const themeMap: Record<string, PresentonExportOptions['theme']> = {
+      'professional': 'professional-blue',
+      'colorful': 'mint-blue',
+    };
+    const options: PresentonExportOptions = {
+      theme: themeMap[(req.query.theme as string) || 'professional'] || 'professional-blue',
+      slideStyle: (req.query.slideStyle as 'focused' | 'dense') || 'focused',
+      includeAnswers: req.query.includeAnswers !== 'false',
+      includeTeacherNotes: req.query.includeTeacherNotes !== 'false',
+      includeInfographic: req.query.includeInfographic !== 'false',
+      language: (req.query.language as string) || 'English',
+    };
+
+    const fakeContent = materialToTeacherContent(material) as any;
+    const result = material.type === 'FLASHCARDS'
+      ? await generateFlashcardPPTX(fakeContent, options)
+      : await generateLessonPPTX(fakeContent, options);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
   } catch (error) {
     next(error);
   }
