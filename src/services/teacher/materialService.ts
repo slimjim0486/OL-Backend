@@ -957,6 +957,29 @@ async function generateSectionItems(
 }
 
 // ============================================
+// CLEANUP
+// ============================================
+
+/**
+ * Delete unapproved materials older than the given age (default 2 days).
+ * Materials that have been edited or used in class are kept even if not explicitly approved.
+ */
+async function cleanupUnapprovedMaterials(maxAgeDays = 2): Promise<{ deleted: number }> {
+  const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
+
+  const { count } = await prisma.teacherMaterial.deleteMany({
+    where: {
+      approved: false,
+      edited: false,
+      usedInClass: false,
+      createdAt: { lte: cutoff },
+    },
+  });
+
+  return { deleted: count };
+}
+
+// ============================================
 // EXPORT
 // ============================================
 
@@ -975,4 +998,5 @@ export const materialService = {
   markMaterialUsed,
   generateAISection,
   generateSectionItems,
+  cleanupUnapprovedMaterials,
 };

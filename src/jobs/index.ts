@@ -135,3 +135,9 @@ export {
   shutdownWeeklyDigestJob,
   triggerWeeklyDigest,
 } from './weeklyDigestJob.js';
+
+// Intelligence Platform: unapproved material auto-cleanup (3 AM UTC daily)
+export {
+  scheduleUnapprovedMaterialCleanupJob,
+  shutdownUnapprovedMaterialCleanupJob,
+} from './unapprovedMaterialCleanupJob.js';

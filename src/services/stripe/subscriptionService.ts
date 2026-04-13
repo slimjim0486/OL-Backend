@@ -212,7 +212,7 @@ export const subscriptionService = {
         priceMonthly: 0,
         priceAnnual: 0,
         features: SUBSCRIPTION_PRODUCTS.FREE.features,
-        generationLimit: FREE_GENERATION_LIMIT,
+        generationLimit: null,
       },
       plus: {
         tier: 'PLUS' as const,
@@ -428,12 +428,8 @@ export const subscriptionService = {
       return { allowed: true, used: 0, limit: Infinity };
     }
 
-    const generationCounter = await resetGenerationCountIfNeeded(teacherId);
-    return {
-      allowed: generationCounter.generationsUsedThisMonth < FREE_GENERATION_LIMIT,
-      used: generationCounter.generationsUsedThisMonth,
-      limit: FREE_GENERATION_LIMIT,
-    };
+    // Generation is always free — the 5/month limit applies to downloads, not generation
+    return { allowed: true, used: 0, limit: Infinity };
   },
 
   async incrementGenerationCount(teacherId: string) {
@@ -527,7 +523,21 @@ export const subscriptionService = {
     }
 
     const publicTier = mapDbTierToPublicTier(refreshedTeacher.subscriptionTier);
-    const generation = await this.canGenerate(teacherId);
+
+    // Fetch download usage for free-tier export counter
+    const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
+    const downloadUsage = await prisma.teacherDownloadUsage.findUnique({
+      where: { teacherId_month: { teacherId, month: monthStart } },
+      select: { usedCount: true },
+    }).catch(() => null);
+
+    const FREE_DOWNLOADS_PER_MONTH = 5;
+    const downloadsUsed = downloadUsage?.usedCount || 0;
+    const isSubscriber = hasActivePaidAccess({
+      publicTier,
+      subscriptionStatus: refreshedTeacher.subscriptionStatus,
+      currentPeriodEnd: refreshedTeacher.currentPeriodEnd,
+    });
 
     return {
       id: refreshedTeacher.stripeSubscriptionId,
@@ -536,8 +546,10 @@ export const subscriptionService = {
       interval: toPublicInterval(refreshedTeacher.subscriptionInterval),
       currentPeriodStart: refreshedTeacher.currentPeriodStart,
       currentPeriodEnd: refreshedTeacher.currentPeriodEnd,
-      generationsUsed: publicTier === 'FREE' ? generation.used : 0,
-      generationsLimit: publicTier === 'FREE' ? generation.limit : null,
+      generationsUsed: 0,
+      generationsLimit: null,
+      downloadsUsed: isSubscriber ? 0 : downloadsUsed,
+      downloadsLimit: isSubscriber ? null : FREE_DOWNLOADS_PER_MONTH,
       grandfatheredUntil: refreshedTeacher.grandfatheredUntil,
       isFoundingMember: refreshedTeacher.isFoundingMember,
       stripePriceId: refreshedTeacher.stripePriceId,

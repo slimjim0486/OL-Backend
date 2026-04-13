@@ -25,7 +25,7 @@ const PRO_ANNUAL_PRICE_ID = env.STRIPE_PRO_ANNUAL_PRICE_ID || '';
 const FOUNDING_PLUS_ANNUAL_PRICE_ID = env.STRIPE_FOUNDING_PLUS_ANNUAL_PRICE_ID || '';
 
 const FREE_PRODUCT: SubscriptionProduct = {
-  name: 'OrbitLearn Free',
+  name: 'Orba Free',
   publicTier: 'FREE',
   internalTier: mapPublicTierToDbTier('FREE'),
   priceMonthly: 0,
@@ -35,12 +35,12 @@ const FREE_PRODUCT: SubscriptionProduct = {
   features: [
     'Unlimited Stream, Graph, and Library access',
     'Student linking, backlinks, streaks, reflection, and digest',
-    '5 material generations each month',
+    'Unlimited material generation, 5 exports per month',
   ],
 };
 
 const PLUS_PRODUCT: SubscriptionProduct = {
-  name: 'OrbitLearn Plus',
+  name: 'Orba Plus',
   publicTier: 'PLUS',
   internalTier: mapPublicTierToDbTier('PLUS'),
   priceMonthly: 12.99,
@@ -55,7 +55,7 @@ const PLUS_PRODUCT: SubscriptionProduct = {
 };
 
 const PRO_PRODUCT: SubscriptionProduct = {
-  name: 'OrbitLearn Pro',
+  name: 'Orba Pro',
   publicTier: 'PRO',
   internalTier: mapPublicTierToDbTier('PRO'),
   priceMonthly: 24.99,

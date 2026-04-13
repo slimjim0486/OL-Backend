@@ -7,7 +7,6 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { IntelligenceMaterialType, MaterialEditType } from '@prisma/client';
 import { authenticateTeacher } from '../../middleware/teacherAuth.js';
-import { requireFeature } from '../../middleware/teacherFeatureGate.js';
 import { generationRateLimit } from '../../middleware/rateLimit.js';
 import { materialService } from '../../services/teacher/materialService.js';
 import { editAnalysisService } from '../../services/teacher/editAnalysisService.js';
@@ -222,7 +221,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // Generate material from stream entry
-router.post('/generate/from-stream/:entryId', requireFeature('generate'), generationRateLimit, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/generate/from-stream/:entryId', generationRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = generateFromStreamSchema.safeParse(req.body);
     if (!parsed.success) {

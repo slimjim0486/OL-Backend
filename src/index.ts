@@ -55,6 +55,10 @@ import {
   scheduleCollectiveInsightsAggregationJob,
   shutdownCollectiveInsightsAggregationJob,
 } from './jobs/collectiveInsightsAggregationJob.js';
+import {
+  scheduleUnapprovedMaterialCleanupJob,
+  shutdownUnapprovedMaterialCleanupJob,
+} from './jobs/unapprovedMaterialCleanupJob.js';
 import contactRoutes from './routes/contact.routes.js';
 import gamificationRoutes from './routes/gamification.routes.js';
 import currencyRoutes from './routes/currency.routes.js';
@@ -451,6 +455,10 @@ async function startServer(): Promise<void> {
       scheduleNotificationCleanupJob();
       logger.info('Notification cleanup job scheduled');
 
+      // Intelligence Platform: unapproved material cleanup (3 AM UTC daily)
+      scheduleUnapprovedMaterialCleanupJob();
+      logger.info('Unapproved material cleanup job scheduled');
+
       // Intelligence Platform: weekly collective insights aggregation (Sunday 7 AM UTC)
       scheduleCollectiveInsightsAggregationJob();
       logger.info('Collective insights aggregation job scheduled');
@@ -485,6 +493,7 @@ async function startServer(): Promise<void> {
           shutdownCompletionsEligibilityJob();
           shutdownNudgeGenerationJob();
           shutdownNotificationCleanupJob();
+          shutdownUnapprovedMaterialCleanupJob();
           shutdownPreferenceUpdateJob();
           shutdownStreakResetJob();
           shutdownWeeklyDigestJob();
