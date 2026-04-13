@@ -179,4 +179,42 @@ describe('exportService weekly template regressions', () => {
     expect(html).toContain('OTHER');
     expect(html).toContain('--color-primary: #6B7280');
   });
+
+  it('renders generated material worksheet sections with nested problems', async () => {
+    const result = await exportMaterialContent({
+      id: 'material-fractions-id',
+      title: 'Worksheet fractions',
+      type: 'WORKSHEET',
+      subject: 'MATH',
+      gradeLevel: 'year5',
+      createdAt: new Date('2026-04-13T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-13T00:00:00.000Z'),
+      content: {
+        title: 'Year 5 Fractions Mastery Worksheet',
+        instructions: 'Show your working for each question.',
+        sections: [
+          {
+            name: 'Adding Fractions',
+            problems: [
+              { question: 'Solve 1/2 + 1/4.', answer: '3/4', difficulty: 'easy' },
+            ],
+          },
+        ],
+        answerKey: [{ problem: 1, answer: '3/4' }],
+      },
+    }, {
+      format: 'html',
+      includeAnswers: true,
+      colorScheme: 'color',
+    });
+
+    const html = result.data as string;
+    expect(html).toContain('Worksheet');
+    expect(html).toContain('Adding Fractions');
+    expect(html).toContain('Solve 1/2 + 1/4.');
+    expect(html).toContain('Answer:');
+    expect(html).toContain('3/4');
+    expect(html).not.toContain('undefined');
+    expect(html).not.toContain('Invalid Date');
+  });
 });

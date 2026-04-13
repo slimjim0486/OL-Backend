@@ -1044,6 +1044,105 @@ function orderedSteps(value: unknown): string[] {
   return splitLines(value);
 }
 
+function answerFromKey(answerKey: unknown[], number: string, index: number): string {
+  const normalizedNumber = number.trim();
+  for (const item of answerKey) {
+    const answerItem = asRecord(item);
+    const problem = asText(answerItem.problem) || asText(answerItem.number) || asText(answerItem.questionNumber);
+    if (problem && problem === normalizedNumber) {
+      return asText(answerItem.answer) || asText(answerItem.correctAnswer);
+    }
+  }
+
+  const byIndex = asRecord(answerKey[index]);
+  return asText(byIndex.answer) || asText(byIndex.correctAnswer) || asText(answerKey[index]);
+}
+
+function collectMaterialProblems(data: Record<string, unknown>): Array<Record<string, unknown>> {
+  const answerKey = asArray(data.answerKey);
+  const problems: Array<Record<string, unknown>> = [];
+
+  const pushProblems = (value: unknown, sectionTitle?: string) => {
+    asArray(value).forEach((item) => {
+      const source = asRecord(item);
+      const number = asText(source.number) || asText(source.problem) || String(problems.length + 1);
+      const question = asText(source.question)
+        || asText(source.prompt)
+        || asText(source.description)
+        || asText(item);
+      if (!question) return;
+
+      problems.push({
+        ...source,
+        number,
+        question,
+        section: sectionTitle,
+        answer: asText(source.answer) || asText(source.correctAnswer) || answerFromKey(answerKey, number, problems.length),
+        difficulty: asText(source.difficulty),
+      });
+    });
+  };
+
+  pushProblems(data.problems);
+
+  asArray(data.sections).forEach((section) => {
+    const sectionData = asRecord(section);
+    const sectionTitle = asText(sectionData.title) || asText(sectionData.name) || asText(sectionData.heading);
+    pushProblems(sectionData.problems, sectionTitle);
+  });
+
+  return problems;
+}
+
+function normalizeMaterialSections(data: Record<string, unknown>): LessonSection[] {
+  return asArray(data.sections)
+    .map((section, index) => {
+      const sectionData = asRecord(section);
+      const title = asText(sectionData.title)
+        || asText(sectionData.name)
+        || asText(sectionData.heading)
+        || `Section ${index + 1}`;
+      const content = asText(sectionData.content)
+        || asText(sectionData.description)
+        || asText(sectionData.instructions);
+
+      const problemLines = collectMaterialProblems({ sections: [sectionData] })
+        .map((problem) => `${asText(problem.number)}. ${asText(problem.question)}`)
+        .join('\n');
+
+      return {
+        ...(sectionData as unknown as LessonSection),
+        title,
+        content: content || problemLines,
+      };
+    })
+    .filter((section) => section.title || section.content);
+}
+
+function normalizeMaterialLessonContent(
+  material: { title: string; type: string },
+  content: unknown
+): LessonContent {
+  const data = asRecord(content);
+  const title = asText(data.title) || material.title;
+
+  if (material.type === 'WORKSHEET') {
+    return {
+      ...(data as unknown as LessonContent),
+      title,
+      weeklyMaterialType: 'WORKSHEET',
+      instructions: asText(data.instructions),
+      problems: collectMaterialProblems(data) as unknown as PracticeExercise[],
+    } as unknown as LessonContent;
+  }
+
+  return {
+    ...(data as unknown as LessonContent),
+    title,
+    sections: normalizeMaterialSections(data),
+  } as unknown as LessonContent;
+}
+
 function generateWeeklyTemplateHTML(
   content: TeacherContent,
   lessonData: LessonContent,
@@ -1208,12 +1307,16 @@ function generateWeeklyTemplateHTML(
             const number = asText(p.number) || String(i + 1);
             const question = asText(p.question) || asText(item);
             const difficulty = asText(p.difficulty);
+            const section = asText(p.section);
             const answer = asText(p.answer);
             return `
               <div class="weekly-card">
                 <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:6px;">
                   <strong>${escapeHtml(number)}.</strong>
-                  ${difficulty ? `<span class="badge">${escapeHtml(difficulty)}</span>` : ''}
+                  <span style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                    ${section ? `<span class="badge">${escapeHtml(section)}</span>` : ''}
+                    ${difficulty ? `<span class="badge">${escapeHtml(difficulty)}</span>` : ''}
+                  </span>
                 </div>
                 <div>${textToHtml(question)}</div>
                 ${options.includeAnswers && answer ? `<div class="weekly-answer"><strong>Answer:</strong> ${textToHtml(answer)}</div>` : ''}
@@ -2150,6 +2253,8 @@ export async function exportMaterialContent(
     content: any;
     subject: string;
     gradeLevel: string;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
   },
   options: ExportOptions = {}
 ): Promise<{ data: Buffer | string; mimeType: string; filename: string }> {
@@ -2177,10 +2282,13 @@ export async function exportMaterialContent(
   const fakeContent = {
     id: material.id,
     title: material.title,
+    description: content.summary || content.description || null,
     subject: material.subject || 'OTHER',
     gradeLevel: material.gradeLevel || '',
     contentType,
-    lessonContent: content,
+    createdAt: material.createdAt ? new Date(material.createdAt) : new Date(),
+    updatedAt: material.updatedAt ? new Date(material.updatedAt) : new Date(),
+    lessonContent: normalizeMaterialLessonContent(material, content),
     quizContent: contentType === 'QUIZ'
       ? { title: content.title || material.title, questions: content.questions || content.assessment?.questions || [] }
       : null,
