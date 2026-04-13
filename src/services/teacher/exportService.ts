@@ -120,8 +120,10 @@ export interface ExportOptions {
   answerKeyOnly?: boolean;
 }
 
+type SubjectColorSet = { primary: string; secondary: string; accent: string };
+
 // Subject colors for styling - matches the Prisma Subject enum
-const subjectColors: Record<Subject, { primary: string; secondary: string; accent: string }> = {
+const subjectColors: Record<Subject, SubjectColorSet> = {
   MATH: { primary: '#3B82F6', secondary: '#DBEAFE', accent: '#1D4ED8' },
   ENGLISH: { primary: '#8B5CF6', secondary: '#EDE9FE', accent: '#6D28D9' },
   SCIENCE: { primary: '#10B981', secondary: '#D1FAE5', accent: '#047857' },
@@ -142,6 +144,42 @@ const subjectColors: Record<Subject, { primary: string; secondary: string; accen
   MUSIC: { primary: '#6366F1', secondary: '#E0E7FF', accent: '#4338CA' },
   OTHER: { primary: '#6B7280', secondary: '#F3F4F6', accent: '#4B5563' },
 };
+
+const grayscaleColors: SubjectColorSet = {
+  primary: '#374151',
+  secondary: '#F3F4F6',
+  accent: '#1F2937',
+};
+
+const subjectAliases: Record<string, Subject> = {
+  GENERAL: Subject.OTHER,
+  LANGUAGE_ARTS: Subject.ENGLISH,
+  ELA: Subject.ENGLISH,
+  LITERACY: Subject.READING,
+  SOCIAL_SCIENCE: Subject.SOCIAL_STUDIES,
+  SOCIAL_SCIENCES: Subject.SOCIAL_STUDIES,
+  PE: Subject.PHYSICAL_EDUCATION,
+  PHYS_ED: Subject.PHYSICAL_EDUCATION,
+  ICT: Subject.COMPUTER_SCIENCE,
+  COMPUTING: Subject.COMPUTER_SCIENCE,
+};
+
+function normalizeSubject(subject: unknown): Subject {
+  if (typeof subject !== 'string') return Subject.OTHER;
+
+  const key = subject.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  if (!key) return Subject.OTHER;
+
+  const aliasedSubject = subjectAliases[key];
+  if (aliasedSubject) return aliasedSubject;
+
+  return Object.values(Subject).includes(key as Subject) ? (key as Subject) : Subject.OTHER;
+}
+
+function getSubjectColors(subject: unknown, colorScheme: 'color' | 'grayscale' = 'color'): SubjectColorSet {
+  if (colorScheme === 'grayscale') return grayscaleColors;
+  return subjectColors[normalizeSubject(subject)] || subjectColors.OTHER;
+}
 
 // ─── SVG Icon System ──────────────────────────────────────────────────────────
 // Replaces emoji icons with consistent, print-safe, CSS-colorable inline SVGs.
@@ -182,9 +220,10 @@ function getOrbitLogo(size: number = 22, color: string = '#2D5A4A'): string {
 }
 
 // ─── Subject-Specific Header Background Patterns (CSS only) ─────────────────
-function getSubjectPattern(subject: Subject, colorScheme: string): string {
+function getSubjectPattern(subject: unknown, colorScheme: string): string {
   if (colorScheme === 'grayscale') return '';
-  const color = subjectColors[subject]?.primary || '#6B7280';
+  const normalizedSubject = normalizeSubject(subject);
+  const color = getSubjectColors(normalizedSubject).primary;
 
   const patterns: Partial<Record<Subject, string>> = {
     MATH: `background-image:
@@ -215,7 +254,7 @@ function getSubjectPattern(subject: Subject, colorScheme: string): string {
     background-size: 14px 14px;`,
   };
 
-  return patterns[subject] || `background-image:
+  return patterns[normalizedSubject] || `background-image:
     linear-gradient(135deg, ${color}04 25%, transparent 25%),
     linear-gradient(225deg, ${color}04 25%, transparent 25%);
   background-size: 24px 24px;`;
@@ -229,15 +268,15 @@ function getSectionDivider(color: string): string {
 // ─── Branded Header HTML ────────────────────────────────────────────────────
 function getBrandedHeader(
   title: string,
-  subject: Subject,
+  subject: unknown,
   gradeLevel: string,
   contentType: string,
   date: string,
-  colors: { primary: string; secondary: string; accent: string },
+  colors: SubjectColorSet,
   colorScheme: string
 ): string {
   const logoColor = colorScheme === 'grayscale' ? '#374151' : '#2D5A4A';
-  const subjectLabel = (subject || 'OTHER').replace(/_/g, ' ');
+  const subjectLabel = normalizeSubject(subject).replace(/_/g, ' ');
   return `
     <div class="branded-header">
       <div class="header-top">
@@ -301,12 +340,8 @@ function getFooterTemplate(primaryColor: string, colorScheme: string): string {
 /**
  * Generate base CSS styles for exports — Canva-quality branded design
  */
-function getBaseStyles(subject: Subject, colorScheme: 'color' | 'grayscale' = 'color'): string {
-  const colors = colorScheme === 'color' ? subjectColors[subject] : {
-    primary: '#374151',
-    secondary: '#F3F4F6',
-    accent: '#1F2937',
-  };
+function getBaseStyles(subject: unknown, colorScheme: 'color' | 'grayscale' = 'color'): string {
+  const colors = getSubjectColors(subject, colorScheme);
 
   const paperBg = colorScheme === 'color' ? '#FEFDFB' : '#FFFFFF';
   const subjectPatternCSS = getSubjectPattern(subject, colorScheme);
@@ -1015,7 +1050,7 @@ function generateWeeklyTemplateHTML(
   options: ExportOptions,
   templateType: WeeklyTemplateType
 ): string {
-  const subject = (content.subject || 'OTHER') as Subject;
+  const subject = normalizeSubject(content.subject);
   const styles = getBaseStyles(subject, options.colorScheme);
   const data = asRecord(lessonData as unknown as Record<string, unknown>);
   const templateLabel = WEEKLY_TEMPLATE_LABELS[templateType];
@@ -1046,7 +1081,7 @@ function generateWeeklyTemplateHTML(
   }
 
   const colorScheme = options.colorScheme || 'color';
-  const colorsObj = colorScheme === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+  const colorsObj = getSubjectColors(subject, colorScheme);
 
   let html = `
     <!DOCTYPE html>
@@ -1277,10 +1312,10 @@ function generateLessonHTML(
     return generateWeeklyTemplateHTML(content, lessonData, options, weeklyTemplateType);
   }
 
-  const subject = (content.subject || 'OTHER') as Subject;
+  const subject = normalizeSubject(content.subject);
   const styles = getBaseStyles(subject, options.colorScheme);
   const cs = options.colorScheme || 'color';
-  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+  const cols = getSubjectColors(subject, cs);
 
   let html = `
     <!DOCTYPE html>
@@ -1594,10 +1629,10 @@ function generateQuizHTML(
   quizData: QuizContent,
   options: ExportOptions
 ): string {
-  const subject = (content.subject || 'OTHER') as Subject;
+  const subject = normalizeSubject(content.subject);
   const styles = getBaseStyles(subject, options.colorScheme);
   const cs = options.colorScheme || 'color';
-  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+  const cols = getSubjectColors(subject, cs);
 
   // Determine if answers should be shown inline or on a separate answer key page
   const isAnswerKeyOnly = options.answerKeyOnly === true;
@@ -1779,10 +1814,10 @@ function generateFlashcardHTML(
   flashcardData: FlashcardContent,
   options: ExportOptions
 ): string {
-  const subject = (content.subject || 'OTHER') as Subject;
+  const subject = normalizeSubject(content.subject);
   const styles = getBaseStyles(subject, options.colorScheme);
   const cs = options.colorScheme || 'color';
-  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+  const cols = getSubjectColors(subject, cs);
 
   let html = `
     <!DOCTYPE html>
@@ -1835,10 +1870,10 @@ function generateStudyGuideHTML(
   guideData: StudyGuideContent,
   options: ExportOptions
 ): string {
-  const subject = (content.subject || 'OTHER') as Subject;
+  const subject = normalizeSubject(content.subject);
   const styles = getBaseStyles(subject, options.colorScheme);
   const cs = options.colorScheme || 'color';
-  const cols = cs === 'color' ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+  const cols = getSubjectColors(subject, cs);
 
   let html = `
     <!DOCTYPE html>
@@ -2004,8 +2039,8 @@ export async function exportContent(
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
-  const subject = (content.subject || 'OTHER') as Subject;
-  const pdfColors = (opts.colorScheme === 'color') ? subjectColors[subject] : { primary: '#374151', secondary: '#F3F4F6', accent: '#1F2937' };
+  const subject = normalizeSubject(content.subject);
+  const pdfColors = getSubjectColors(subject, opts.colorScheme);
 
   try {
     const page = await browser.newPage();

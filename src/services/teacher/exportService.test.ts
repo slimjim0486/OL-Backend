@@ -21,9 +21,10 @@ vi.mock('puppeteer', () => {
 });
 
 let exportContent: typeof import('./exportService.js').exportContent;
+let exportMaterialContent: typeof import('./exportService.js').exportMaterialContent;
 
 beforeAll(async () => {
-  ({ exportContent } = await import('./exportService.js'));
+  ({ exportContent, exportMaterialContent } = await import('./exportService.js'));
 });
 
 function makeContent(overrides: Partial<TeacherContent> = {}): TeacherContent {
@@ -151,5 +152,31 @@ describe('exportService weekly template regressions', () => {
     expect(html).toContain('Learning Objectives');
     expect(html).toContain('Lesson Content');
     expect(html).not.toContain('Step-by-Step Instructions');
+  });
+
+  it('exports material subjects stored as free-form strings', async () => {
+    const result = await exportMaterialContent({
+      id: 'material-test-id',
+      title: 'Imported General Worksheet',
+      type: 'WORKSHEET',
+      subject: 'general',
+      gradeLevel: '5',
+      content: {
+        title: 'Imported General Worksheet',
+        weeklyMaterialType: 'WORKSHEET',
+        instructions: 'Solve each item.',
+        problems: [{ question: 'What did you notice?', answer: 'A valid observation.' }],
+      },
+    }, {
+      format: 'html',
+      includeAnswers: true,
+      colorScheme: 'color',
+    });
+
+    const html = result.data as string;
+    expect(result.mimeType).toBe('text/html');
+    expect(html).toContain('Imported General Worksheet');
+    expect(html).toContain('OTHER');
+    expect(html).toContain('--color-primary: #6B7280');
   });
 });

@@ -254,6 +254,104 @@ function sectionContentLines(lessonData: LessonContent, keywords: string[]): str
   return section ? splitLines(section.content) : [];
 }
 
+function appendTextBlock(parts: string[], label: string, value: unknown, maxLength = 500): void {
+  const text = asText(value);
+  if (text) {
+    parts.push(`\n${label}: ${truncateText(text, maxLength)}`);
+  }
+}
+
+function appendStringList(parts: string[], label: string, value: unknown, maxItems = 8, maxLength = 160): void {
+  const items = asArray(value).map(asText).filter(Boolean);
+  if (items.length === 0) return;
+
+  parts.push(`\n${label}:`);
+  items.slice(0, maxItems).forEach((item) => parts.push(`- ${truncateText(item, maxLength)}`));
+}
+
+function appendQuestionItems(
+  parts: string[],
+  label: string,
+  value: unknown,
+  options: PresentonExportOptions,
+  maxItems = 12
+): number {
+  const items = asArray(value);
+  if (items.length === 0) return 0;
+
+  parts.push(`\n${label}:`);
+  let written = 0;
+
+  items.slice(0, maxItems).forEach((item, index) => {
+    const itemObj = asRecord(item);
+    const number = asText(itemObj.number) || asText(itemObj.problem) || String(index + 1);
+    const question = asText(itemObj.question)
+      || asText(itemObj.prompt)
+      || asText(itemObj.activity)
+      || asText(itemObj.description)
+      || asText(item);
+    if (!question) return;
+
+    const difficulty = asText(itemObj.difficulty);
+    parts.push(`${number}. ${truncateText(question, 240)}${difficulty ? ` (${difficulty})` : ''}`);
+
+    const choices = asArray(itemObj.options).map(asText).filter(Boolean);
+    choices.slice(0, 5).forEach((choice, choiceIndex) => {
+      parts.push(`   ${String.fromCharCode(65 + choiceIndex)}) ${truncateText(choice, 100)}`);
+    });
+
+    if (options.includeAnswers) {
+      const answer = asText(itemObj.answer) || asText(itemObj.correctAnswer);
+      if (answer) parts.push(`   Answer: ${truncateText(answer, 180)}`);
+    }
+
+    const scaffolding = asText(itemObj.scaffolding);
+    if (scaffolding) parts.push(`   Support: ${truncateText(scaffolding, 160)}`);
+
+    written += 1;
+  });
+
+  return written;
+}
+
+function appendActivityObject(parts: string[], value: unknown): void {
+  const activity = asRecord(value);
+  if (Object.keys(activity).length === 0) return;
+
+  parts.push(`\nActivity:`);
+  const name = asText(activity.name);
+  const description = asText(activity.description);
+  if (name) parts.push(`- Name: ${truncateText(name, 160)}`);
+  if (description) parts.push(`- Description: ${truncateText(description, 280)}`);
+
+  appendStringList(parts, 'Activity Materials', activity.materials, 10, 120);
+  appendStringList(parts, 'Activity Steps', activity.steps, 10, 180);
+}
+
+function appendScheduleItems(parts: string[], value: unknown, maxItems = 10): number {
+  const items = asArray(value);
+  if (items.length === 0) return 0;
+
+  parts.push(`\nSchedule:`);
+  let written = 0;
+
+  items.slice(0, maxItems).forEach((item, index) => {
+    const itemObj = asRecord(item);
+    const time = asText(itemObj.time);
+    const activity = asText(itemObj.activity) || asText(itemObj.title) || `Item ${index + 1}`;
+    const duration = asText(itemObj.duration);
+    const instructions = asText(itemObj.instructions);
+    const materials = asArray(itemObj.materials).map(asText).filter(Boolean);
+
+    parts.push(`${index + 1}. ${time ? `${time} - ` : ''}${truncateText(activity, 160)}${duration ? ` (${duration})` : ''}`);
+    if (instructions) parts.push(`   Instructions: ${truncateText(instructions, 220)}`);
+    if (materials.length > 0) parts.push(`   Materials: ${materials.slice(0, 6).join(', ')}`);
+    written += 1;
+  });
+
+  return written;
+}
+
 /**
  * Truncate text to a maximum length
  */
@@ -290,6 +388,9 @@ function formatLessonContent(
     parts.push(`\nOverview: ${truncateText(lessonData.summary, 500)}`);
   }
 
+  appendTextBlock(parts, 'Overview', (lessonData as unknown as Record<string, unknown>)?.overview, 500);
+  appendTextBlock(parts, 'Student Instructions', lessonData?.instructions, 500);
+
   // Learning Objectives (limit to 5)
   if (lessonData?.objectives && lessonData.objectives.length > 0) {
     const objectives = lessonData.objectives.slice(0, 5);
@@ -303,9 +404,20 @@ function formatLessonContent(
   if (lessonData?.sections && lessonData.sections.length > 0) {
     parts.push(`\nLesson Content:`);
     lessonData.sections.forEach((section, index) => {
-      parts.push(`\n${index + 1}. ${section.title}`);
+      const sectionObj = asRecord(section);
+      const sectionTitle = asText(sectionObj.title)
+        || asText(sectionObj.name)
+        || asText(sectionObj.heading)
+        || `Section ${index + 1}`;
+      const sectionBody = asText(sectionObj.content)
+        || asText(sectionObj.description)
+        || asText(sectionObj.instructions);
+
+      parts.push(`\n${index + 1}. ${truncateText(sectionTitle, 160)}`);
       // Truncate section content to prevent overly long prompts
-      parts.push(truncateText(section.content, 400));
+      if (sectionBody) {
+        parts.push(truncateText(sectionBody, 400));
+      }
 
       // Include a few activities if present
       if (section.activities && section.activities.length > 0) {
@@ -319,7 +431,34 @@ function formatLessonContent(
           }
         });
       }
+
+      appendQuestionItems(parts, `${sectionTitle} Problems`, sectionObj.problems, options, 8);
     });
+  }
+
+  appendQuestionItems(parts, 'Practice Problems', (lessonData as unknown as Record<string, unknown>)?.problems, options, 14);
+  appendQuestionItems(parts, 'Guided Practice', (lessonData as unknown as Record<string, unknown>)?.guidedPractice, options, 8);
+  appendQuestionItems(parts, 'Independent Practice', (lessonData as unknown as Record<string, unknown>)?.independentPractice, options, 8);
+  appendStringList(parts, 'Check for Understanding', (lessonData as unknown as Record<string, unknown>)?.checkForUnderstanding, 8, 180);
+  appendStringList(parts, 'Important Notes', (lessonData as unknown as Record<string, unknown>)?.importantNotes, 8, 180);
+  appendScheduleItems(parts, (lessonData as unknown as Record<string, unknown>)?.schedule);
+  appendActivityObject(parts, (lessonData as unknown as Record<string, unknown>)?.activity);
+  appendTextBlock(parts, 'Alternative Explanation', (lessonData as unknown as Record<string, unknown>)?.alternativeExplanation, 600);
+  appendTextBlock(parts, 'Visual Aid', (lessonData as unknown as Record<string, unknown>)?.visualAid, 350);
+  appendTextBlock(parts, 'Emergency Notes', (lessonData as unknown as Record<string, unknown>)?.emergencyNotes, 350);
+  appendTextBlock(parts, 'End of Day Wrap-Up', (lessonData as unknown as Record<string, unknown>)?.endOfDay, 350);
+
+  if (options.includeAnswers) {
+    const answerKey = asArray((lessonData as unknown as Record<string, unknown>)?.answerKey);
+    if (answerKey.length > 0) {
+      parts.push(`\nAnswer Key:`);
+      answerKey.slice(0, 14).forEach((item, index) => {
+        const itemObj = asRecord(item);
+        const problem = asText(itemObj.problem) || String(index + 1);
+        const answer = asText(itemObj.answer) || asText(item);
+        if (answer) parts.push(`${problem}. ${truncateText(answer, 180)}`);
+      });
+    }
   }
 
   // Vocabulary (limit to 8 terms)
@@ -645,6 +784,37 @@ function calculateSlideCount(content: TeacherContent, options: PresentonExportOp
     slides += Math.min(sectionCount * 2, 12); // Cap section slides
   } else {
     slides += Math.min(Math.ceil(sectionCount / 2), 6);
+  }
+
+  const lessonRecord = asRecord(lessonData);
+  const topLevelProblemCount = asArray(lessonRecord.problems).length;
+  const sectionProblemCount = asArray(lessonRecord.sections).reduce<number>((count, section) => {
+    return count + asArray(asRecord(section).problems).length;
+  }, 0);
+  const guidedPracticeCount = asArray(lessonRecord.guidedPractice).length;
+  const independentPracticeCount = asArray(lessonRecord.independentPractice).length;
+  const scheduleCount = asArray(lessonRecord.schedule).length;
+  const checkCount = asArray(lessonRecord.checkForUnderstanding).length;
+
+  const practiceItemCount = topLevelProblemCount + sectionProblemCount + guidedPracticeCount + independentPracticeCount;
+  if (practiceItemCount > 0) {
+    slides += options.slideStyle === 'focused'
+      ? Math.min(Math.ceil(practiceItemCount / 2), 8)
+      : Math.min(Math.ceil(practiceItemCount / 3), 5);
+  }
+
+  if (scheduleCount > 0) {
+    slides += options.slideStyle === 'focused'
+      ? Math.min(Math.ceil(scheduleCount / 2), 5)
+      : Math.min(Math.ceil(scheduleCount / 3), 3);
+  }
+
+  if (checkCount > 0) {
+    slides += options.slideStyle === 'focused' ? 2 : 1;
+  }
+
+  if (lessonRecord.activity || lessonRecord.alternativeExplanation || lessonRecord.visualAid) {
+    slides += options.slideStyle === 'focused' ? 2 : 1;
   }
 
   // Vocabulary slide(s)
